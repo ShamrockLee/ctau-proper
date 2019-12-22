@@ -26,6 +26,7 @@ void xAna_monoH_ctau(std::string inputFile,std::string outputFile, bool debug=fa
   TH1F* h_ctau2=new TH1F("h_ctau2","",100000,0,10000);
   TH1F* h_ctau_lab  = (TH1F*)h_ctau2->Clone("h_ctau_lab");
   TH1F* h_ctau_proper  = (TH1F*)h_ctau2->Clone("h_ctau_proper");
+  TH1F* h_chi2_gamma  = (TH1F*)h_ctau2->Clone("h_chi2_gamma");
 
   //Event loop
   for(Long64_t jEntry=0; jEntry<data.GetEntriesFast() ;jEntry++){
@@ -70,7 +71,8 @@ void xAna_monoH_ctau(std::string inputFile,std::string outputFile, bool debug=fa
       TVector3 dist =  *chi1_vtx - *chi2_vtx;
       
       double ctau_lab = dist.Mag();
-      double ctau_proper = ctau_lab / (chi2_p4->Gamma());
+      double chi2_gamma = chi2_p4->Gamma();
+      double ctau_proper = ctau_lab / (double)(chi2_p4->Gamma());
 
 
       if(debug){
@@ -78,6 +80,7 @@ void xAna_monoH_ctau(std::string inputFile,std::string outputFile, bool debug=fa
       }
       
       h_ctau_lab -> Fill(ctau_lab);
+      h_chi2_gamma -> Fill(chi2_gamma);
       h_ctau_proper -> Fill(ctau_proper);
     }
   }
@@ -87,6 +90,7 @@ void xAna_monoH_ctau(std::string inputFile,std::string outputFile, bool debug=fa
   TFile* outFile = new TFile(outputFile.data(),"recreate");
   h_ctau_lab->Write();
   h_ctau_proper->Write();
+  h_chi2_gamma->Write();
   outFile->Close();
   std::cout << "nTotal    = " << nTotal << std::endl;
   for(int i=0;i<20;i++)
