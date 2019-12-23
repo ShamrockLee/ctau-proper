@@ -31,5 +31,8 @@
 *.out
 *.app
 
+# ROOT compiled files
+*.pcm
+
 # ROOT files
 *.root
