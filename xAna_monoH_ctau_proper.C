@@ -27,11 +27,22 @@ void xAna_monoH_ctau(std::string inputFile,std::string outputFile, bool debug=fa
   //TH1F* h_ctau_lab  = (TH1F*)h_ctau2->Clone("h_ctau_lab");
   //TH1F* h_chi2_gamma  = (TH1F*)h_ctau2->Clone("h_ctau_proper");
   //TH1F* h_chi2_gamma  = (TH1F*)h_ctau2->Clone("h_chi2_gamma");
+  
+  // Suitable for Mx2-1_Mx1-0p1
+  /*
   TH1F* h_betatau_lab =new TH1F("h_betatau_lab","",1000,0,500);
   TH1F* h_ctau_lab =new TH1F("h_ctau_lab","", 1000, 0, 500);
   TH1F* h_ctau_proper =new TH1F("h_ctau_proper","", 1000, 0, 2);
   TH1F* h_chi2_beta =new TH1F("h_chi2_beta","", 1000, 0.9999, 1.0001);
   TH1F* h_chi2_gamma =new TH1F("h_chi2_gamma","", 1000, 0, 10000);
+  */
+  
+  // Suitable for Mx2-150_Mx1-1
+  TH1F* h_betatau_lab =new TH1F("h_betatau_lab","",500,0,5);
+  TH1F* h_ctau_lab =new TH1F("h_ctau_lab","", 500, 0, 5);
+  TH1F* h_ctau_proper =new TH1F("h_ctau_proper","", 500, 0, 2);
+  TH1F* h_chi2_beta =new TH1F("h_chi2_beta","", 500, 0, 2);
+  TH1F* h_chi2_gamma =new TH1F("h_chi2_gamma","", 500, 0, 20);
 
   //Event loop
   for(Long64_t jEntry=0; jEntry<data.GetEntriesFast() ;jEntry++){
@@ -95,9 +106,7 @@ void xAna_monoH_ctau(std::string inputFile,std::string outputFile, bool debug=fa
   }
     
 
-  //Some shared library needed.
-  /*
-  Double_t ctauLabMaximum = h_betatau_lab->GetMaximum();
+  Double_t ctauLabMaximum = h_ctau_lab->GetMaximum();
   Int_t ctauLabMaximumBin = h_ctau_lab->GetMaximumBin();
   Double_t ctauLabMinimum = h_ctau_lab->GetMinimum();
   Int_t ctauLabMinimumBin = h_ctau_lab->GetMinimumBin();
@@ -109,7 +118,7 @@ void xAna_monoH_ctau(std::string inputFile,std::string outputFile, bool debug=fa
   Int_t chi2GammaMaximumBin = h_chi2_gamma->GetMaximumBin();
   Double_t chi2GammaMinimum = h_chi2_gamma->GetMinimum();
   Int_t chi2GammaMinimumBin = h_chi2_gamma->GetMinimumBin();
-  */
+  
   
   TFile* outFile = new TFile(outputFile.data(),"recreate");
   h_betatau_lab->Write();

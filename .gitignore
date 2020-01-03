@@ -36,3 +36,6 @@
 
 # ROOT files
 *.root
+
+# VSCode settings
+.vscode
