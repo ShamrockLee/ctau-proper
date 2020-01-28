@@ -6,6 +6,7 @@ authors = ["Shamrock Lee <ShamrockLee+GitHub@protonmail.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.6"
+numpy = "^1.18.1"
 
 [tool.poetry.dev-dependencies]
 

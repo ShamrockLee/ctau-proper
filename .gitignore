@@ -1,3 +1,5 @@
+# C++
+
 # Prerequisites
 *.d
 
@@ -31,14 +33,13 @@
 *.out
 *.app
 
+# ROOT
+
 # ROOT compiled files
 *.pcm
 
 # ROOT files
 *.root
-
-# VSCode settings
-.vscode
 
 #Python
 
@@ -171,3 +172,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Editors and IDEs
+
+# VSCode settings
+.vscode
+
+# KDevelop/Kate
+*.kdev*
+.kdev*
+.*.kate-swp
+.swp.*

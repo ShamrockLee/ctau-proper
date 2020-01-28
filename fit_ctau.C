@@ -29,7 +29,7 @@ char* strConcat(const char *s1, const char *s2) {
 
 TF1 fExpAndHill(std::string tfName, Double_t xmin, Double_t xmax, char signHorizontal=1, char signVerticle=1) {
     // myHeaviside<Double_t>((x - [1])*signHorizontal)*[2]*exp(([1] - x)*signHorizontal/[4]) 
-    // + myHeaviside<Double_t>(([1] - x)*signHorizontal)*[2]*(1 + (x - [1])/[3])
+    // + myHeaviside<Double_t>(([1] - x)*signHorizontal)*[2]*(1 + (x - [1])*signHorizontal/[3])
     std::string* formula = new string();
     std::string* strXMinusArg1 = "(x - [1])";
     std::string* strXMinusArg1TimesSignHorizontal = signHorizontal > 0 ? strcat("-", strXMinusArg1) : strXMinusArg1;
