@@ -36,7 +36,7 @@ TString fStrExpAndHillExpPart(bool inverseHorizotnal=false, bool inverseVerticle
     TString strXDisp = (TString)"(x-" + strParameter1st + ")";
     formula += strParameter2nd;
     formula += "*(";
-    formula += (TString)"exp(" + (!inverseHorizotnal ? "-" : "") + strXDisp + "/p[4])";
+    formula += (TString)"exp(" + (!inverseHorizotnal ? "-" : "") + strXDisp + "/p[3])";
     formula += ")";
     return formula;
 }
@@ -47,14 +47,14 @@ TString fStrExpAndHill(bool inverseHorizotnal=false, bool inverseVerticle=false)
     // + myHeaviside<Double_t>(([1] - x)*signHorizontal)*[2]*(1 + (x - [1])*signHorizontal/[3])
     
     TString formula = "";
-    TString strXDisp = "(*x-p[1])";
+    TString strXDisp = "(*x-p[0])";
     formula += (inverseVerticle ? "-" : "");
-    formula += "p[2]*(";
-    formula += (TString)"exp(" + (!inverseHorizotnal ? "-" : "") + strXDisp + "/p[4])";
+    formula += "p[1]*(";
+    formula += (TString)"exp(" + (!inverseHorizotnal ? "-" : "") + strXDisp + "/p[3])";
     formula += (TString)"*myHeaviside<double>(";
     formula += (inverseHorizotnal ? (TString)"-" + strXDisp + ", 0, 0" : strXDisp);
     formula += ")";
-    formula += (TString)"+(1+" + (inverseHorizotnal ? "-" : "") + strXDisp + "/p[3])";
+    formula += (TString)"+(1+" + (inverseHorizotnal ? "-" : "") + strXDisp + "/p[2])";
     formula += (TString)"*myHeaviside<double>(";
     formula += (!inverseHorizotnal ? (TString)"-" + strXDisp + ", 0, 0" : strXDisp);
     formula += ")";
@@ -120,33 +120,32 @@ public:
         clDoubleExpAndHill::inverseVerticle = inverseVerticle;
     }
     Double_t fDoubleExpAndHill(Double_t *x, Double_t *p) {
-        Double_t xMinusP1Adjusted = inverseHorizotnal ? p[1] - *x : *x - p[1];
-        return myHeaviside<Double_t>(xMinusP1Adjusted)*p[2]*exp(-xMinusP1Adjusted/p[4]) + myHeaviside<Double_t>(xMinusP1Adjusted)*p[2]*(1 + xMinusP1Adjusted/p[3]);
+        Double_t xMinusP1Adjusted = inverseHorizotnal ? p[0] - *x : *x - p[0];
+        return myHeaviside<Double_t>(xMinusP1Adjusted)*p[1]*exp(-xMinusP1Adjusted/p[3]) + myHeaviside<Double_t>(xMinusP1Adjusted)*p[1]*(1 + xMinusP1Adjusted/p[2]);
     }
 };
 */
 
 inline Double_t fDoubleExpAndHillMeta(Double_t *x, Double_t *p, bool inverseHorizotnal=false) {
-    Double_t xMinusP1Adjusted = inverseHorizotnal ? p[1] - *x : *x - p[1];
+    Double_t xMinusP1Adjusted = inverseHorizotnal ? p[0] - *x : *x - p[0];
     // Double_t valMyHeavisideAdjusted = inverseHorizotnal ? myHeaviside<Double_t>(xMinusP1Adjusted, 0,  0) : myHeaviside<Double_t>(xMinusP1Adjusted);
-    // return valMyHeavisideAdjusted*p[2]*exp(-xMinusP1Adjusted/p[4]) + valMyHeavisideAdjusted*p[2]*(1 + xMinusP1Adjusted/p[3]);
-    return (xMinusP1Adjusted >= 0) ?  p[2]*exp(-xMinusP1Adjusted/p[4]) : p[2]*(1 + xMinusP1Adjusted/p[3]);
+    // return valMyHeavisideAdjusted*p[1]*exp(-xMinusP1Adjusted/p[3]) + valMyHeavisideAdjusted*p[1]*(1 + xMinusP1Adjusted/p[2]);
+    return (xMinusP1Adjusted >= 0) ?  p[1]*exp(-xMinusP1Adjusted/p[3]) : p[1]*(1 + xMinusP1Adjusted/p[2]);
 }
 
 /*
 auto fLambdaExpAndHill(bool inverseHorizotnal=false, bool inverseVerticle=false) {
-    auto lambdaXMinusAdjusted = inverseHorizotnal ? [&](Double_t *x, Double_t *p){p[1]-*x;} : [&](Double_t *x, Double_t *p){return *x - p[1];};
-    return [&](Double_t *x, Double_t *p){return p[2]*(exp(-lambdaXMinusAdjusted(x, p)/p[4])*myHeaviside<Double_t>(lambdaXMinusAdjusted(x, p))+(1+lambdaXMinusAdjusted(x, p)/p[3])*myHeaviside<Double_t>(-lambdaXMinusAdjusted(x, p), 0, 0));};
+    auto lambdaXMinusAdjusted = inverseHorizotnal ? [&](Double_t *x, Double_t *p){p[0]-*x;} : [&](Double_t *x, Double_t *p){return *x - p[0];};
+    return [&](Double_t *x, Double_t *p){return p[1]*(exp(-lambdaXMinusAdjusted(x, p)/p[3])*myHeaviside<Double_t>(lambdaXMinusAdjusted(x, p))+(1+lambdaXMinusAdjusted(x, p)/p[2])*myHeaviside<Double_t>(-lambdaXMinusAdjusted(x, p), 0, 0));};
 }
 */
 
-void setParametersExpAndHill(TH1F* phist, Double_t parametersTF[], bool inverseHorizotnal, Double_t xmin, Double_t xmax) { //Double_t *pxmin=NULL, Double_t *pxmax=NULL) {
+void setParametersExpAndHill(TH1F* phist, Double_t parametersTF[4], bool inverseHorizotnal, Double_t xmin, Double_t xmax) { //Double_t *pxmin=NULL, Double_t *pxmax=NULL) {
     Int_t maximumBin = phist->GetMaximumBin();
     Double_t binWidth = phist->GetBinWidth(maximumBin);
-    parametersTF[0] = 0;
-    parametersTF[1] = binWidth * maximumBin;
-    parametersTF[2] = phist->GetBinContent(maximumBin);
-    parametersTF[3] = inverseHorizotnal ? 1 - parametersTF[1] : parametersTF[1];
+    parametersTF[0] = binWidth * maximumBin;
+    parametersTF[1] = phist->GetBinContent(maximumBin);
+    parametersTF[2] = inverseHorizotnal ? 1 - parametersTF[0] : parametersTF[0];
     Double_t xlow = phist->GetBinLowEdge(1);
     Int_t numBins = phist->GetNbinsX();
     // Double_t xup = xlow + binWidth * binNumber;
@@ -169,7 +168,7 @@ void setParametersExpAndHill(TH1F* phist, Double_t parametersTF[], bool inverseH
             areaExpPart = binWidth * fSumHist(phist, iMin, maximumBin+1) / (1 - fMaxHist(phist, iMin-deltaiDetectRange, iMin+deltaiDetectRange+1)/(deltaiDetectRange*2+1));
         }
     }
-    parametersTF[4] = areaExpPart / parametersTF[2];
+    parametersTF[3] = areaExpPart / parametersTF[1];
     /*
     Double_t xmin;
     Double_t xmax;
@@ -199,19 +198,23 @@ void setParametersExpAndHill(TH1F* phist, Double_t parametersTF[], bool inverseH
         cout << "iMin: " << iMin << " iMax: " << iMax << endl;
         cout << "deltaiDetectRange: " << deltaiDetectRange << endl;
         cout << "areaExpPart: " << areaExpPart << endl;
-        for (int i=0; i<4; i++) {
+        for (int i=0; i<4-1; i++) {
             cout << parametersTF[i] << strSepValues;
         }
-        cout << parametersTF[4] << strEndValues << endl;
+        cout << parametersTF[3] << strEndValues << endl;
         }
     
 }
 
 void setParametersExpAndHill(TH1F* phist, TF1* ptf, bool inverseHorizotnal, Double_t xmin, Double_t xmax) {
-    Double_t parametersTF[4+1];
+    Double_t parametersTF[4];
     setParametersExpAndHill(phist, parametersTF, inverseHorizotnal, xmin, xmax);
-    // ptf->SetParameters(parametersTF[0], parametersTF[1], parametersTF[2], parametersTF[3], parametersTF[4]);
+    // ptf->SetParameters(parametersTF[0], parametersTF[1], parametersTF[2], parametersTF[3]);
     ptf->SetParameters(parametersTF);
+    ptf->SetParLimits(0, xmin, xmax);
+    ptf->SetParLimits(1, 0, parametersTF[1]*10);
+    ptf->SetParLimits(2, 0, parametersTF[2]*10);
+    ptf->SetParLimits(3, 0, inverseHorizotnal ? parametersTF[0] : parametersTF[3]*10);
 }
 /*
 void setParametersExpAndHill(TH1F* phist, Double_t parametersTF[], bool inverseHorizotnal=false, Double_t xmin=0.f) {
@@ -270,11 +273,11 @@ void fitHistInFile(const char* nameFileIn) {
     xLimitsCtauProper[1] = xLimitsCtauProper[0] + h_ctau_proper->GetBinWidth(1)*h_ctau_proper->GetNbinsX();
     xLimitsChi2Beta[1] = 1.f;
     xLimitsChi2Gamma[0] = 1.f;
-    TF1 *tfBetatauLab = new TF1("f_betatau_lab", doubleExpAndHill, xLimitsBetaTauLab[0], xLimitsBetaTauLab[1], 5);
-    TF1 *tfChi2Beta = new TF1("f_chi2_beta", doubleExpAndHillInversed, xLimitsChi2Beta[0], xLimitsChi2Beta[1], 5);
-    TF1 *tfChi2Gamma = new TF1("f_chi2_gamma", doubleExpAndHill, xLimitsChi2Gamma[0], xLimitsChi2Gamma[1], 5);
-    TF1 *tfCtauLab = new TF1("f_ctau_lab", doubleExpAndHill, xLimitsCtauLab[0], xLimitsCtauLab[1], 5);
-    TF1 *tfCtauProper = new TF1("f_ctau_proper", doubleExpAndHill, xLimitsCtauProper[0], xLimitsCtauProper[1], 5);
+    TF1 *tfBetatauLab = new TF1("f_betatau_lab", doubleExpAndHill, xLimitsBetaTauLab[0], xLimitsBetaTauLab[1], 4);
+    TF1 *tfChi2Beta = new TF1("f_chi2_beta", doubleExpAndHillInversed, xLimitsChi2Beta[0], xLimitsChi2Beta[1], 4);
+    TF1 *tfChi2Gamma = new TF1("f_chi2_gamma", doubleExpAndHill, xLimitsChi2Gamma[0], xLimitsChi2Gamma[1], 4);
+    TF1 *tfCtauLab = new TF1("f_ctau_lab", doubleExpAndHill, xLimitsCtauLab[0], xLimitsCtauLab[1], 4);
+    TF1 *tfCtauProper = new TF1("f_ctau_proper", doubleExpAndHill, xLimitsCtauProper[0], xLimitsCtauProper[1], 4);
     setParametersExpAndHill(h_betatau_lab, tfBetatauLab);
     setParametersExpAndHill(h_chi2beta, tfChi2Beta, true);
     setParametersExpAndHill(h_chi2gamma, tfChi2Gamma);
@@ -288,15 +291,13 @@ void fitHistInFile(const char* nameFileIn) {
     // tfChi2Gamma->Draw("SAME");
     // h_ctau_lab->Draw();
     // tfCtauLab->Draw("SAME");
-    h_ctau_proper->Draw();
-    tfCtauProper->Draw("SAME");
-    /*
+    // h_ctau_proper->Draw();
+    // tfCtauProper->Draw("SAME");
     h_betatau_lab->Fit(tfBetatauLab);
-    h_chi2beta->Fit(tfChi2Beta);
-    h_chi2gamma->Fit(tfChi2Gamma);
-    h_ctau_lab->Fit(tfCtauLab);
-    h_ctau_proper->Fit(tfCtauProper);
-    */
+    // h_chi2beta->Fit(tfChi2Beta);
+    // h_chi2gamma->Fit(tfChi2Gamma);
+    // h_ctau_lab->Fit(tfCtauLab);
+    // h_ctau_proper->Fit(tfCtauProper);
     // TPaveText* fitlabel = new TPaveText(0.6,0.4,0.9,0.75,"NDC");
     // fileIn->Close();
 }
