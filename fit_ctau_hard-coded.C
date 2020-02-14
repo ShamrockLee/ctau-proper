@@ -11,6 +11,9 @@
 #include <TFile.h>
 #include <TPaveText.h>
 #include <TPavesText.h>
+#include <TFitResult.h>
+#include <TFitResultPtr.h>
+#include <cmath>
 
 using namespace std;
 
@@ -211,10 +214,10 @@ void setParametersExpAndHill(TH1F* phist, TF1* ptf, bool inverseHorizotnal, Doub
     setParametersExpAndHill(phist, parametersTF, inverseHorizotnal, xmin, xmax);
     // ptf->SetParameters(parametersTF[0], parametersTF[1], parametersTF[2], parametersTF[3]);
     ptf->SetParameters(parametersTF);
-    ptf->SetParLimits(0, xmin, xmax);
-    ptf->SetParLimits(1, 0, parametersTF[1]*10);
-    ptf->SetParLimits(2, 0, parametersTF[2]*10);
-    ptf->SetParLimits(3, 0, inverseHorizotnal ? parametersTF[0] : parametersTF[3]*10);
+    ptf->SetParLimits(0, TMath::Max(xmin, parametersTF[0]-(xmax-xmin)/20), TMath::Min(xmax, parametersTF[0]+(xmax-xmin)/20));
+    ptf->SetParLimits(1, parametersTF[2]*0.8, parametersTF[1]*1.5);
+    ptf->SetParLimits(2, 0, parametersTF[2]*2);
+    ptf->SetParLimits(3, 0, inverseHorizotnal ? TMath::Max(parametersTF[0], parametersTF[3]*0.5) : parametersTF[3]*2);
 }
 /*
 void setParametersExpAndHill(TH1F* phist, Double_t parametersTF[], bool inverseHorizotnal=false, Double_t xmin=0.f) {
@@ -293,11 +296,12 @@ void fitHistInFile(const char* nameFileIn) {
     // tfCtauLab->Draw("SAME");
     // h_ctau_proper->Draw();
     // tfCtauProper->Draw("SAME");
-    h_betatau_lab->Fit(tfBetatauLab);
-    // h_chi2beta->Fit(tfChi2Beta);
-    // h_chi2gamma->Fit(tfChi2Gamma);
-    // h_ctau_lab->Fit(tfCtauLab);
-    // h_ctau_proper->Fit(tfCtauProper);
+    // TFitResultPtr tfitrpBetatauLab = h_betatau_lab->Fit(tfBetatauLab, "", "");
+    // TFitResultPtr tfitrpChi2Beta = h_chi2beta->Fit(tfChi2Beta, "", "");
+    // TFitResultPtr tfitrpChi2Gamma = h_chi2gamma->Fit(tfChi2Gamma, "", "");
+    // TFitResultPtr tfitrpCtauLab = h_ctau_lab->Fit(tfCtauLab, "", "");
+    TFitResultPtr tfitrpCtauProper = h_ctau_proper->Fit(tfCtauProper, "", "");
+    TString pathImageFolder = "../out_images/output_proper_Mx2-150_Mx1-1_20200130";
     // TPaveText* fitlabel = new TPaveText(0.6,0.4,0.9,0.75,"NDC");
     // fileIn->Close();
 }
