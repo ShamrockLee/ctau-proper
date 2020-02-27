@@ -1,4 +1,4 @@
-/** Reader of ggNtuplizer's and other TTrees.
+/* Reader of ggNtuplizer's and other TTrees.
  *
  * Works both with old as well as with new ntuples. In particular, for tree
  * branches containing vector<...> objects of elementary data types as well as
@@ -6,10 +6,10 @@
  * underlying arrays are returned (vector::front()) by TreeReader::Get*() call
  * family.
  *
- * @note vector<bool> cannot be handled in this way since booleans are packed
+ * NOTE: vector<bool> cannot be handled in this way since booleans are packed
  * as bits into bytes.
  *
- * @note for branches containing variable length arrays, corresponding counter
+ * NOTE: for branches containing variable length arrays, corresponding counter
  * branches must be read off first.
  *
  * Usage of int, long, ... elementary data types for retrieving branch contents
@@ -71,45 +71,45 @@ class TreeReader {
 
  public:
 
-   //! types of branch/leaf contents
-   //! @note some unsigned types may not be supported
+   // types of branch/leaf contents
+   // NOTE: some unsigned types may not be supported
    enum ETypes {
-      kBool,            //!< single 1-byte boolean (TLeafO)
-      kChar,            //!< single 1-byte integer (TLeafB)
-      kShort,           //!< single 2-byte integer (TLeafS)
-      kInt,             //!< single 4-byte integer (TLeafI)
-      kFloat,           //!< single 4-byte float (TLeafF)
-      kDouble,          //!< single 8-byte float (TLeafD)
-      kLong64,          //!< single 8-byte integer (TLeafL)
-      kArrBool,         //!< array of 1-byte booleans (TLeafO only)
-      kArrChar,         //!< array of 1-byte integers (TLeafB or vector<char>)
-      kArrCharTLeaf,    //!< array of 1-byte integers (TLeafB)
-      kArrCharVector,   //!< array of 1-byte integers (vector<char>); @note char=signed char is assumed
-      kArrUCharVector,  //!< array of 1-byte unsigned integers (vector<unsigned char>)
-      kArrShort,        //!< array of 2-byte integers (TLeafS or vector<short>)
-      kArrShortTLeaf,   //!< array of 2-byte integers (TLeafS)
-      kArrShortVector,  //!< array of 2-byte integers (vector<short>)
-      kArrUShortVector, //!< array of 2-byte unsigned integers (vector<unsigned short>)
-      kArrInt,          //!< array of 4-byte integers (TLeafI or vector<int>)
-      kArrIntTLeaf,     //!< array of 4-byte integers (TLeafI)
-      kArrIntVector,    //!< array of 4-byte integers (vector<int>)
-      kArrUIntVector,   //!< array of 4-byte unsigned integers (vector<unsigned int>)
-      kArrFloat,        //!< array of 4-byte floats (TLeafF or vector<float>)
-      kArrFloatTLeaf,   //!< array of 4-byte floats (TLeafF)
-      kArrFloatVector,  //!< array of 4-byte floats (vector<float>)
-      kArrLong64,       //!< array of 8-byte integers (TLeafL or vector<long>)
-      kArrLong64TLeaf,  //!< array of 8-byte integers (TLeafL)
-      kArrLong64Vector, //!< array of 8-byte integers (vector<long>)
-      kArrULong64Vector,//!< array of 8-byte unsigned integers (vector<unsigned long>)
-      kArrVectInt,      //!< array of vector<int> (vector<vector<int> >)
-      kArrVectFloat,    //!< array of vector<float> (vector<vector<float> >)
-      kArrString,       //!< array of string 
-      kArrStringVector, //!< array of string (vector<string>)
-      kTObject,         //!< general object inherited from TObject
-      kVoidPtr          //!< all other data types
+      kBool,            // single 1-byte boolean (TLeafO)
+      kChar,            // single 1-byte integer (TLeafB)
+      kShort,           // single 2-byte integer (TLeafS)
+      kInt,             // single 4-byte integer (TLeafI)
+      kFloat,           // single 4-byte float (TLeafF)
+      kDouble,          // single 8-byte float (TLeafD)
+      kLong64,          // single 8-byte integer (TLeafL)
+      kArrBool,         // array of 1-byte booleans (TLeafO only)
+      kArrChar,         // array of 1-byte integers (TLeafB or vector<char>)
+      kArrCharTLeaf,    // array of 1-byte integers (TLeafB)
+      kArrCharVector,   // array of 1-byte integers (vector<char>); NOTE: char=signed char is assumed
+      kArrUCharVector,  // array of 1-byte unsigned integers (vector<unsigned char>)
+      kArrShort,        // array of 2-byte integers (TLeafS or vector<short>)
+      kArrShortTLeaf,   // array of 2-byte integers (TLeafS)
+      kArrShortVector,  // array of 2-byte integers (vector<short>)
+      kArrUShortVector, // array of 2-byte unsigned integers (vector<unsigned short>)
+      kArrInt,          // array of 4-byte integers (TLeafI or vector<int>)
+      kArrIntTLeaf,     // array of 4-byte integers (TLeafI)
+      kArrIntVector,    // array of 4-byte integers (vector<int>)
+      kArrUIntVector,   // array of 4-byte unsigned integers (vector<unsigned int>)
+      kArrFloat,        // array of 4-byte floats (TLeafF or vector<float>)
+      kArrFloatTLeaf,   // array of 4-byte floats (TLeafF)
+      kArrFloatVector,  // array of 4-byte floats (vector<float>)
+      kArrLong64,       // array of 8-byte integers (TLeafL or vector<long>)
+      kArrLong64TLeaf,  // array of 8-byte integers (TLeafL)
+      kArrLong64Vector, // array of 8-byte integers (vector<long>)
+      kArrULong64Vector,// array of 8-byte unsigned integers (vector<unsigned long>)
+      kArrVectInt,      // array of vector<int> (vector<vector<int> >)
+      kArrVectFloat,    // array of vector<float> (vector<vector<float> >)
+      kArrString,       // array of string 
+      kArrStringVector, // array of string (vector<string>)
+      kTObject,         // general object inherited from TObject
+      kVoidPtr          // all other data types
    };
 
-   //! TTree/TChain initializers
+   // TTree/TChain initializers
    TreeReader(TTree* tree);
    TreeReader(const char* path, const char* treename = "tree/treeMaker");
    TreeReader(const char** paths, int npaths, const char* treename = "tree/treeMaker");
@@ -117,24 +117,23 @@ class TreeReader {
 
    virtual ~TreeReader();
 
-   //! simple getters
+   // simple getters
    TTree*   GetTree()        { return fTree; }
    Long64_t GetEntriesFast() { return fTree->GetEntriesFast(); }
    Bool_t   HasMC()          { return fkMC; }
 
-   //! useful to determine which type of variable to use for which branch
+   // useful to determine which type of variable to use for which branch
    void Print();
 
-   //! sets event number to retrieve next time TreeReader::Get*() called
+   // sets event number to retrieve next time TreeReader::Get*() called
    void GetEntry(Long64_t entry);
 
-   //!
-   //! returns either a pointer to first element of one- or multi-dimensional
-   //! array or a pointer to an unprocessed object.
+   // returns either a pointer to first element of one- or multi-dimensional
+   // array or a pointer to an unprocessed object.
    void* GetPtr(const char* branch_name, ETypes cktype = kVoidPtr, Int_t* nsize = NULL);
 
-   //! specializations of the call above;
-   //! @note use same methods with type casting for unsigned data types
+   // specializations of the call above;
+   // NOTE: use same methods with type casting for unsigned data types
    Char_t*    GetPtrChar   (const char* bname) { return (Char_t*)    GetPtr(bname, kArrChar);    }
    Short_t*   GetPtrShort  (const char* bname) { return (Short_t*)   GetPtr(bname, kArrShort);   }
    Int_t*     GetPtrInt    (const char* bname) { return (Int_t*)     GetPtr(bname, kArrInt);     }
@@ -142,10 +141,10 @@ class TreeReader {
    Long64_t*  GetPtrLong64 (const char* bname) { return (Long64_t*)  GetPtr(bname, kArrLong64);  }
    TObject*   GetPtrTObject(const char* bname) { return (TObject*)   GetPtr(bname, kTObject);    }
 
-   //! @note this works only for old ntuples
+   // NOTE: this works only for old ntuples
    Bool_t*    GetPtrBool(const char* bname) { return (Bool_t*) GetPtr(bname, kArrBool); }
 
-   //! return branch values for elementary types
+   // return branch values for elementary types
    Bool_t   GetBool  (const char* bname) { return ((Bool_t*)   GetPtr(bname, kBool))  [0]; }
    Char_t   GetChar  (const char* bname) { return ((Char_t*)   GetPtr(bname, kChar))  [0]; }
    Short_t  GetShort (const char* bname) { return ((Short_t*)  GetPtr(bname, kShort)) [0]; }
@@ -158,7 +157,7 @@ class TreeReader {
    Int_t GetPtrStringSize(){return fStringVectorSize;}
 
 
-   //! vector<vector<float> > and vector<vector<int> > tree branches
+   // vector<vector<float> > and vector<vector<int> > tree branches
    std::vector<Float_t>* GetPtrVectorFloat(const char* bname, Int_t &nsize) {
       return (std::vector<Float_t>*) GetPtr(bname, kArrVectFloat, &nsize);
    }
@@ -178,18 +177,18 @@ class TreeReader {
    void  InitTChain(const char** paths, int npaths, const char* treename);
    void  FindLeaf(const char* bname);
 
-   TFile*   fFile;     //< file handle associated with fTree
-   TTree*   fTree;     //< reference to TTree or TChain to read entries from
-   Int_t    fTreeNum;  //< (for TChain) current tree number in list of TTrees
-   Bool_t   fkMC;      //< if kTRUE, MC truth info is available
-   Long64_t fEntry;    //< fTree entry number to read with Get*() methods
+   TFile*   fFile;     // file handle associated with fTree
+   TTree*   fTree;     // reference to TTree or TChain to read entries from
+   Int_t    fTreeNum;  // (for TChain) current tree number in list of TTrees
+   Bool_t   fkMC;      // if kTRUE, MC truth info is available
+   Long64_t fEntry;    // fTree entry number to read with Get*() methods
    Int_t    fStringVectorSize; 
 
-   //! caching
-   std::map<std::string,int> fLeafIdx; //< leaf name => index in arrays below
-   std::vector<TLeaf*>  fLeafAddr;     //< cached leaf address
-   std::vector<ETypes>  fLeafType;     //< cached type of leaf contents
-   std::vector<void*>   fLeafValue;    //< cached payload address
+   // caching
+   std::map<std::string,int> fLeafIdx; // leaf name => index in arrays below
+   std::vector<TLeaf*>  fLeafAddr;     // cached leaf address
+   std::vector<ETypes>  fLeafType;     // cached type of leaf contents
+   std::vector<void*>   fLeafValue;    // cached payload address
 };
 
 //______________________________________________________________________________
@@ -201,7 +200,7 @@ TreeReader::TreeReader(TTree* tree) :
    fEntry(-1),
    fStringVectorSize(0)
 {
-   /**Associates an external TTree or TChain with this class.
+   /* Associates an external TTree or TChain with this class.
     *
     * tree = reference to TTree or TChain. The caller is the owner of the
     * object.
@@ -225,7 +224,7 @@ TreeReader::TreeReader(const char* path, const char* treename) :
    fkMC(kFALSE),
    fEntry(-1)
 {
-   /**Takes TTree from a root file.
+   /* Takes TTree from a root file.
     *
     * path = any root-supported path to a file with TTree.
     */
@@ -241,7 +240,7 @@ TreeReader::TreeReader(const char** paths, int npaths, const char* treename) :
    fkMC(kFALSE),
    fEntry(-1)
 {
-   /**Makes TChain of trees from several root files.
+   /* Makes TChain of trees from several root files.
     *
     * paths = array of any root-supported paths to root files with TTrees;
     * npaths = number of elements in the array above.
@@ -258,7 +257,7 @@ TreeReader::TreeReader(std::vector<std::string> paths, const char* treename) :
    fkMC(kFALSE),
    fEntry(-1)
 {
-   /**Makes TChain of trees from several root files.
+   /* Makes TChain of trees from several root files.
     *
     * paths = array of any root-supported paths to root files with TTrees.
     */
@@ -276,7 +275,7 @@ TreeReader::TreeReader(std::vector<std::string> paths, const char* treename) :
 //______________________________________________________________________________
 TreeReader::~TreeReader()
 {
-   /**Frees memory.
+   /* Frees memory.
     */
 
    if (fTree) delete fTree;
@@ -286,12 +285,12 @@ TreeReader::~TreeReader()
 //______________________________________________________________________________
 void TreeReader::Print()
 {
-   /**Prints to stdout branch names together with descriptions of their content
+   /* Prints to stdout branch names together with descriptions of their content
     * as to be used in an analysis code.
     *
     * Useful to determine which type of variable to use for which branch.
     *
-    * @note for branches containing vector<...> objects of elementary data types
+    * NOTE: for branches containing vector<...> objects of elementary data types
     * or vector<...> objects of vector<int> or vector<float> data types, types
     * of underlying arrays are shown (as to be returned by TreeReader::Get*()
     * call family).
@@ -314,7 +313,7 @@ void TreeReader::Print()
          std::string descr(leaf->GetBranch()->GetClassName());
 
          // known one- and two-dimensional vector<...> arrays
-         // @note force showing data types of well-defined sizes
+         // NOTE: force showing data types of well-defined sizes
          const char* types[] = {
             "float", "Float_t", "char", "Char_t", "signed char", "unsigned char", "UChar_t",
             "short", "short int", "signed short", "signed short int", "Short_t",
@@ -353,7 +352,7 @@ void TreeReader::Print()
       else {
          std::string descr;
 
-         // @note only necessary leaf types are listed
+         // NOTE: only necessary leaf types are listed
          if (leaf->IsA() == TLeafF::Class())
             descr = "Float_t";
          else if (leaf->IsA() == TLeafI::Class())
@@ -391,7 +390,7 @@ void TreeReader::Print()
 //______________________________________________________________________________
 void TreeReader::GetEntry(Long64_t entry)
 {
-   /** Sets event number to retrieve next time TreeReader::Get*() called.
+   /* Sets event number to retrieve next time TreeReader::Get*() called.
     */
 
    if (fTree->IsA() != TChain::Class())
@@ -420,7 +419,7 @@ void TreeReader::GetEntry(Long64_t entry)
 //______________________________________________________________________________
 void* TreeReader::GetPtr(const char* branch_name, ETypes cktype, Int_t* nsize)
 {
-   /** Returns either a pointer to first element of one- or multi-dimensional
+   /* Returns either a pointer to first element of one- or multi-dimensional
     * array or a pointer to an unprocessed object.
     *
     * In particular, for vector<...> arrays of elementary data types as well as
@@ -484,7 +483,7 @@ void* TreeReader::GetPtr(const char* branch_name, ETypes cktype, Int_t* nsize)
 
    // load branch contents into memory, if necessary
    if (!fLeafValue[i]) {
-      // @note it is assumed here that the corresponding branch is not disabled
+      // NOTE: it is assumed here that the corresponding branch is not disabled
       TBranch* br = fLeafAddr[i]->GetBranch();
       if (!br)
          FATAL(Form("TLeaf::GetBranch() failed: %s", branch_name));
@@ -542,7 +541,7 @@ void* TreeReader::GetPtr(const char* branch_name, ETypes cktype, Int_t* nsize)
 //______________________________________________________________________________
 void TreeReader::InitSingleTTree(const char* path, const char* treename)
 {
-   /** Common code for the class constructors: open single TTree.
+   /* Common code for the class constructors: open single TTree.
     */
 
    // verify sizes of elementary data types
@@ -577,7 +576,7 @@ void TreeReader::InitSingleTTree(const char* path, const char* treename)
 //______________________________________________________________________________
 void TreeReader::InitTChain(const char** paths, int npaths, const char* treename)
 {
-   /** Common code for the class constructors: make TChain of several TTrees.
+   /* Common code for the class constructors: make TChain of several TTrees.
     */
 
    // verify sizes of elementary data types
@@ -604,7 +603,7 @@ void TreeReader::InitTChain(const char** paths, int npaths, const char* treename
 //______________________________________________________________________________
 void TreeReader::FindLeaf(const char* bname)
 {
-   /**Finds leaf, determines type of its contents and fills the cache of leafs
+   /* Finds leaf, determines type of its contents and fills the cache of leafs
     * accordingly.
     */
 

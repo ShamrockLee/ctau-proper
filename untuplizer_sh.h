@@ -43,8 +43,8 @@
  * 5. Tree friends are not supported.
  */
 
-#ifndef UNTUPLIZER_H
-#define UNTUPLIZER_H
+#ifndef UNTUPLIZER_SH_H
+#define UNTUPLIZER_SH_H
 
 #include <map>
 #include <string>
@@ -73,7 +73,7 @@ class TreeReader {
 
    //! types of branch/leaf contents
    //! @note some unsigned types may not be supported
-   enum ETypes {
+   enum class ETypes {
       kBool,            //!< single 1-byte boolean (TLeafO)
       kChar,            //!< single 1-byte integer (TLeafB)
       kShort,           //!< single 2-byte integer (TLeafS)
@@ -131,45 +131,45 @@ class TreeReader {
    //!
    //! returns either a pointer to first element of one- or multi-dimensional
    //! array or a pointer to an unprocessed object.
-   void* GetPtr(const char* branch_name, ETypes cktype = kVoidPtr, Int_t* nsize = NULL);
+   void* GetPtr(const char* branch_name, ETypes cktype = ETypes::kVoidPtr, Int_t* nsize = NULL);
 
    //! specializations of the call above;
    //! @note use same methods with type casting for unsigned data types
-   Char_t*    GetPtrChar   (const char* bname) { return (Char_t*)    GetPtr(bname, kArrChar);    }
-   Short_t*   GetPtrShort  (const char* bname) { return (Short_t*)   GetPtr(bname, kArrShort);   }
-   Int_t*     GetPtrInt    (const char* bname) { return (Int_t*)     GetPtr(bname, kArrInt);     }
-   Float_t*   GetPtrFloat  (const char* bname) { return (Float_t*)   GetPtr(bname, kArrFloat);   }
-   Long64_t*  GetPtrLong64 (const char* bname) { return (Long64_t*)  GetPtr(bname, kArrLong64);  }
-   TObject*   GetPtrTObject(const char* bname) { return (TObject*)   GetPtr(bname, kTObject);    }
+   Char_t*    GetPtrChar   (const char* bname) { return (Char_t*)    GetPtr(bname, ETypes::kArrChar);    }
+   Short_t*   GetPtrShort  (const char* bname) { return (Short_t*)   GetPtr(bname, ETypes::kArrShort);   }
+   Int_t*     GetPtrInt    (const char* bname) { return (Int_t*)     GetPtr(bname, ETypes::kArrInt);     }
+   Float_t*   GetPtrFloat  (const char* bname) { return (Float_t*)   GetPtr(bname, ETypes::kArrFloat);   }
+   Long64_t*  GetPtrLong64 (const char* bname) { return (Long64_t*)  GetPtr(bname, ETypes::kArrLong64);  }
+   TObject*   GetPtrTObject(const char* bname) { return (TObject*)   GetPtr(bname, ETypes::kTObject);    }
 
    //! @note this works only for old ntuples
-   Bool_t*    GetPtrBool(const char* bname) { return (Bool_t*) GetPtr(bname, kArrBool); }
+   Bool_t*    GetPtrBool(const char* bname) { return (Bool_t*) GetPtr(bname, ETypes::kArrBool); }
 
    //! return branch values for elementary types
-   Bool_t   GetBool  (const char* bname) { return ((Bool_t*)   GetPtr(bname, kBool))  [0]; }
-   Char_t   GetChar  (const char* bname) { return ((Char_t*)   GetPtr(bname, kChar))  [0]; }
-   Short_t  GetShort (const char* bname) { return ((Short_t*)  GetPtr(bname, kShort)) [0]; }
-   Int_t    GetInt   (const char* bname) { return ((Int_t*)    GetPtr(bname, kInt))   [0]; }
-   Float_t  GetFloat (const char* bname) { return ((Float_t*)  GetPtr(bname, kFloat)) [0]; }
-   Double_t GetDouble(const char* bname) { return ((Double_t*) GetPtr(bname, kDouble))[0]; }
-   Long64_t GetLong64(const char* bname) { return ((Long64_t*) GetPtr(bname, kLong64))[0]; }
+   Bool_t   GetBool  (const char* bname) { return ((Bool_t*)   GetPtr(bname, ETypes::kBool))  [0]; }
+   Char_t   GetChar  (const char* bname) { return ((Char_t*)   GetPtr(bname, ETypes::kChar))  [0]; }
+   Short_t  GetShort (const char* bname) { return ((Short_t*)  GetPtr(bname, ETypes::kShort)) [0]; }
+   Int_t    GetInt   (const char* bname) { return ((Int_t*)    GetPtr(bname, ETypes::kInt))   [0]; }
+   Float_t  GetFloat (const char* bname) { return ((Float_t*)  GetPtr(bname, ETypes::kFloat)) [0]; }
+   Double_t GetDouble(const char* bname) { return ((Double_t*) GetPtr(bname, ETypes::kDouble))[0]; }
+   Long64_t GetLong64(const char* bname) { return ((Long64_t*) GetPtr(bname, ETypes::kLong64))[0]; }
 
-   std::string* GetPtrString(const char* bname) { return (std::string*) GetPtr(bname, kArrString); }
+   std::string* GetPtrString(const char* bname) { return (std::string*) GetPtr(bname, ETypes::kArrString); }
    Int_t GetPtrStringSize(){return fStringVectorSize;}
 
 
    //! vector<vector<float> > and vector<vector<int> > tree branches
    std::vector<Float_t>* GetPtrVectorFloat(const char* bname, Int_t &nsize) {
-      return (std::vector<Float_t>*) GetPtr(bname, kArrVectFloat, &nsize);
+      return (std::vector<Float_t>*) GetPtr(bname, ETypes::kArrVectFloat, &nsize);
    }
    std::vector<Float_t>* GetPtrVectorFloat(const char* bname) {
-      return (std::vector<Float_t>*) GetPtr(bname, kArrVectFloat);
+      return (std::vector<Float_t>*) GetPtr(bname, ETypes::kArrVectFloat);
    }
    std::vector<Int_t>* GetPtrVectorInt(const char* bname, Int_t &nsize) {
-      return (std::vector<Int_t>*) GetPtr(bname, kArrVectInt, &nsize);
+      return (std::vector<Int_t>*) GetPtr(bname, ETypes::kArrVectInt, &nsize);
    }
    std::vector<Int_t>* GetPtrVectorInt(const char* bname) {
-      return (std::vector<Int_t>*) GetPtr(bname, kArrVectInt);
+      return (std::vector<Int_t>*) GetPtr(bname, ETypes::kArrVectInt);
    }
 
  protected:
@@ -449,32 +449,32 @@ void* TreeReader::GetPtr(const char* branch_name, ETypes cktype, Int_t* nsize)
    }
 
    // verify leaf type, if requested
-   if (cktype != kVoidPtr) {
-      if (cktype == kArrFloat) {
-         if (fLeafType[i] != kArrFloatTLeaf && fLeafType[i] != kArrFloatVector)
+   if (cktype != ETypes::kVoidPtr) {
+      if (cktype == ETypes::kArrFloat) {
+         if (fLeafType[i] != ETypes::kArrFloatTLeaf && fLeafType[i] != ETypes::kArrFloatVector)
             FATAL(Form("branch is not of type Float_t*: %s", branch_name));
-      } else if (cktype == kArrInt) {
-         if (fLeafType[i] != kArrIntTLeaf && fLeafType[i] != kArrIntVector &&
-             fLeafType[i] != kArrUIntVector)
+      } else if (cktype == ETypes::kArrInt) {
+         if (fLeafType[i] != ETypes::kArrIntTLeaf && fLeafType[i] != ETypes::kArrIntVector &&
+             fLeafType[i] != ETypes::kArrUIntVector)
             FATAL(Form("branch is not of type (U)Int_t*: %s", branch_name));
-      } else if (cktype == kArrChar) {
-         if (fLeafType[i] != kArrCharTLeaf && fLeafType[i] != kArrCharVector &&
-             fLeafType[i] != kArrUCharVector)
+      } else if (cktype == ETypes::kArrChar) {
+         if (fLeafType[i] != ETypes::kArrCharTLeaf && fLeafType[i] != ETypes::kArrCharVector &&
+             fLeafType[i] != ETypes::kArrUCharVector)
             FATAL(Form("branch is not of type (U)Char_t*: %s", branch_name));
-      } else if (cktype == kArrShort) {
-         if (fLeafType[i] != kArrShortTLeaf && fLeafType[i] != kArrShortVector &&
-             fLeafType[i] != kArrUShortVector)
+      } else if (cktype == ETypes::kArrShort) {
+         if (fLeafType[i] != ETypes::kArrShortTLeaf && fLeafType[i] != ETypes::kArrShortVector &&
+             fLeafType[i] != ETypes::kArrUShortVector)
             FATAL(Form("branch is not of type (U)Short_t*: %s", branch_name));
-      } else if (cktype == kArrLong64) {
-         if (fLeafType[i] != kArrLong64TLeaf && fLeafType[i] != kArrLong64Vector &&
-             fLeafType[i] != kArrULong64Vector)
+      } else if (cktype == ETypes::kArrLong64) {
+         if (fLeafType[i] != ETypes::kArrLong64TLeaf && fLeafType[i] != ETypes::kArrLong64Vector &&
+             fLeafType[i] != ETypes::kArrULong64Vector)
             FATAL(Form("branch is not of type (U)Long64_t*: %s", branch_name));
-      } else if (cktype == kTObject) {
-         if (fLeafType[i] != kTObject)
+      } else if (cktype == ETypes::kTObject) {
+         if (fLeafType[i] != ETypes::kTObject)
             FATAL(Form("branch content is not inherited from TObject: %s", branch_name));
       } 
-      else if (cktype == kArrString) {
-	if (fLeafType[i] != kArrStringVector)
+      else if (cktype == ETypes::kArrString) {
+	if (fLeafType[i] != ETypes::kArrStringVector)
 	   FATAL(Form("branch is not of type string*: %s", branch_name));
       }      
       else
@@ -493,29 +493,29 @@ void* TreeReader::GetPtr(const char* branch_name, ETypes cktype, Int_t* nsize)
 
       // pointer to actual leaf payload
       void* ptr = fLeafAddr[i]->GetValuePointer();
-      if (fLeafType[i] == kTObject)
+      if (fLeafType[i] == ETypes::kTObject)
          ptr = *((void**)ptr);
 
       // cache address to payload
-      if (fLeafType[i] == kArrFloatVector)
+      if (fLeafType[i] == ETypes::kArrFloatVector)
          fLeafValue[i] = &((std::vector<float>*)ptr)->front();
-      else if (fLeafType[i] == kArrIntVector)
+      else if (fLeafType[i] == ETypes::kArrIntVector)
          fLeafValue[i] = &((std::vector<int>*)ptr)->front();
-      else if (fLeafType[i] == kArrUIntVector)
+      else if (fLeafType[i] == ETypes::kArrUIntVector)
          fLeafValue[i] = &((std::vector<unsigned int>*)ptr)->front();
-      else if (fLeafType[i] == kArrCharVector)
+      else if (fLeafType[i] == ETypes::kArrCharVector)
          fLeafValue[i] = &((std::vector<char>*)ptr)->front();
-      else if (fLeafType[i] == kArrUCharVector)
+      else if (fLeafType[i] == ETypes::kArrUCharVector)
          fLeafValue[i] = &((std::vector<unsigned char>*)ptr)->front();
-      else if (fLeafType[i] == kArrShortVector)
+      else if (fLeafType[i] == ETypes::kArrShortVector)
          fLeafValue[i] = &((std::vector<short>*)ptr)->front();
-      else if (fLeafType[i] == kArrUShortVector)
+      else if (fLeafType[i] == ETypes::kArrUShortVector)
          fLeafValue[i] = &((std::vector<unsigned short>*)ptr)->front();
-      else if (fLeafType[i] == kArrLong64Vector)
+      else if (fLeafType[i] == ETypes::kArrLong64Vector)
          fLeafValue[i] = &((std::vector<long>*)ptr)->front();
-      else if (fLeafType[i] == kArrULong64Vector)
+      else if (fLeafType[i] == ETypes::kArrULong64Vector)
          fLeafValue[i] = &((std::vector<unsigned long>*)ptr)->front();
-      else if (fLeafType[i] == kArrStringVector)
+      else if (fLeafType[i] == ETypes::kArrStringVector)
 	{
 	  fLeafValue[i] = &((std::vector<std::string>*)ptr)->front();
 	  fStringVectorSize = ((std::vector<std::string>*)ptr)->size();
@@ -525,12 +525,12 @@ void* TreeReader::GetPtr(const char* branch_name, ETypes cktype, Int_t* nsize)
    }
 
    // special case of vector<vector<float> > and vector<vector<int> >
-   if (fLeafType[i] == kArrVectFloat) {
+   if (fLeafType[i] == ETypes::kArrVectFloat) {
       if (nsize)
          *nsize = (Int_t) ((std::vector<std::vector<float> >*)fLeafValue[i])->size();
       return &((std::vector<std::vector<float> >*)fLeafValue[i])->front();
    }
-   else if (fLeafType[i] == kArrVectInt) {
+   else if (fLeafType[i] == ETypes::kArrVectInt) {
       if (nsize)
          *nsize = (Int_t) ((std::vector<std::vector<int> >*)fLeafValue[i])->size();
       return &((std::vector<std::vector<int> >*)fLeafValue[i])->front();
@@ -622,76 +622,76 @@ void TreeReader::FindLeaf(const char* bname)
 
       if (descr.compare("vector<float>") == 0 ||
           descr.compare("vector<Float_t>") == 0)
-         type = kArrFloatVector;
+         type = ETypes::kArrFloatVector;
       else if (descr.compare("vector<int>") == 0 ||
                descr.compare("vector<signed>") == 0 ||
                descr.compare("vector<signed int>") == 0 ||
                descr.compare("vector<Int_t>") == 0)
-         type = kArrIntVector;
+         type = ETypes::kArrIntVector;
       else if (descr.compare("vector<unsigned>") == 0 ||
                descr.compare("vector<unsigned int>") == 0 ||
                descr.compare("vector<UInt_t>") == 0)
-         type = kArrUIntVector;
+         type = ETypes::kArrUIntVector;
       else if (descr.compare("vector<char>") == 0 ||
                descr.compare("vector<Char_t>") == 0)
-         type = kArrCharVector;
+         type = ETypes::kArrCharVector;
       else if (descr.compare("vector<unsigned char>") == 0 ||
                descr.compare("vector<UChar_t>") == 0)
-         type = kArrUCharVector;
+         type = ETypes::kArrUCharVector;
       else if (descr.compare("vector<short>") == 0 ||
                descr.compare("vector<short int>") == 0 ||
                descr.compare("vector<signed short>") == 0 ||
                descr.compare("vector<signed short int>") == 0 ||
                descr.compare("vector<Short_t>") == 0)
-         type = kArrShortVector;
+         type = ETypes::kArrShortVector;
       else if (descr.compare("vector<unsigned short>") == 0 ||
                descr.compare("vector<unsigned short int>") == 0 ||
                descr.compare("vector<UShort_t>") == 0)
-         type = kArrUShortVector;
+         type = ETypes::kArrUShortVector;
       else if (descr.compare("vector<long>") == 0 ||
                descr.compare("vector<long int>") == 0 ||
                descr.compare("vector<signed long>") == 0 ||
                descr.compare("vector<signed long int>") == 0 ||
                descr.compare("vector<Long64_t>") == 0 ||
                descr.compare("vector<Long>") == 0)
-         type = kArrLong64Vector;
+         type = ETypes::kArrLong64Vector;
       else if (descr.compare("vector<unsigned long>") == 0 ||
                descr.compare("vector<unsigned long int>") == 0 ||
                descr.compare("vector<ULong64_t>") == 0 ||
                descr.compare("vector<ULong_t>") == 0)
-         type = kArrULong64Vector;
+         type = ETypes::kArrULong64Vector;
       else if (descr.compare("vector<vector<float> >") == 0 ||
                descr.compare("vector<vector<Float_t> >") == 0)
-         type = kArrVectFloat;
+         type = ETypes::kArrVectFloat;
       else if (descr.compare("vector<vector<int> >") == 0 ||
                descr.compare("vector<vector<signed> >") == 0 ||
                descr.compare("vector<vector<signed int> >") == 0 ||
                descr.compare("vector<vector<Int_t> >") == 0)
-         type = kArrVectInt;
+         type = ETypes::kArrVectInt;
      else if (descr.compare("vector<string>") == 0)
-         type = kArrStringVector;
+         type = ETypes::kArrStringVector;
      else
-         type = kVoidPtr;
+         type = ETypes::kVoidPtr;
    } // TLeafElement
 
    // objects inherited from TObject
    else if (leaf->IsA() == TLeafObject::Class())
-      type = kTObject;
+      type = ETypes::kTObject;
 
    // fixed/variable length arrays of elementary data types
    else if (leaf->GetLeafCount() || leaf->GetLenStatic() > 1) {
       if (leaf->IsA() == TLeafF::Class())
-         type = kArrFloatTLeaf;
+         type = ETypes::kArrFloatTLeaf;
       else if (leaf->IsA() == TLeafI::Class())
-         type = kArrIntTLeaf;
+         type = ETypes::kArrIntTLeaf;
       else if (leaf->IsA() == TLeafB::Class())
-         type = kArrCharTLeaf;
+         type = ETypes::kArrCharTLeaf;
       else if (leaf->IsA() == TLeafS::Class())
-         type = kArrShortTLeaf;
+         type = ETypes::kArrShortTLeaf;
       else if (leaf->IsA() == TLeafL::Class())
-         type = kArrLong64TLeaf;
+         type = ETypes::kArrLong64TLeaf;
       else if (leaf->IsA() == TLeafO::Class())
-         type = kArrBool;
+         type = ETypes::kArrBool;
       else
          FATAL(Form("branch contains an unknown data type: %s", bname));
    }
@@ -699,19 +699,19 @@ void TreeReader::FindLeaf(const char* bname)
    // single variables of elementary data types
    else if (!leaf->GetLeafCount() && leaf->GetLenStatic() == 1) {
       if (leaf->IsA() == TLeafF::Class())
-         type = kFloat;
+         type = ETypes::kFloat;
       else if (leaf->IsA() == TLeafI::Class())
-         type = kInt;
+         type = ETypes::kInt;
       else if (leaf->IsA() == TLeafB::Class())
-         type = kChar;
+         type = ETypes::kChar;
       else if (leaf->IsA() == TLeafS::Class())
-         type = kShort;
+         type = ETypes::kShort;
       else if (leaf->IsA() == TLeafD::Class())
-         type = kDouble;
+         type = ETypes::kDouble;
       else if (leaf->IsA() == TLeafL::Class())
-         type = kLong64;
+         type = ETypes::kLong64;
       else if (leaf->IsA() == TLeafO::Class())
-         type = kBool;
+         type = ETypes::kBool;
       else
          FATAL(Form("branch contains an unknown data type: %s", bname));
    }
