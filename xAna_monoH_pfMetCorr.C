@@ -30,28 +30,33 @@ void efferr(float nsig,float ntotal,float factor=1) {
 void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile, bool toRecreateOutFile=true, bool debug=false) {
     TreeReader data(nameInputFile.data());
     ULong64_t nTotal=0;
-    ULong64_t nPass[20]={0};
+    // ULong64_t nPass[20]={0};
     TH1F* hPfMetCorrPt = new TH1F("hPfMetCorrPt", "PfMetCorrPt", 512, 0, 512);
     TH1F* hPfMetCorrPhi = new TH1F("hPfMetCorrPhi", "PfMetCorrPhi", 512, 0, 8);
     TH1F* hPfMetCorrSig = new TH1F("hPfMetCorrSig", "PfMetCorrSig", 512, 0, 125);
-    // TH1C* hFATnJet = new TH1C("hFATnJet", "FATnJet", 8, 0, 4);
-    // TH1C* hTHINnJet = new TH1C("hTHINnJet", "THINnJet", 64, 0, 64);
+    TH1C* hFATnJet = new TH1C("hFATnJet", "FATnJet", 8, 0, 4);
+    TH1C* hTHINnJet = new TH1C("hTHINnJet", "THINnJet", 64, 0, 64);
     TH1C* hNGoodTHINJet = new TH1C("hNGoodTHINJet", "nGoodTHINJet", 64, 0, 64);
     TH1C* hNGoodTHINBJet = new TH1C("hNGoodTHINBJet", "nGoodTHINBJet", 64, 0, 64);
-    TH1F* hEleP4M = new TH1F("hEleP4M", "eleP4->M()", 512, 0, 0.5);
-    TH1F* hMuP4M = new TH1F("hMuP4M", "muP4->M()", 512, 0, 0.25);
-    TH1F* hHPSTau_4MomentumM = new TH1F("hHPSTau_4MomentumM", "HPSTau_4Momentum->M()", 512, 0, 0.25);
+    TH1F* hElePairP4M = new TH1F("hEleP4M", "eleP4->M()", 512, 0, 0.5);
+    TH1F* hMuPairP4M = new TH1F("hMuP4M", "muP4->M()", 512, 0, 0.25);
+    // TH1F* hHPSTau_4MomentumM = new TH1F("hHPSTau_4MomentumM", "HPSTau_4Momentum->M()", 512, 0, 0.25);
     for(Long64_t jEntry=0; jEntry<data.GetEntriesFast() ;jEntry++) {
+        /*
         if (jEntry % 50000 == 0)
             fprintf(stderr, "Processing event %lli of %lli\n", jEntry + 1, data.GetEntriesFast());
         nPass[0]++;
+        */
         data.GetEntry(jEntry);
         nTotal ++;
+        /*
         //0. has a good vertex
         int nVtx        = data.GetInt("nVtx");
         if(nVtx<1)continue;
         nPass[0]++;
+        */
 
+        /*
         //1. trigger 
         std::string* trigName = data.GetPtrString("hlt_trigName");
         std::vector<bool> &trigResult = *((std::vector<bool>*) data.GetPtr("hlt_trigResult"));
@@ -97,12 +102,14 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         }
         if( isData && !passFilter )continue;
         nPass[2]++;
-        
+        */
         float pfMetCorrPt = data.GetFloat("pfMetCorrPt");
         float pfMetCorrPhi = data.GetFloat("pfMetCorrPhi");
+        /*
         if(pfMetCorrPt<170.)continue;
         nPass[3]++;
-        
+        */
+        /*
         // (NOT) // veto extra electrons
         int nEle = data.GetInt("nEle");
         TClonesArray* eleP4 = (TClonesArray*) data.GetPtrTObject("eleP4");
@@ -119,7 +126,8 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         } 
         // if(myEles.size()>0)continue;
         nPass[4]++;
-        
+        */
+        /*
         // (NOT) //veto extra muons
         int nMu = data.GetInt("nMu");
         TClonesArray* muP4 = (TClonesArray*) data.GetPtrTObject("muP4");
@@ -128,7 +136,9 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         float* muNeHadIso = data.GetPtrFloat("muNeHadIso");
         float* muGamIso   = data.GetPtrFloat("muGamIso");
         float* muPUPt     = data.GetPtrFloat("muPUPt");
+        */
         
+        /*
         std::vector<int> myMuos;
         myMuos.clear();
         for(int im = 0; im < nMu; im++) {
@@ -145,7 +155,9 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         }
         // if(myMuos.size()>0)continue;
         nPass[5]++;
+        */
         
+        /*
         // (NOT) //veto extra taus
         int nTau = data.GetInt("HPSTau_n");
         TClonesArray* tauP4 = (TClonesArray*) data.GetPtrTObject("HPSTau_4Momentum");
@@ -164,7 +176,9 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         }
         //if(myTaus.size()>0)continue;
         nPass[6]++;
+        */
         
+        /*
         //find a pair of b-jets that could be a Higgs candidate
         const int nTHINJets     = data.GetInt("THINnJet");
         TClonesArray* thinjetP4 = (TClonesArray*) data.GetPtrTObject("THINjetP4");
@@ -209,11 +223,14 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
                 }
             } // end of inner loop jet
         } // end of outer loop jet
+        */
 
-
+        /*
         if(Hindex[0]<0 || Hindex[1]<0)continue;
         nPass[7]++;
+        */
 
+        /*
         TLorentzVector  bjet[2];
         for(int ib=0; ib<2;ib++)bjet[ib] = 
                     *((TLorentzVector*)thinjetP4->At(Hindex[ib]));
@@ -252,15 +269,16 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         nGoodTHINBJets++;
 
         } // end of loop
+        */
         
         Int_t nGenPar = data.GetInt("nGenPar");
         hPfMetCorrPt->Fill(pfMetCorrPt);
         hPfMetCorrPhi->Fill(pfMetCorrPhi);
         hPfMetCorrSig->Fill(data.GetFloat("pfMetCorrSig"));
-        hNGoodTHINJet->Fill(nGoodTHINJets);
-        hNGoodTHINBJet->Fill(nGoodTHINBJets);
-        // hFATnJet->Fill(data.GetInt("FATnJet"));
-        // hTHINnJet->Fill(data.GetInt("THINnJet"));
+        // hNGoodTHINJet->Fill(nGoodTHINJets);
+        // hNGoodTHINBJet->Fill(nGoodTHINBJets);
+        hFATnJet->Fill(data.GetInt("FATnJet"));
+        hTHINnJet->Fill(data.GetInt("THINnJet"));
         // hEleP4M->Fill(((TLorentzVector *)data.GetPtrTObject("eleP4"))->M());
         // hMuP4M->Fill(((TLorentzVector *)data.GetPtrTObject("muP4"))->M());
     }
@@ -268,12 +286,12 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
     hPfMetCorrPt->Write();
     hPfMetCorrPhi->Write();
     hPfMetCorrSig->Write();
-    //hFATnJet->Write();
-    //hTHINnJet->Write();
-    hNGoodTHINJet->Write();
-    hNGoodTHINBJet->Write();
-    hEleP4M->Write();
-    hMuP4M->Write();
-    hHPSTau_4MomentumM->Write();
+    hFATnJet->Write();
+    hTHINnJet->Write();
+    //hNGoodTHINJet->Write();
+    //hNGoodTHINBJet->Write();
+    hElePairP4M->Write();
+    hMuPairP4M->Write();
+    //hHPSTau_4MomentumM->Write();
     outFile->Close();
 }

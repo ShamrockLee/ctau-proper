@@ -62,24 +62,26 @@ void Main(const char* nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
         reallyDeleteCanvas = deleteCanvas;
     }
     TString nameFileHead = "pfMetCorr";
-    TString nameFileTail = "20200224";
+    TString nameFileTail = "20200310";
     TString namesFileVariable[] = {"Mx-1", "Mx2-1_Mx1-0p1_ctau-1", "Mx-150", "Mx2-150_Mx1-1_ctau-1"};
     TString namesHistogramSelected[] = {"hPfMetCorrPt", "hPfMetCorrPhi", "hPfMetCorrSig", 
         "hNGoodTHINJet", "hNGoodTHINBJet", 
         "hEleP4M", "hMuP4M", "hHPSTau_4MomentumM"};
     for (int i=0; i<4; i++) {
         TString nameFileVariable = namesFileVariable[i];
-        TFile* ptfile = new TFile((TString)"output_" + nameFileHead + "_selected_" + nameFileVariable + "_" + nameFileTail + ".root");
+        TFile* ptfile = new TFile((TString)"output_" + nameFileHead + "_" + nameFileVariable + "_" + nameFileTail + ".root");
         TString nameHistogram;
         for (int j=0;j<8;j++) {
             c1->Clear();
             nameHistogram = namesHistogramSelected[j];
             ((TH1F *)ptfile->Get(nameHistogram))->Draw();
-            c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_selected_" + nameFileVariable + "_" +  nameHistogram + ".svg");
+            c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogram + ".svg");
         }
+        /*
         gStyle->SetOptFit(1111);
         c1->Clear();
         FitExp((TH1F *)ptfile->Get("hEleP4M"), c1);
-        c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_selected_" + nameFileVariable + "_" +  "hEleP4M" + "_fit" + ".svg");
+        c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  "hEleP4M" + "_fit" + ".svg");
+        */
     }
 }
