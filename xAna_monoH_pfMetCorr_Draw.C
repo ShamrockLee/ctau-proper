@@ -31,13 +31,17 @@ Double_t fSumHist(TH1F* phist, Int_t iBinStart, Int_t iBinEnd) {
 Double_t fSumHist(TH1F* phist, Int_t iBinStart=1) {
     return fSumHist(phist, iBinStart, phist->GetNbinsX()+1);
 }
-
 Double_t doubleDecayingExpWithTau(Double_t *x, Double_t *p) {
     return p[0] * TMath::Exp(-*x/p[1]);
 }
+Double_t doubleGrowingExpWithTau(Double_t *x, Double_t *p) {
+    return p[0] * TMath::Exp(*x/p[1]);
+}
 
-void FitExp(TH1F* hist, TCanvas* ptc, const char* strFitOptions, const char* strFitDrawOptions, const char* nameTF, Double_t xmin, Double_t xmax) {
-    TF1 *tfExpWithTau = new TF1(nameTF, &doubleDecayingExpWithTau, xmin, xmax, 2);
+void FitExp(TH1F* hist, TCanvas* ptc, bool isDecaying, const char* strFitOptions, const char* strFitDrawOptions, const char* nameTF, Double_t xmin, Double_t xmax) {
+    Double_t (*doubleFunctionPointer)(Double_t*, Double_t*);
+    doubleFunctionPointer = isDecaying ? doubleDecayingExpWithTau : doubleGrowingExpWithTau;
+    TF1 *tfExpWithTau = new TF1(nameTF, doubleFunctionPointer, xmin, xmax, 2);
     tfExpWithTau->SetParameter(0, hist->GetMaximum());
     tfExpWithTau->SetParameter(1, hist->GetBinWidth(1) * fSumHist(hist) / tfExpWithTau->GetParameter(0));
     tfExpWithTau->SetParLimits(0, 0, tfExpWithTau->GetParameter(0)*1.5);
@@ -51,8 +55,8 @@ void FitExp(TH1F* hist, TCanvas* ptc, const char* strFitOptions, const char* str
     hist->Fit(tfExpWithTau, strFitOptions, strFitDrawOptions);
 }
 
-void FitExp(TH1F* hist, TCanvas* ptc, const char* strFitOptions="L", const char* strFitDrawOptions="", const char* nameTF="tfExpWithTau") {
-    return FitExp(hist, ptc, strFitOptions, strFitDrawOptions, nameTF, 0, hist->GetBinWidth(1)*hist->GetNbinsX());
+void FitExp(TH1F* hist, TCanvas* ptc, bool isDecaying=true, const char* strFitOptions="L", const char* strFitDrawOptions="", const char* nameTF="tfExpWithTau") {
+    return FitExp(hist, ptc, isDecaying, strFitOptions, strFitDrawOptions, nameTF, 0, hist->GetBinWidth(1)*hist->GetNbinsX());
 }
 
 void Main(const char* nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=true) {
@@ -64,24 +68,36 @@ void Main(const char* nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
     TString nameFileHead = "pfMetCorr";
     TString nameFileTail = "20200310";
     TString namesFileVariable[] = {"Mx-1", "Mx2-1_Mx1-0p1_ctau-1", "Mx-150", "Mx2-150_Mx1-1_ctau-1"};
-    TString namesHistogramSelected[] = {"hPfMetCorrPt", "hPfMetCorrPhi", "hPfMetCorrSig", 
-        "hNGoodTHINJet", "hNGoodTHINBJet", 
-        "hEleP4M", "hMuP4M", "hHPSTau_4MomentumM"};
+    TString namesHistogram[] = {"hPfMetCorrPt", "hPfMetCorrPhi", "hPfMetCorrSig", 
+        "hFATnJet", "hTHINnJet"};
     for (int i=0; i<4; i++) {
         TString nameFileVariable = namesFileVariable[i];
         TFile* ptfile = new TFile((TString)"output_" + nameFileHead + "_" + nameFileVariable + "_" + nameFileTail + ".root");
         TString nameHistogram;
-        for (int j=0;j<8;j++) {
+        for (int j=0;j<5;j++) {
             c1->Clear();
-            nameHistogram = namesHistogramSelected[j];
+            nameHistogram = namesHistogram[j];
             ((TH1F *)ptfile->Get(nameHistogram))->Draw();
             c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogram + ".svg");
         }
-        /*
+        
         gStyle->SetOptFit(1111);
+        TString nameHistogramToFit;
         c1->Clear();
-        FitExp((TH1F *)ptfile->Get("hEleP4M"), c1);
-        c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  "hEleP4M" + "_fit" + ".svg");
-        */
+        nameHistogramToFit = "hPfMetCorrPt";
+        ((TH1F *)ptfile->Get(nameHistogramToFit))->Fit("landau");
+        c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogramToFit + "_fit" + ".svg");
+        c1->Clear();
+        nameHistogramToFit = "hPfMetCorrSig";
+        ((TH1F *)ptfile->Get(nameHistogramToFit))->Fit("landau");
+        c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogramToFit + "_fit" + ".svg");
+        c1->Clear();
+        nameHistogramToFit = "hTHINnJet";
+        ((TH1F *)ptfile->Get(nameHistogramToFit))->Fit("landau");
+        c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogramToFit + "_fit" + ".svg");
+        // c1->Clear();
+        // FitExp((TH1F *)ptfile->Get("hEleP4M"), c1);
+        // c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  "hEleP4M" + "_fit" + ".svg");
+        
     }
 }
