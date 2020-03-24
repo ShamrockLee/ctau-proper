@@ -1,0 +1,46 @@
+root
+.L xAna_monoH_pfMetCorr.C++
+xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_pfMetCorr_Mx-1_20200324.root");
+.q
+root
+.L xAna_monoH_pfMetCorr.C++
+xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-0p1_ctau-1_13TeV-madgraph.root", "output_pfMetCorr_Mx2-1_Mx1-0p1_ctau-1_20200324.root");
+.q
+root
+.L xAna_monoH_pfMetCorr.C++
+xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_pfMetCorr_Mx-150_20200324.root");
+.q
+root
+.L xAna_monoH_pfMetCorr.C++
+xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-1_ctau-1_13TeV-madgraph.root", "output_pfMetCorr_Mx2-150_Mx1-1_ctau-1_20200324.root");
+.q
+
+
+
+root
+.L dumpCompareMultiplePDF.C++
+dumpCompareMultiplePDF("/home/shamrock/Documents/Project_HEP/ROOT_assignment_20191210/proper-ctau/output_pfMetCorr_Mx2-1_Mx1-0p1_ctau-1_20200324.root", "/home/shamrock/Documents/Project_HEP/ROOT_assignment_20191210/proper-ctau/outpt_Mx-1_20200324.root")
+.q
+
+
+
+root
+.L xAna_monoH_pfMetCorr_Draw.C++
+Main("../out_images/output_pfMetCorr_20200324");
+.q
+
+
+pfMetCorr_Mx-1_Mx2-1_Mx1-0p1_ctau-1_hFATnJet
+pfMetCorr_Mx-1_ctau-1_hEleP4MMax
+pfMetCorr_Mx2-1_Mx1-0p1_ctau-1_hEleP4MMax
+pfMetCorr_Mx2-1_Mx1-0p1_ctau-1_hEleP4MtMax
+pfMetCorr_Mx2-1_Mx1-0p1_ctau-1_hMuP4MMax
+pfMetCorr_Mx2-1_Mx1-0p1_ctau-1_hMuP4MtMax
+
+significance =value/sigma (standard error)
+3 --excluding
+5 --discover
+
+THINJet: AK4 Jet, jets with smaller jet radius
+
+p_t transverse momentum
