@@ -359,72 +359,12 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         Int_t nGenPar = data.GetInt("nGenPar");
         Int_t nEle = data.GetInt("nEle");
         Int_t* eleCharge = (Int_t*) data.GetPtrInt("eleCharge");
+        TClonesArray* eleP4 = (TClonesArray*)data.GetPtrTObject("eleP4");
         // TClonesArray* eleCharge = (TClonesArray*) data.GetPtrTObject("eleCharge");
 
         // Electron pairs
 
-        Int_t nEleNeg = 0;
-        std::vector<Int_t> vectorIElesNeg(nEle);
-        std::vector<Int_t> vectorIElesPos(vectorIElesNeg);
-        for (Int_t iEle=0; iEle<nEle; iEle++) {
-            if ((eleCharge[iEle]) < 0) {
-                vectorIElesNeg[nEleNeg] = iEle;
-                nEleNeg++;
-            } else {
-                vectorIElesPos[iEle - nEleNeg] = iEle;
-            }
-            vectorIElesNeg.resize(nEleNeg);
-            vectorIElesPos.resize(nEle-nEleNeg);
-        }
-
-        TClonesArray* eleP4 = (TClonesArray*)data.GetPtrTObject("eleP4");
-        std::vector<Double_t> vectorEleP4M2(nEle);
-        for (Int_t i=0; i<nEle; i++) {
-            vectorEleP4M2[i] = ((TLorentzVector*)eleP4->At(i))->M2();
-        }
-        // auto compareM2 = [eleP4](Int_t i, Int_t j){return ((TLorentzVector*)eleP4->At(i))->M2() < ((TLorentzVector*)eleP4->At(j))->M2();};
-        // auto compareM2 = [vectorEleP4M2](Int_t i, Int_t j, bool (*comparor)(Int_t, Int_t) = nullptr) {
-        //     return (comparor == nullptr) ? (*comparor)(vectorEleP4M2[i], vectorEleP4M2[j]) : vectorEleP4M2[i] < vectorEleP4M2[j];};
-        auto compareEleM2Inversed = [vectorEleP4M2](Int_t i, Int_t j) {return vectorEleP4M2[i] > vectorEleP4M2[j];};
-        std::sort(vectorIElesNeg.begin(), vectorIElesNeg.end(), compareEleM2Inversed);
-        std::sort(vectorIElesPos.begin(), vectorIElesPos.end(), compareEleM2Inversed);
-        // std::vector<Int_t*> vectorElePairsValid(nEle <= nEleNeg*2 ? nEleNeg : nEle - nEleNeg);
-        std::vector<TLorentzVector> vectorP4ElePairsValid(nEle <= nEleNeg*2 ? nEleNeg : nEle - nEleNeg);
-        // for (Int_t jEleNeg=0, jElePos=0; jEleNeg<nEleNeg && jElePos<nEle-nEleNeg; (vectorEleP4M2.at(jEleNeg) <= vectorEleP4M2.at(jElePos)) ? jEleNeg++ : jElePos++)
-        //     if (fcnIsM2CloseEnough(vectorEleP4M2.at(jEleNeg), vectorEleP4M2.at(jElePos))) vectorElePairsValid
-        Int_t jEleNeg = 0, jElePos = 0, jElePairValid = 0;
-        // Int_t **currentIElePairs;
-        while (jEleNeg < nEleNeg && jElePos < nEle - nEleNeg) {
-            if (fcnIsM2CloseEnough(vectorEleP4M2.at(jEleNeg), vectorEleP4M2.at(jElePos))) {
-                // currentIElePairs = new Int_t*;
-                // (*currentIElePairs)[0] = vectorIElesNeg[jEleNeg];
-                // (*currentIElePairs)[1] = vectorIElesPos[jElePos];
-                // vectorElePairsValid[jElePairValid] = *currentIElePairs;
-                vectorP4ElePairsValid[jElePairValid] = *((TLorentzVector*)eleP4->At(vectorIElesNeg[jEleNeg])) + *((TLorentzVector*)(eleP4->At(vectorIElesPos[jElePos])));
-                jEleNeg++, jElePos++, jElePairValid++;
-            } else if (jEleNeg <= jElePos) jEleNeg++; else jElePos++;
-        }
-        vectorP4ElePairsValid.resize(jElePairValid);
-        vectorP4ElePairsValid.shrink_to_fit();
-        Double_t p4MPairCurrent, p4MPairMax, p4MPairMaxMt, p4MtPairCurrent, p4MtPairMax;
-        if (jElePairValid > 0) {
-            p4MPairMax = p4MPairMaxMt = (vectorP4ElePairsValid.at(0)).M();
-            p4MtPairMax = vectorP4ElePairsValid.at(0).Mt();
-            for(Int_t iP4 = 0; iP4 < jElePairValid; iP4++) {
-                p4MPairCurrent = vectorP4ElePairsValid[iP4].M();
-                p4MtPairCurrent = vectorP4ElePairsValid[iP4].Mt();
-                if (p4MPairCurrent > p4MPairMax) {
-                    p4MPairMax = p4MPairCurrent;
-                }
-                if (p4MtPairCurrent > p4MtPairMax) {
-                    p4MtPairMax = p4MtPairCurrent;
-                    // p4MPairMaxMt = p4MPairCurrent;
-                }
-            }
-            hElePairP4MMax->Fill(p4MPairMax);
-            // hElePairP4MMaxMt->Fill(p4MPairMaxMt);
-            hElePairP4MtMax->Fill(p4MtPairMax);
-        }
+        selectAndFillElectronPairs(nEle, eleCharge, eleP4, hElePairP4MMax, hElePairP4MtMax);
 
         Int_t nMu = data.GetInt("nMu");
         Int_t* muCharge = (Int_t*) data.GetPtrInt("muCharge");
