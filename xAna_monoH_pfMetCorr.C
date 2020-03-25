@@ -112,19 +112,20 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
     TreeReader data(nameInputFile.data());
     ULong64_t nTotal=0;
     // ULong64_t nPass[20]={0};
-    TH1F* hPfMetCorrPt = new TH1F("hPfMetCorrPt", "PfMetCorrPt", 512, 0, 512);
-    TH1F* hPfMetCorrPhi = new TH1F("hPfMetCorrPhi", "PfMetCorrPhi", 1024, -8, 8);
-    TH1F* hPfMetCorrSig = new TH1F("hPfMetCorrSig", "PfMetCorrSig", 512, 0, 125);
+    TH1F* hPfMetCorrPt = new TH1F("hPfMetCorrPt", "PfMetCorrPt", 500, 0, 500);
+    TH1F* hPfMetCorrPhi = new TH1F("hPfMetCorrPhi", "PfMetCorrPhi", 200, -10, 10);
+    TH1F* hPfMetCorrSig = new TH1F("hPfMetCorrSig", "PfMetCorrSig", 500, 0, 100);
     TH1F* hFATnJet = new TH1F("hFATnJet", "FATnJet", 6, 0 - 0.5f, 6 -0.5f);
-    TH1F* hTHINnJet = new TH1F("hTHINnJet", "THINnJet", 64, 0 - 0.5f, 64 - 0.5f);
-    // TH1C* hNGoodTHINJet = new TH1C("hNGoodTHINJet", "nGoodTHINJet", 64, 0, 64);
-    // TH1C* hNGoodTHINBJet = new TH1C("hNGoodTHINBJet", "nGoodTHINBJet", 64, 0, 64);
-    TH1F* hElePairP4MMax = new TH1F("hEleP4MMax", "Max mass of e-pairs", 512, 0, 0.5);
+    TH1F* hTHINnJet = new TH1F("hTHINnJet", "THINnJet", 50, 0 - 0.5f, 50 - 0.5f);
+    // TH1C* hNGoodTHINJet = new TH1C("hNGoodTHINJet", "nGoodTHINJet", 50, 0, 50);
+    // TH1C* hNGoodTHINBJet = new TH1C("hNGoodTHINBJet", "nGoodTHINBJet", 50, 0, 50);
+    TH1F* hElePairP4MMax = new TH1F("hEleP4MMax", "Max mass of e-pairs", 1000*200, 0, 200);
     // TH1F* hElePairP4MMaxMt = (TH1F*) hElePairP4MMax->Clone("hEleP4MMaxMt");
     // hElePairP4MMaxMt->SetTitle("Mass of e-pairs with max Mt");
-    TH1F* hElePairP4MtMax = new TH1F("hEleP4MtMax", "Max m_t of e-pairs", 512, 0, 0.5);
-    TH1F* hMuPairP4MMax = new TH1F("hMuP4MMax", "Max mass of mu-pairs", 512, 0.2112, 0.2115);
-    TH1F* hMuPairP4MtMax = new TH1F("hMuP4MtMax", "Max m_t of mu-pairs", 512, 0, 0.5);
+    TH1F* hElePairP4MtMax = new TH1F("hEleP4MtMax", "Max m_t of e-pairs", 1000*200, 0, 200);
+    // TH1F* hMuPairP4MMax = new TH1F("hMuP4MMax", "Max mass of mu-pairs", 512, 0.2112, 0.2115);
+    TH1F* hMuPairP4MMax = new TH1F("hMuP4MMax", "Max mass of mu-pairs", 1000*200, 0, 200);
+    TH1F* hMuPairP4MtMax = new TH1F("hMuP4MtMax", "Max m_t of mu-pairs", 1000*200, 0, 200);
     // TH1F* hHPSTau_4MomentumM = new TH1F("hHPSTau_4MomentumM", "HPSTau_4Momentum->M()", 512, 0, 0.25);
     for(Long64_t jEntry=0; jEntry<data.GetEntriesFast() ;jEntry++) {
         /*

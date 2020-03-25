@@ -116,8 +116,9 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
         c1 = new TCanvas;
         reallyDeleteCanvas = deleteCanvas;
     }
+    gStyle->SetOptStat(111111);
     TString nameFileHead = "pfMetCorr";
-    TString nameFileTail = "20200324";
+    TString nameFileTail = "20200325";
     const Int_t nFVarComparing = 2;
     const Int_t nFVarableGroups = 2;
     TString arrsNameFileVariable[nFVarableGroups][nFVarComparing];
