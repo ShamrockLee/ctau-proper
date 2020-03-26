@@ -1,0 +1,2 @@
+# .C as C++
+*.C linguist-language=C++
