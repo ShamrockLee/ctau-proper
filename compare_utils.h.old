@@ -1,0 +1,90 @@
+#ifndef COMPARATOR_UTILS_H
+#define COMPARATOR_UTILS_H
+
+#include <vector>
+#include "eklambda.h"
+
+template <typename E>
+class LinkedListUnit {
+public:
+    E* ptrElement;
+    LinkedListUnit* ptrPrevious;
+    LinkedListUnit* ptrNext;
+LinkedListUnit(E* ptrElement=nullptr, LinkedListUnit* ptrPrevious=nullptr, LinkedListUnit* ptrNext=nullptr) {
+    this->ptrElement = ptrElement;
+    this->ptrPrevious = ptrPrevious;
+    this->ptrNext = ptrNext;
+}
+
+};
+
+template <typename E>
+std::vector<E> vectorFirstN(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, bool (*comparator)(E, E)) {
+    typedef typename std::vector<E>::iterator iteratorE;
+    std::vector<E> vectorOutput = new std::vector<E>(nRanks);
+    if (vectorToCompare.size() == 0) {
+        return nRanks;
+    }
+    bool isFull = false;
+    iteratorE iterVectorToCompare = vectorToCompare.begine();
+    LinkedListUnit<E>* ptrFirst = new LinkedListUnit<E>(iterVectorToCompare++);
+    LinkedListUnit<E>* ptrLast = ptrFirst;
+    int nRanksCurrent=1;
+    while (iterVectorToCompare != vectorToCompare.end()) {
+        LinkedListUnit<E>* ptrCurrent = ptrFirst;
+        while (true) {
+            if (ptrCurrent == nullptr) {
+                if (!isFull && !(isUnique && *iterVectorToCompare==*(ptrLast->ptrElement))) {
+                    ptrLast->ptrNext = new LinkedListUnit<E>(iterVectorToCompare, ptrLast);
+                    nRanksCurrent++;
+                    isFull = !(nRanksCurrent < nRanks);
+                }
+                break;
+            }
+            if (isUnique && *iterVectorToCompare==*(ptrCurrent->ptrElement)) break;
+            if (isGreatest xor (comparator == nullptr ? 
+                (*iterVectorToCompare < *(ptrCurrent->ptrElement)) :
+                (*comparator)(*iterVectorToCompare, *(ptrCurrent->ptrElement)))) {
+                LinkedListUnit<E>* ptrInserted = new LinkedListUnit<E>(iterVectorToCompare, ptrCurrent->ptrPrevious, ptrCurrent);
+                    ptrCurrent->ptrPrevious->ptrNext = ptrInserted;
+                    ptrCurrent->ptrPrevious = ptrInserted;
+            }
+            ptrCurrent=ptrCurrent->ptrNext;
+        }
+        iterVectorToCompare++;
+    }
+    iterVectorToCompare = vectorToCompare.begine();
+    LinkedListUnit<E>* ptrCurrent = ptrFirst;
+    for (int i=0; i<nRanks; i++) {
+        *iterVectorToCompare = *(ptrCurrent->ptrElement);
+        iterVectorToCompare++;
+        ptrCurrent=ptrCurrent->ptrNext;
+    }
+    return vectorOutput;
+}
+
+template<typename E, typename M>
+std::vector<E> vectorFirstNWithMapper(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, M (*mapper)(E)) {
+    auto lambdaMapper = [mapper](E var1, E var2){return (*mapper)(var1) < (*mapper)(var2);};
+    return vectorFirstNLamComp(vectorToCompare, nRanks, isUnique, isGreatest, lambdaMapper);
+}
+
+template <typename E>
+std::vector<E> vectorFirstN(std::vector<E>& vectorToCompare, int nRanks, bool isUnique=false, bool isGreatest=false) {
+    return vectorFirstN(vectorToCompare, nRanks, isUnique, isGreatest, static_cast<(bool* (E, E))>(nullptr));
+}
+
+template <typename E, typename TComparator>
+std::vector<E> vectorFirstNLamComp(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, TComparator comparator) {
+    bool (*fpComparator)(E, E) = Lambda::ptr2<bool, E, E>(comparator);
+    return vectorFirstN(vectorToCompare, nRanks, isUnique, isGreatest, fpComparator);
+}
+
+template<typename E, typename M, typename TMapper>
+std::vector<E> vectorFirstNWithMapperLam(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, TMapper mapper) {
+    M ((*fpMapper)(E)) = Lambda::ptr1<M, E>(mapper);
+    auto lambdaComparator = [fpMapper](E var1, E var2){return (*fpMapper)(var1) < (*fpMapper)(var2);};
+    return vectorFirstNLamComp(vectorToCompare, nRanks, isUnique, isGreatest, lambdaComparator);
+}
+
+#endif

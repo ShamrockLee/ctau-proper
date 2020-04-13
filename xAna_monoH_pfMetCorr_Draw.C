@@ -118,7 +118,7 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
     }
     gStyle->SetOptStat(111111);
     TString nameFileHead = "pfMetCorr";
-    TString nameFileTail = "20200325";
+    TString nameFileTail = "20200414";
     const Int_t nFVarComparing = 2;
     const Int_t nFVarableGroups = 2;
     TString arrsNameFileVariable[nFVarableGroups][nFVarComparing];
@@ -127,7 +127,12 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
     arrsNameFileVariable[1][0] = "Mx-150";
     arrsNameFileVariable[1][1] = "Mx2-150_Mx1-1_ctau-1";
     std::vector<TString> namesHistogram({"hPfMetCorrPt", "hPfMetCorrPhi", "hPfMetCorrSig", 
-        "hFATnJet", "hTHINnJet"});
+        "hFATnJet", "hTHINnJet", 
+        "hElePairP4MMax", "hElePairP4MMaxPt", "hElePairP4MTwoMaxPt", 
+        "hElePairP4MtMax",
+        "hMuPairP4MMax", "hMuPairP4MMaxPt", "hMuPairP4MTwoMaxPt", 
+        "hMuPairP4MtMax"
+    });
     // , "hElePairP4MMax", "hElePairP4MtMax", "hMuPairP4MMax", "hMuPairP4MtMax"
     if (DEBUGGING) std::cout << "namesHistogram size: " << namesHistogram.size() << std::endl;
     bool normalize = true;
@@ -142,7 +147,9 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
         TString nameFileHeadAndVars = nameFileHead;
         for (int iFVar=0; iFVar<nFVarComparing; iFVar++) {
             TString nameFileVariable =  arrsNameFileVariable[iFGroup][iFVar];
-            plTFile[iFVar] = new TFile((TString)"output_" + nameFileHead + "_" + nameFileVariable + "_" + nameFileTail + ".root");
+            TString nameFile = (TString)"output_" + nameFileHead + "_" + nameFileVariable + "_" + nameFileTail + ".root";
+            if (DEBUGGING) std::cout << "Opening file: " << nameFile << std::endl;
+            plTFile[iFVar] = new TFile(nameFile);
             if (DEBUGGING) plTFile[iFVar]->ls();
             nameFileHeadAndVars += (TString)"_" + nameFileVariable;
 
@@ -174,11 +181,16 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
                 if (DEBUGGING) std::cout<< "Extracting " << nameHistogram << " from " << plTFile[iFVar]->GetName() << std::endl;
                 plTHist[iFVar] = ((TH1F *)plTFile[iFVar]->Get(nameHistogram));
                 if (DEBUGGING) std::cout<< "Extracted " << nameHistogram << std::endl;
-                plTFile[iFVar]->Close();
+                // plTFile[iFVar]->Close(); // DONT CLOSE!! The histogram need the data. Closing cause segment violation when drawing.
+                // if (DEBUGGING) std::cout << "Closed file " << plTFile[iFVar]->GetName() << std::endl;
                 c1->Clear();
+                if (DEBUGGING) std::cout << "Drawing histogram " << plTHist[iFVar]->GetName() << std::endl;
                 plTHist[iFVar]->Draw();
-                c1->Print((TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogram + ".svg");
+                TString pathImage = (TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogram + ".svg";
+                if (DEBUGGING) std::cout << "Printing canvas to " << pathImage << std::endl;
+                c1->Print(pathImage);
             }
+            if (DEBUGGING) std::cout << "Decorating histogram " << plTHist[0]->GetName() << " and " << plTHist[1]->GetName() << std::endl;
             plTHist[0]->SetMarkerStyle(8);
             plTHist[0]->SetMarkerSize(1);
             plTHist[0]->SetLineWidth(3);
@@ -191,17 +203,21 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
                 gStyle->SetOptStat(0);
                 plTHist[iFVar]->Sumw2();
                 if(normalize){
+                    if (DEBUGGING) std::cout << "Normalizing histogram " << plTHist[iFVar]->GetName() << std::endl;
                     plTHist[iFVar]->Scale(1.0/plTHist[iFVar]->Integral());
 	            }
             }
+            if (DEBUGGING) std::cout << "Setting maximum for histogram " << plTHist[0]->GetName() << " and " << plTHist[1]->GetName() << std::endl;
             float max = TMath::Min(0xFFFFFF.0p0, TMath::Max(plTHist[0]->GetMaximum(), plTHist[1]->GetMaximum()));
             plTHist[0]->SetMaximum(1.1*max);
             plTHist[1]->SetMaximum(1.1*max);
 
             double chi2=0.;
             int nbins=0;
+            if (DEBUGGING) std::cout << "Chi2 comparing histogram " << plTHist[0]->GetName() << " and " << plTHist[1]->GetName() << std::endl;
             chi2NbinsCompare(plTHist[0],plTHist[1],chi2,nbins,1,plTHist[0]->GetNbinsX());
 
+            if (DEBUGGING) std::cout << "Drawing histogram " << plTHist[0]->GetName() << " and " << plTHist[1]->GetName() << std::endl;
             plTHist[0]->Draw("hist");
             plTHist[1]->Draw("histsame");
             leg->Clear();
@@ -212,7 +228,9 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
             // leg->AddEntry(h1,endfix1.Data(),"l");
             // leg->AddEntry(h2,endfix2.Data(),"l");
             leg->Draw("same");
-            c1->Print((TString)nameOutImageDir + "/" + nameFileHeadAndVars + "_" +  namesHistogram[iHist] + ".svg");
+            TString pathImage = (TString)nameOutImageDir + "/" + nameFileHeadAndVars + "_" +  namesHistogram[iHist] + ".svg";
+            if (DEBUGGING) std::cout << "Printing canvas to " << pathImage << std::endl;
+            c1->Print(pathImage);
 
         }
     }

@@ -1,0 +1,21 @@
+#ifndef COMPAIR_UTILS
+#define COMPAIR_UTILS
+
+#import <vector>
+
+template <typename E>
+std::vector<E> vectorFirstN(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, bool (*comparator)(E, E));
+
+template<typename E, typename M>
+std::vector<E> vectorFirstNWithMapper(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, M (*mapper)(E));
+
+template <typename E>
+std::vector<E> vectorFirstN(std::vector<E>& vectorToCompare, int nRanks, bool isUnique=false, bool isGreatest=false);
+
+template <typename E, typename TComparator>
+std::vector<E> vectorFirstNLamComp(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, TComparator comparator);
+
+template<typename E, typename M, typename TMapper>
+std::vector<E> vectorFirstNWithMapperLam(std::vector<E>& vectorToCompare, int nRanks, bool isUnique, bool isGreatest, TMapper mapper);
+
+#endif

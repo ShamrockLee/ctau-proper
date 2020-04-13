@@ -10,7 +10,7 @@
  * from the other.
  */
 
-#define DEBUGGING true
+#define DEBUG_LEVEL 1
 
 #include <vector>
 #include <iostream>
@@ -23,12 +23,18 @@
 #include <TLorentzVector.h>
 #include <TVector3.h>
 #include <TStyle.h>
+#include <TMath.h>
+#include "compare_utils_11.h" // For vectorFirstN
+#include <algorithm> // for `std::max_element`
+#include <numeric> // for `std::iota`
 
+/*
 void efferr(float nsig,float ntotal,float factor=1) {
     float eff = nsig/ntotal;
     float err = sqrt( (1-eff)*eff/ntotal);
     std::cout << "efficiency = " << eff*factor << " +- " << err*factor << std::endl;
 }
+*/
 
 template<typename TypeTArray=TClonesArray, TypeTArray* TArray=nullptr, typename TypeIndex=Int_t>
 bool compareTArrayElementsAt(TypeIndex i, TypeIndex j) {
@@ -44,56 +50,147 @@ bool fcnIsM2CloseEnough(Double_t M2_a, Double_t M2_b) {
     return TMath::Max(M2_a, M2_b) <= TMath::Min(M2_a, M2_b) * 0x1.004p0;
 }
 
-void selectAndFillElectronPairs(Int_t nEle, Int_t* eleCharge, TClonesArray* eleP4, TH1F* hElePairP4MMax, TH1F* hElePairP4MtMax) {
-    Int_t nEleNeg = 0;
-    std::vector<Int_t> vectorIElesNeg(nEle);
-    std::vector<Int_t> vectorIElesPos(vectorIElesNeg);
-    for (Int_t iEle=0; iEle<nEle; iEle++) {
-        if ((eleCharge[iEle]) < 0) {
-            vectorIElesNeg[nEleNeg] = iEle;
-            nEleNeg++;
-        } else {
-            vectorIElesPos[iEle - nEleNeg] = iEle;
-        }
-        vectorIElesNeg.resize(nEleNeg);
-        vectorIElesPos.resize(nEle-nEleNeg);
-    }
+struct {
+    Int_t nEle;
+    std::vector<bool>* eleIsPass;
+    Int_t* eleCharge;
+    TClonesArray* eleP4;
+    TH1F* hElePairP4MMax = nullptr;
+    TH1F* hElePairP4MtMax = nullptr;
+    TH1F* hElePairP4MMaxPt = nullptr;
+    TH1F* hElePairP4MTwoMaxPt = nullptr;
+    bool toDistinguishCharge = false;
+} typedef SelectAndFillEPairs;
 
-    std::vector<Double_t> vectorEleP4M2(nEle);
-    for (Int_t i=0; i<nEle; i++) {
+void selectAndFillElectronPairs(SelectAndFillEPairs selectAndFillEPairs) {
+    Int_t nEle = selectAndFillEPairs.nEle;
+    std::vector<bool>* eleIsPass = selectAndFillEPairs.eleIsPass;
+    Int_t* eleCharge = selectAndFillEPairs.eleCharge;
+    TClonesArray* eleP4 = selectAndFillEPairs.eleP4;
+    TH1F* hElePairP4MMax = selectAndFillEPairs.hElePairP4MMax;
+    TH1F* hElePairP4MtMax = selectAndFillEPairs.hElePairP4MtMax;
+    TH1F* hElePairP4MMaxPt = selectAndFillEPairs.hElePairP4MMaxPt;
+    TH1F* hElePairP4MWithTwoMaxPt = selectAndFillEPairs.hElePairP4MTwoMaxPt;
+    bool toDistinguishCharge = selectAndFillEPairs.toDistinguishCharge;
+
+    Int_t nEleNeg = 0;
+    std::vector<Int_t> vectorIElePassed;
+    vectorIElePassed.clear();
+    Int_t nElePassed = 0;
+    // std::vector<bool>& eleIsPassLoose = *((std::vector<bool>*) data.GetPtr("eleIsPassLoose"));
+    if (eleIsPass != nullptr) {
+        for (Int_t iEle=0; iEle<nEle; iEle++) {
+            if (!eleIsPass->at(iEle)) continue;
+            vectorIElePassed.push_back(iEle);
+            nElePassed++;
+        }
+        vectorIElePassed.resize(nElePassed);
+    } else {
+        nElePassed = nEle;
+        // vectorIElePassed.resize(nEle);
+        // std::iota(vectorIElePassed.begin(), vectorIElePassed.begin() + nEle, 0);
+        for (Int_t i=0; i<nEle; vectorIElePassed.push_back(i++));
+    }
+    if (DEBUG_LEVEL > 1) std::cout << "vectorIElePassed got, nEle: " << nEle << ", nElePassed: " << nElePassed << std::endl;
+    if (DEBUG_LEVEL > 1) assert(vectorIElePassed.size() == nElePassed);
+    // // inversely sort according to Pt
+    // std::sort(vectorIElePassed.begin(), vectorIElePassed.end(), [eleP4](Int_t i, Int_t j) {return ((TLorentzVector*)eleP4->At(i))->Pt() > ((TLorentzVector*)eleP4->At(j))->Pt();});
+    
+    
+    /*
+    std::vector<Double_t> vectorEleP4M2(nElePassed);
+    for (Int_t i=0; i<nElePassed; i++) {
         vectorEleP4M2[i] = ((TLorentzVector*)eleP4->At(i))->M2();
     }
-    // auto compareM2 = [eleP4](Int_t i, Int_t j){return ((TLorentzVector*)eleP4->At(i))->M2() < ((TLorentzVector*)eleP4->At(j))->M2();};
-    // auto compareM2 = [vectorEleP4M2](Int_t i, Int_t j, bool (*comparor)(Int_t, Int_t) = nullptr) {
-    //     return (comparor == nullptr) ? (*comparor)(vectorEleP4M2[i], vectorEleP4M2[j]) : vectorEleP4M2[i] < vectorEleP4M2[j];};
-    auto compareEleM2Inversed = [vectorEleP4M2](Int_t i, Int_t j) {return vectorEleP4M2[i] > vectorEleP4M2[j];};
-    std::sort(vectorIElesNeg.begin(), vectorIElesNeg.end(), compareEleM2Inversed);
-    std::sort(vectorIElesPos.begin(), vectorIElesPos.end(), compareEleM2Inversed);
-    // std::vector<Int_t*> vectorElePairsValid(nEle <= nEleNeg*2 ? nEleNeg : nEle - nEleNeg);
-    std::vector<TLorentzVector> vectorP4ElePairsValid(nEle <= nEleNeg*2 ? nEleNeg : nEle - nEleNeg);
-    // for (Int_t jEleNeg=0, jElePos=0; jEleNeg<nEleNeg && jElePos<nEle-nEleNeg; (vectorEleP4M2.at(jEleNeg) <= vectorEleP4M2.at(jElePos)) ? jEleNeg++ : jElePos++)
-    //     if (fcnIsM2CloseEnough(vectorEleP4M2.at(jEleNeg), vectorEleP4M2.at(jElePos))) vectorElePairsValid
-    Int_t jEleNeg = 0, jElePos = 0, jElePairValid = 0;
-    // Int_t **currentIElePairs;
-    while (jEleNeg < nEleNeg && jElePos < nEle - nEleNeg) {
-        if (fcnIsM2CloseEnough(vectorEleP4M2.at(jEleNeg), vectorEleP4M2.at(jElePos))) {
-            // currentIElePairs = new Int_t*;
-            // (*currentIElePairs)[0] = vectorIElesNeg[jEleNeg];
-            // (*currentIElePairs)[1] = vectorIElesPos[jElePos];
-            // vectorElePairsValid[jElePairValid] = *currentIElePairs;
-            vectorP4ElePairsValid[jElePairValid] = *((TLorentzVector*)eleP4->At(vectorIElesNeg[jEleNeg])) + *((TLorentzVector*)(eleP4->At(vectorIElesPos[jElePos])));
-            jEleNeg++, jElePos++, jElePairValid++;
-        } else if (jEleNeg <= jElePos) jEleNeg++; else jElePos++;
+    */
+    if (nElePassed < 2) return;
+    TLorentzVector* p4ElePairWithTwoMaxPt = new TLorentzVector();
+    std::vector<TLorentzVector> vectorP4ElePairsValid;
+    vectorP4ElePairsValid.clear();
+    Int_t nElePairsValid = 0;
+    if (toDistinguishCharge) {
+        std::vector<Int_t> vectorIElesNeg(nElePassed);
+        std::vector<Int_t> vectorIElesPos(vectorIElesNeg);
+        std::vector<Int_t>::iterator iterIElesNeg = vectorIElesNeg.begin();
+        std::vector<Int_t>::iterator iterIElesPos = vectorIElesPos.begin();
+        TLorentzVector *eleP4MaxPtNeg, *eleP4MaxPtPos;
+        eleP4MaxPtNeg = eleP4MaxPtPos = nullptr;
+        for (std::vector<Int_t>::iterator iterIElePassed = vectorIElePassed.begin(); iterIElePassed != vectorIElePassed.end(); iterIElePassed++) {
+            TLorentzVector* eleP4Current = (TLorentzVector*)eleP4->At(*iterIElePassed);
+            if ((eleCharge[*iterIElePassed]) < 0) {
+                // vectorIElesNeg[nEleNeg] = iEle;
+                *(iterIElesNeg++) = *iterIElePassed;
+                if (eleP4MaxPtNeg == nullptr) {
+                    eleP4MaxPtNeg = eleP4Current;
+                } else if (eleP4Current->Pt() > eleP4MaxPtNeg->Pt()) {
+                    eleP4MaxPtNeg = eleP4Current;
+                }
+                nEleNeg++;
+            } else {
+                // vectorIElesPos[iEle - nEleNeg] = iEle;
+                *(iterIElesPos++) = *iterIElePassed;
+                if (eleP4MaxPtPos == nullptr) {
+                    eleP4MaxPtPos = eleP4Current;
+                } else if (eleP4Current->Pt() > eleP4MaxPtPos->Pt()) {
+                    eleP4MaxPtPos = eleP4Current;
+                }
+            }
+            vectorIElesNeg.resize(nEleNeg);
+            vectorIElesPos.resize(nElePassed-nEleNeg);
+        }
+        if (eleP4MaxPtNeg != nullptr && eleP4MaxPtPos != nullptr) {
+            *p4ElePairWithTwoMaxPt = *eleP4MaxPtNeg + *eleP4MaxPtPos;
+        } else {
+            delete p4ElePairWithTwoMaxPt;
+            p4ElePairWithTwoMaxPt = nullptr;
+        }
+        for (std::vector<Int_t>::iterator iterIElesNeg = vectorIElesNeg.begin(); 
+             iterIElesNeg != vectorIElesNeg.end(); iterIElesNeg++) {
+            for (std::vector<Int_t>::iterator iterIElesPos = vectorIElesPos.begin(); 
+                iterIElesPos != vectorIElesPos.end(); iterIElesPos++) {
+                vectorP4ElePairsValid.push_back(*((TLorentzVector*)eleP4->At(*iterIElesNeg)) + *((TLorentzVector*)(eleP4->At(*iterIElesPos))));
+                nElePairsValid++;
+            }
+        }
+    } else {
+        // auto lambdaMapperPt = ([eleP4](Int_t i){return (Double_t)(((TLorentzVector*)eleP4->At(i))->Pt());});
+    // Double_t (*mapperPt)(Int_t) = Lambda::ptr1<Double_t, Int_t>(lambdaMapperPt);
+        std::vector<Int_t> vectorITwoElesWithMaxPt = vectorFirstNWithMapper<Int_t, Double_t>(
+            vectorIElePassed, 2, false, true, 
+            [eleP4](Int_t i){return (Double_t)(((TLorentzVector*)eleP4->At(i))->Pt());}
+        );
+        *p4ElePairWithTwoMaxPt = *(TLorentzVector*)eleP4->At(vectorITwoElesWithMaxPt[0]) 
+         + *(TLorentzVector*)eleP4->At(vectorITwoElesWithMaxPt[1]);
+         for (std::vector<Int_t>::iterator iterIElePassedLeft = vectorIElePassed.begin(); 
+              iterIElePassedLeft != vectorIElePassed.end(); 
+              iterIElePassedLeft++) {
+                  for (std::vector<Int_t>::iterator iterIElePassedRight = iterIElePassedLeft + 1;
+                      iterIElePassedRight != vectorIElePassed.end();
+                      iterIElePassedRight++) {
+                      vectorP4ElePairsValid.push_back(*((TLorentzVector*)eleP4->At(*iterIElePassedLeft)) + *((TLorentzVector*)(eleP4->At(*iterIElePassedRight))));
+                      nElePairsValid++;
+                }
+            }
     }
-    vectorP4ElePairsValid.resize(jElePairValid);
+    if (hElePairP4MWithTwoMaxPt != nullptr && p4ElePairWithTwoMaxPt != nullptr) {
+        hElePairP4MWithTwoMaxPt->Fill(p4ElePairWithTwoMaxPt->M());
+    }
+    // auto compareEleM2Inversed = [vectorEleP4M2](Int_t i, Int_t j) {return vectorEleP4M2[i] > vectorEleP4M2[j];};
+    // std::sort(vectorIElesNeg.begin(), vectorIElesNeg.end(), compareEleM2Inversed);
+    // std::sort(vectorIElesPos.begin(), vectorIElesPos.end(), compareEleM2Inversed);
+    vectorP4ElePairsValid.resize(nElePairsValid);
     vectorP4ElePairsValid.shrink_to_fit();
-    Double_t p4MPairCurrent, p4MPairMax, p4MPairMaxMt, p4MtPairCurrent, p4MtPairMax;
-    if (jElePairValid > 0) {
-        p4MPairMax = p4MPairMaxMt = (vectorP4ElePairsValid.at(0)).M();
+    Double_t p4MPairCurrent, p4MPairMax, p4MPairMaxMt, p4MPairMaxPt, p4MtPairCurrent, p4MtPairMax, p4PtPairCurrent, p4PtPairMax;
+    if (nElePairsValid > 0) {
+        p4MPairMax = p4MPairMaxMt = p4MPairMaxPt = (vectorP4ElePairsValid.at(0)).M();
         p4MtPairMax = vectorP4ElePairsValid.at(0).Mt();
-        for(Int_t iP4 = 0; iP4 < jElePairValid; iP4++) {
-            p4MPairCurrent = vectorP4ElePairsValid[iP4].M();
-            p4MtPairCurrent = vectorP4ElePairsValid[iP4].Mt();
+        p4PtPairMax = vectorP4ElePairsValid.at(0).Pt();
+        for(std::vector<TLorentzVector>::iterator iterP4ElePairsValid = vectorP4ElePairsValid.begin(); 
+            iterP4ElePairsValid != vectorP4ElePairsValid.end(); 
+            iterP4ElePairsValid++) {
+            p4MPairCurrent = iterP4ElePairsValid->M();
+            p4MtPairCurrent = iterP4ElePairsValid->Mt();
+            p4PtPairCurrent = iterP4ElePairsValid->Pt();
             if (p4MPairCurrent > p4MPairMax) {
                 p4MPairMax = p4MPairCurrent;
             }
@@ -101,10 +198,15 @@ void selectAndFillElectronPairs(Int_t nEle, Int_t* eleCharge, TClonesArray* eleP
                 p4MtPairMax = p4MtPairCurrent;
                 // p4MPairMaxMt = p4MPairCurrent;
             }
+            if (p4PtPairCurrent > p4PtPairMax) {
+                p4PtPairMax = p4PtPairCurrent;
+                p4MPairMaxPt = p4MPairCurrent;
+            }
         }
-        hElePairP4MMax->Fill(p4MPairMax);
+        if (hElePairP4MMax != nullptr) hElePairP4MMax->Fill(p4MPairMax);
         // hElePairP4MMaxMt->Fill(p4MPairMaxMt);
-        hElePairP4MtMax->Fill(p4MtPairMax);
+        if (hElePairP4MtMax != nullptr) hElePairP4MtMax->Fill(p4MtPairMax);
+        if (hElePairP4MMaxPt != nullptr) hElePairP4MMaxPt->Fill(p4MPairMaxPt);
     }
 }
 
@@ -112,20 +214,29 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
     TreeReader data(nameInputFile.data());
     ULong64_t nTotal=0;
     // ULong64_t nPass[20]={0};
-    TH1F* hPfMetCorrPt = new TH1F("hPfMetCorrPt", "PfMetCorrPt", 500, 0, 500);
-    TH1F* hPfMetCorrPhi = new TH1F("hPfMetCorrPhi", "PfMetCorrPhi", 200, -10, 10);
-    TH1F* hPfMetCorrSig = new TH1F("hPfMetCorrSig", "PfMetCorrSig", 500, 0, 100);
+    TH1F* hPfMetCorrPt = new TH1F("hPfMetCorrPt", "PfMetCorrPt", 250, 0, 500);
+    TH1F* hPfMetCorrPhi = new TH1F("hPfMetCorrPhi", "PfMetCorrPhi", 100, -10, 10);
+    TH1F* hPfMetCorrSig = new TH1F("hPfMetCorrSig", "PfMetCorrSig", 100, 0, 100);
     TH1F* hFATnJet = new TH1F("hFATnJet", "FATnJet", 6, 0 - 0.5f, 6 -0.5f);
     TH1F* hTHINnJet = new TH1F("hTHINnJet", "THINnJet", 50, 0 - 0.5f, 50 - 0.5f);
     // TH1C* hNGoodTHINJet = new TH1C("hNGoodTHINJet", "nGoodTHINJet", 50, 0, 50);
     // TH1C* hNGoodTHINBJet = new TH1C("hNGoodTHINBJet", "nGoodTHINBJet", 50, 0, 50);
-    TH1F* hElePairP4MMax = new TH1F("hEleP4MMax", "Max mass of e-pairs", 1000*200, 0, 200);
-    // TH1F* hElePairP4MMaxMt = (TH1F*) hElePairP4MMax->Clone("hEleP4MMaxMt");
+    TH1F* hElePairP4MMax = new TH1F("hElePairP4MMax", "Max mass of e-pairs", 1000*1, 0, 1000);
+    // TH1F* hElePairP4MMaxMt = (TH1F*) hElePairP4MMax->Clone("hElePairP4MMaxMt");
     // hElePairP4MMaxMt->SetTitle("Mass of e-pairs with max Mt");
-    TH1F* hElePairP4MtMax = new TH1F("hEleP4MtMax", "Max m_t of e-pairs", 1000*200, 0, 200);
-    // TH1F* hMuPairP4MMax = new TH1F("hMuP4MMax", "Max mass of mu-pairs", 512, 0.2112, 0.2115);
-    TH1F* hMuPairP4MMax = new TH1F("hMuP4MMax", "Max mass of mu-pairs", 1000*200, 0, 200);
-    TH1F* hMuPairP4MtMax = new TH1F("hMuP4MtMax", "Max m_t of mu-pairs", 1000*200, 0, 200);
+    TH1F* hElePairP4MMaxPt = (TH1F*) hElePairP4MMax->Clone("hElePairP4MMaxPt");
+    hElePairP4MMaxPt->SetTitle("Mass of e-pairs with max Pt");
+    TH1F* hElePairP4MTwoMaxPt = (TH1F*) hElePairP4MMax->Clone("hElePairP4MTwoMaxPt");
+    hElePairP4MTwoMaxPt->SetTitle("Mass of e-pairs constructed from the two with max Pt");
+    TH1F* hElePairP4MtMax = new TH1F("hElePairP4MtMax", "Max m_t of e-pairs", 200, 0, 5000);
+    // TH1F* hMuPairP4MMax = new TH1F("hMuPairP4MMax", "Max mass of mu-pairs", 512, 0.2112, 0.2115);
+    TH1F* hMuPairP4MMax = new TH1F("hMuPairP4MMax", "Max mass of mu-pairs", 1000*1, 0, 1000);
+    TH1F* hMuPairP4MMaxPt = (TH1F*) hMuPairP4MMax->Clone("hMuPairP4MMaxPt");
+    hMuPairP4MMaxPt->SetTitle("Mass of mu-pairs with max Pt");
+    TH1F* hMuPairP4MTwoMaxPt = (TH1F*) hMuPairP4MMax->Clone("hMuPairP4MTwoMaxPt");
+    hMuPairP4MTwoMaxPt->SetTitle("Mass of mu-pairs constructed from the two with max Pt");
+    TH1F* hMuPairP4MtMax = new TH1F("hMuPairP4MtMax", "Max m_t of mu-pairs", 200, 0, 1000);
+    // TH1F* hMuPairP4MMaxPt = 
     // TH1F* hHPSTau_4MomentumM = new TH1F("hHPSTau_4MomentumM", "HPSTau_4Momentum->M()", 512, 0, 0.25);
     for(Long64_t jEntry=0; jEntry<data.GetEntriesFast() ;jEntry++) {
         /*
@@ -358,21 +469,35 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         */
         
         Int_t nGenPar = data.GetInt("nGenPar");
-        Int_t nEle = data.GetInt("nEle");
-        Int_t* eleCharge = (Int_t*) data.GetPtrInt("eleCharge");
-        TClonesArray* eleP4 = (TClonesArray*)data.GetPtrTObject("eleP4");
+        
         // TClonesArray* eleCharge = (TClonesArray*) data.GetPtrTObject("eleCharge");
 
         // Electron pairs
+        SelectAndFillEPairs inputParsElectron;
+        inputParsElectron.nEle = data.GetInt("nEle");
+        inputParsElectron.eleCharge = (Int_t*) data.GetPtrInt("eleCharge");
+        inputParsElectron.eleP4 = (TClonesArray*)data.GetPtrTObject("eleP4");
+        inputParsElectron.eleIsPass = ((std::vector<bool>*) data.GetPtr("eleIsPassLoose"));
+        inputParsElectron.hElePairP4MMax = hElePairP4MMax;
+        inputParsElectron.hElePairP4MMaxPt = hElePairP4MMaxPt;
+        inputParsElectron.hElePairP4MTwoMaxPt = hElePairP4MTwoMaxPt;
+        inputParsElectron.hElePairP4MtMax = hElePairP4MtMax;
+        inputParsElectron.toDistinguishCharge = false;
+        selectAndFillElectronPairs(inputParsElectron);
 
-        selectAndFillElectronPairs(nEle, eleCharge, eleP4, hElePairP4MMax, hElePairP4MtMax);
-
-        Int_t nMu = data.GetInt("nMu");
-        Int_t* muCharge = (Int_t*) data.GetPtrInt("muCharge");
-        TClonesArray* muP4 = (TClonesArray*) data.GetPtrTObject("muP4");
         
         // Muon pairs
-        selectAndFillElectronPairs(nMu, muCharge, muP4, hMuPairP4MMax, hMuPairP4MtMax);
+        SelectAndFillEPairs inputParsMuon;
+        inputParsMuon.nEle = data.GetInt("nMu");
+        inputParsMuon.eleCharge = (Int_t*) data.GetPtrInt("muCharge");
+        inputParsMuon.eleP4 = (TClonesArray*) data.GetPtrTObject("muP4");
+        inputParsMuon.eleIsPass = nullptr;//((std::vector<bool>*) data.GetPtr("muIsPassLoose"));
+        inputParsMuon.hElePairP4MMax = hMuPairP4MMax;
+        inputParsMuon.hElePairP4MMaxPt = hMuPairP4MMaxPt;
+        inputParsMuon.hElePairP4MTwoMaxPt = hMuPairP4MTwoMaxPt;
+        inputParsMuon.hElePairP4MtMax = hMuPairP4MtMax;
+        inputParsMuon.toDistinguishCharge = true;
+        selectAndFillElectronPairs(inputParsMuon);
 
         hPfMetCorrPt->Fill(pfMetCorrPt);
         hPfMetCorrPhi->Fill(pfMetCorrPhi);
@@ -385,7 +510,7 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         // hMuP4M->Fill(((TLorentzVector *)data.GetPtrTObject("muP4"))->M());
     }
     TFile* outFile = new TFile(nameOutputFile.data(), toRecreateOutFile ? "recreate" : "update");
-    gStyle->SetOptStat(111111);
+    // gStyle->SetOptStat(111111);
     hPfMetCorrPt->Write();
     hPfMetCorrPhi->Write();
     hPfMetCorrSig->Write();
@@ -395,10 +520,14 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
     //hNGoodTHINBJet->Write();
     hElePairP4MMax->Write();
     // hElePairP4MMaxMt->Write();
+    hElePairP4MMaxPt->Write();
+    hElePairP4MTwoMaxPt->Write();
     hElePairP4MtMax->Write();
     hMuPairP4MMax->Write();
+    hMuPairP4MMaxPt->Write();
+    hMuPairP4MTwoMaxPt->Write();
     hMuPairP4MtMax->Write();
     //hHPSTau_4MomentumM->Write();
-    if (DEBUGGING) outFile->ls();
+    if (DEBUG_LEVEL > 0) outFile->ls();
     outFile->Close();
 }
