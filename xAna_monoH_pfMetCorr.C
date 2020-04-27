@@ -221,16 +221,16 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
     TH1F* hTHINnJet = new TH1F("hTHINnJet", "THINnJet", 50, 0 - 0.5f, 50 - 0.5f);
     // TH1C* hNGoodTHINJet = new TH1C("hNGoodTHINJet", "nGoodTHINJet", 50, 0, 50);
     // TH1C* hNGoodTHINBJet = new TH1C("hNGoodTHINBJet", "nGoodTHINBJet", 50, 0, 50);
-    TH1F* hElePairP4MMax = new TH1F("hElePairP4MMax", "Max mass of e-pairs", 1000*1, 0, 1000);
+    TH1F* hElePairP4MMax = new TH1F("hElePairP4MMax", "Max mass of e-pairs", 200*1, 0, 200);
     // TH1F* hElePairP4MMaxMt = (TH1F*) hElePairP4MMax->Clone("hElePairP4MMaxMt");
     // hElePairP4MMaxMt->SetTitle("Mass of e-pairs with max Mt");
     TH1F* hElePairP4MMaxPt = (TH1F*) hElePairP4MMax->Clone("hElePairP4MMaxPt");
     hElePairP4MMaxPt->SetTitle("Mass of e-pairs with max Pt");
     TH1F* hElePairP4MTwoMaxPt = (TH1F*) hElePairP4MMax->Clone("hElePairP4MTwoMaxPt");
     hElePairP4MTwoMaxPt->SetTitle("Mass of e-pairs constructed from the two with max Pt");
-    TH1F* hElePairP4MtMax = new TH1F("hElePairP4MtMax", "Max m_t of e-pairs", 200, 0, 5000);
+    TH1F* hElePairP4MtMax = new TH1F("hElePairP4MtMax", "Max m_t of e-pairs", 40, 0, 1000);
     // TH1F* hMuPairP4MMax = new TH1F("hMuPairP4MMax", "Max mass of mu-pairs", 512, 0.2112, 0.2115);
-    TH1F* hMuPairP4MMax = new TH1F("hMuPairP4MMax", "Max mass of mu-pairs", 1000*1, 0, 1000);
+    TH1F* hMuPairP4MMax = new TH1F("hMuPairP4MMax", "Max mass of mu-pairs", 200*1, 0, 200);
     TH1F* hMuPairP4MMaxPt = (TH1F*) hMuPairP4MMax->Clone("hMuPairP4MMaxPt");
     hMuPairP4MMaxPt->SetTitle("Mass of mu-pairs with max Pt");
     TH1F* hMuPairP4MTwoMaxPt = (TH1F*) hMuPairP4MMax->Clone("hMuPairP4MTwoMaxPt");
@@ -491,12 +491,20 @@ void xAna_monoH_PfMetCorrs(std::string nameInputFile, std::string nameOutputFile
         inputParsMuon.nEle = data.GetInt("nMu");
         inputParsMuon.eleCharge = (Int_t*) data.GetPtrInt("muCharge");
         inputParsMuon.eleP4 = (TClonesArray*) data.GetPtrTObject("muP4");
-        inputParsMuon.eleIsPass = nullptr;//((std::vector<bool>*) data.GetPtr("muIsPassLoose"));
+        inputParsMuon.eleIsPass = (std::vector<bool>*) data.GetPtr("isLooseMuon");//((std::vector<bool>*) data.GetPtr("muIsPassLoose"));
+        // Muon filters to make use of:
+        // std::vector<bool> isTightMuon;
+        //std::vector<bool> isLooseMuon;
+        //std::vector<bool> isMediumMuon;
+        // std::vector<bool> isSoftMuon;
+        // std::vector<bool> isHighPtMuon;
+        // std::vector<bool> isCustomTrackerMuon;
+        // https://github.com/syuvivida/DMAnaRun2/blob/80X_puppi/TreeMaker/interface/patMuonTree.h#L71-L76
         inputParsMuon.hElePairP4MMax = hMuPairP4MMax;
         inputParsMuon.hElePairP4MMaxPt = hMuPairP4MMaxPt;
         inputParsMuon.hElePairP4MTwoMaxPt = hMuPairP4MTwoMaxPt;
         inputParsMuon.hElePairP4MtMax = hMuPairP4MtMax;
-        inputParsMuon.toDistinguishCharge = true;
+        inputParsMuon.toDistinguishCharge = false; //DON'T DISTINGUISH CHARGES!!!
         selectAndFillElectronPairs(inputParsMuon);
 
         hPfMetCorrPt->Fill(pfMetCorrPt);
