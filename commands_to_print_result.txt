@@ -1,18 +1,18 @@
 root
-.L xAna_monoH_pfMetCorr.C++
-xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_pfMetCorr_Mx-1_20200421.root");
+.L xAna_monoH_jets.C++
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_jets_Mx-1_20200525.root");
 .q
 root
-.L xAna_monoH_pfMetCorr.C++
-xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-0p1_ctau-1_13TeV-madgraph.root", "output_pfMetCorr_Mx2-1_Mx1-0p1_ctau-1_20200421.root");
+.L xAna_monoH_jets.C++
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-0p1_ctau-1_13TeV-madgraph.root", "output_jets_Mx2-1_Mx1-0p1_ctau-1_20200525.root");
 .q
 root
-.L xAna_monoH_pfMetCorr.C++
-xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_pfMetCorr_Mx-150_20200421.root");
+.L xAna_monoH_jets.C++
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_jets_Mx-150_20200525.root");
 .q
 root
-.L xAna_monoH_pfMetCorr.C++
-xAna_monoH_PfMetCorrs("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-1_ctau-1_13TeV-madgraph.root", "output_pfMetCorr_Mx2-150_Mx1-1_ctau-1_20200421.root");
+.L xAna_monoH_jets.C++
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-1_ctau-1_13TeV-madgraph.root", "output_jets_Mx2-150_Mx1-1_ctau-1_20200525.root");
 .q
 
 
