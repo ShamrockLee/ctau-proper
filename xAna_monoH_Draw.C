@@ -117,8 +117,8 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
         reallyDeleteCanvas = deleteCanvas;
     }
     gStyle->SetOptStat(111111);
-    TString nameFileHead = "pfMetCorr";
-    TString nameFileTail = "20200421";
+    TString nameFileHead = "jets";
+    TString nameFileTail = "20200525";
     const Int_t nFVarComparing = 2;
     const Int_t nFVarableGroups = 2;
     TString arrsNameFileVariable[nFVarableGroups][nFVarComparing];
@@ -126,12 +126,8 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
     arrsNameFileVariable[0][1] = "Mx2-1_Mx1-0p1_ctau-1";
     arrsNameFileVariable[1][0] = "Mx-150";
     arrsNameFileVariable[1][1] = "Mx2-150_Mx1-1_ctau-1";
-    std::vector<TString> namesHistogram({"hPfMetCorrPt", "hPfMetCorrPhi", "hPfMetCorrSig", 
-        "hFATnJet", "hTHINnJet", 
-        "hElePairP4MMax", "hElePairP4MMaxPt", "hElePairP4MTwoMaxPt", 
-        "hElePairP4MtMax",
-        "hMuPairP4MMax", "hMuPairP4MMaxPt", "hMuPairP4MTwoMaxPt", 
-        "hMuPairP4MtMax"
+    std::vector<TString> namesHistogram({
+        "hTHINnJetMatched"
     });
     // , "hElePairP4MMax", "hElePairP4MtMax", "hMuPairP4MMax", "hMuPairP4MtMax"
     if (DEBUGGING) std::cout << "namesHistogram size: " << namesHistogram.size() << std::endl;

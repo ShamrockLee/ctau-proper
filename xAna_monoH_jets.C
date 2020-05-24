@@ -11,7 +11,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
   Long64_t nTotal=0;
   Long64_t nPass[20]={0};
   
-  TH1F* hTHINNJetMatched = new TH1F("hTHINNJetMatched", "number of matched thin jets (d or dbar from chi2)", 8, 0-0.5f, 8-0.5f); 
+  TH1F* hTHINnJetMatched = new TH1F("hTHINnJetMatched", "number of matched thin jets (d or dbar from chi2)", 8, 0-0.5f, 8-0.5f); 
   // TH1F* hTHINjetPairP4M = new TH1F("hTHINjetPairP4M", "Static Mass of THINjet Pairs", 50, 0, 500);
   // TH1F* hTHINjetPairP4Pt = new TH1F("hTHINjetPairP4Pt", "Pt of THINjet Pairs", 100, 0, 1000);
   // TH1F* hTHINjetPairP4Rho = new TH1F("hTHINjetPairP4Rho", "Rho of THINjet Pairs", 500, 0, 5000);
@@ -141,7 +141,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
 
     // if(!findAMatch)continue;
     
-    hTHINNJetMatched->Fill(vIndexesJetMatched.size());
+    hTHINnJetMatched->Fill(vIndexesJetMatched.size());
     // hTHINjetPairP4M->Fill(thinjetPairP4->M());
     // hTHINjetPairP4Pt->Fill(thinjetPairP4->Pt());
     // hTHINjetPairP4Rho->Fill(thinjetPairP4->Rho());
@@ -156,7 +156,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
   }
   
   TFile* outFile = new TFile(outputFile.data(), toRecreateOutFile ? "recreate" : "update");
-  hTHINNJetMatched->Write();
+  hTHINnJetMatched->Write();
   // hTHINjetPairP4M->Write();
   // hTHINjetPairP4Pt->Write();
   // hTHINjetPairP4Rho->Write();

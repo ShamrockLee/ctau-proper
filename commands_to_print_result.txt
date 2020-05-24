@@ -25,8 +25,8 @@ dumpCompareMultiplePDF("/home/shamrock/Documents/Project_HEP/ROOT_assignment_201
 
 
 root
-.L xAna_monoH_pfMetCorr_Draw.C++
-Main("../out_images/output_pfMetCorr_20200421");
+.L xAna_monoH_Draw.C++
+Main("../out_images/output_jets_20200525");
 .q
 
 
