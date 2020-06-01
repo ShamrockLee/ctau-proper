@@ -118,7 +118,7 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
     }
     gStyle->SetOptStat(111111);
     TString nameFileHead = "jets";
-    TString nameFileTail = "20200525";
+    TString nameFileTail = "20200601";
     const Int_t nFVarComparing = 2;
     const Int_t nFVarableGroups = 2;
     TString arrsNameFileVariable[nFVarableGroups][nFVarComparing];
@@ -127,7 +127,12 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
     arrsNameFileVariable[1][0] = "Mx-150";
     arrsNameFileVariable[1][1] = "Mx2-150_Mx1-1_ctau-1";
     std::vector<TString> namesHistogram({
-        "hTHINnJetMatched"
+        "hNumDWanted",
+        "hIsDsFoundStrict",
+        "hIsTHINMatched",
+        "hDeltaRTHINjetPairsFromChi2ordi",
+        "hDeltaRTHINjetPairsFromChi2bar",
+        "hDeltaRBetweenTwoTHINjetPairs"
     });
     // , "hElePairP4MMax", "hElePairP4MtMax", "hMuPairP4MMax", "hMuPairP4MtMax"
     if (DEBUGGING) std::cout << "namesHistogram size: " << namesHistogram.size() << std::endl;
@@ -181,6 +186,7 @@ void Main(std::string nameOutImageDir, TCanvas* c1 = nullptr, bool deleteCanvas=
                 // if (DEBUGGING) std::cout << "Closed file " << plTFile[iFVar]->GetName() << std::endl;
                 c1->Clear();
                 if (DEBUGGING) std::cout << "Drawing histogram " << plTHist[iFVar]->GetName() << std::endl;
+                gStyle->SetOptStat(111111);
                 plTHist[iFVar]->Draw();
                 TString pathImage = (TString)nameOutImageDir + "/" + nameFileHead + "_" + nameFileVariable + "_" +  nameHistogram + ".svg";
                 if (DEBUGGING) std::cout << "Printing canvas to " << pathImage << std::endl;

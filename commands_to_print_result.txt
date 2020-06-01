@@ -1,18 +1,18 @@
 root
 .L xAna_monoH_jets.C++
-xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_jets_Mx-1_20200525.root");
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_jets_Mx-1_20200601.root");
 .q
 root
 .L xAna_monoH_jets.C++
-xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-0p1_ctau-1_13TeV-madgraph.root", "output_jets_Mx2-1_Mx1-0p1_ctau-1_20200525.root");
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-0p1_ctau-1_13TeV-madgraph.root", "output_jets_Mx2-1_Mx1-0p1_ctau-1_20200601.root");
 .q
 root
 .L xAna_monoH_jets.C++
-xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_jets_Mx-150_20200525.root");
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_13TeV-madgraph.root", "output_jets_Mx-150_20200601.root");
 .q
 root
 .L xAna_monoH_jets.C++
-xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-1_ctau-1_13TeV-madgraph.root", "output_jets_Mx2-150_Mx1-1_ctau-1_20200525.root");
+xAna_monoH_jets("../infile_20191226/crab_DarkMatter_MonoZToLL_NLO_Vector_Mx2-150_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-1_ctau-1_13TeV-madgraph.root", "output_jets_Mx2-150_Mx1-1_ctau-1_20200601.root");
 .q
 
 
@@ -26,7 +26,7 @@ dumpCompareMultiplePDF("/home/shamrock/Documents/Project_HEP/ROOT_assignment_201
 
 root
 .L xAna_monoH_Draw.C++
-Main("../out_images/output_jets_20200525");
+Main("../out_images/output_jets_20200601");
 .q
 
 
@@ -48,3 +48,10 @@ p_t transverse momentum
 \hat z points to the direction anti-clockwise proton beam
 \hat x points to the center of the collider circle
 \hat y points to the sky
+
+// The "direction of a jet" (the direction of the THINjetP4)
+// Jet clustering algorithm
+// The direction of the axis of THINJet: Energy-weighted summation of directions of particles (roughly)
+// will be close to the direction of the particle with the highest direction
+
+// BTW, see the deltaR between d-dbar from the same chi1.
