@@ -202,9 +202,10 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
           }
           if (findAMatchSeparately) break;
           if (indexJetMatchedLast==nJets-1) {
-            if (i>nJetMatchedSeparately)
+            if (i>nJetMatchedSeparately) {
               nJetMatchedSeparately = i;
-            break;
+              break;
+            }
           }
         }
         if (findAMatchSeparately)break;
