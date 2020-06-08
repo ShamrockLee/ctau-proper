@@ -14,8 +14,9 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
   Long64_t nPass[20]={0};
   
   TH1F* hNumDWanted = new TH1F("hNumDWanted", "number of d or dbar from chi2", 8, 0-0.5f, 8-0.5f); 
-  TH1F* hIsDsFoundStrict = new TH1F("hIsDsFoundStrict", "Entrys with and without a d-dbar pair from chi2 and another pair from chi2-bar", 2, 0-0.5f, 2-0.5f);
-  TH1F* hIsTHINMatched = new TH1F("hIsTHINMatched", "Matched and unmatched thin jets (d or dbar from chi2)", 2, 0-0.5f, 2-0.5f);
+  TH1F* hIsDsFoundSignCorrect = new TH1F("hIsDsFoundSignCorrect", "Entrys with and without a d-dbar pair from chi2 and another pair from chi2-bar", 2, 0-0.5f, 2-0.5f);
+  TH1F* hnTHINMatchedSeparately = new TH1F("hnTHINMatchedSeparately", "Number of seperately matched thin jets (d or dbar from chi2)", 5, 0-0.5f, 5-0.5f);
+  TH1F* hnTHINMatched = new TH1F("hnTHINMatched", "Number of matched thin jets (d or dbar from chi2)", 5, 0-0.5f, 5-0.5f);
   TH1F* hDeltaRTHINjetPairsFromChi2ordi = new TH1F("hDeltaRTHINjetPairsFromChi2ordi", "deltaR of d-pairs from (ordinary) chi2", 100, 0, M_PI);
   TH1F* hDeltaRTHINjetPairsFromChi2bar = (TH1F*)hDeltaRTHINjetPairsFromChi2ordi->Clone("hDeltaRTHINjetPairsFromChi2bar");
   hDeltaRTHINjetPairsFromChi2bar->SetTitle("deltaR of d-pairs from chi2-bar");
@@ -61,25 +62,25 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
       
     }
     
-    std::vector<Int_t> vIndexesDWatedStrict;
-    vIndexesDWatedStrict.clear();
-    bool isDsFoundStrict = true;
+    std::vector<Int_t> vIndexesDWatedSignCorrectSeperated;
+    vIndexesDWatedSignCorrectSeperated.clear();
+    bool isDsFoundSignCorrect = true;
     {
       bool boolsSignCheckResult[4];
       for (int k=0; k<4; k++) boolsSignCheckResult[k] = false;
       for (int i=0; i<2; i++) {
         for (int j=0; j<2; j++) {
           for (int ig=0; ig<nGenPar; ig++) {
-            if ((genParId[ig] == 1 * (i==1 ? -1 : 1)) &&
-                (genMomParId[ig] == j * (j==1 ? -1 : 1))) {
+            if ((genParId[ig] * (i==1 ? -1 : 1) > 0) &&
+                (genMomParId[ig] * (j==1 ? -1 : 1) > 0)) {
               boolsSignCheckResult[i + (j<<1)] = true;
-              vIndexesDWatedStrict.push_back(ig);
+              vIndexesDWatedSignCorrectSeperated.push_back(ig);
             }
           }
         }
       }
       for (int k=0; k<4; k++) {
-        if (!boolsSignCheckResult[k]) isDsFoundStrict = false;
+        if (!boolsSignCheckResult[k]) isDsFoundSignCorrect = false;
       }
     }
     // hNumDWanted->Fill(vIndexesDWated.size()); //This is temporarily -- to test if it is affected by the bow operations
@@ -168,19 +169,20 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
 
     // }
     
-    std::vector<Int_t> vIndexesJetMatched;
-    vIndexesJetMatched.clear();
+    std::vector<Int_t> vIndexesJetMatchedSeparately;
+    vIndexesJetMatchedSeparately.clear();
+    Int_t nJetMatchedSeparately = 0;
     std::vector<Int_t> vIndexesDWatedSwapped;
-    if (isDsFoundStrict)
-      vIndexesDWatedSwapped = vIndexesDWatedStrict;
+    if (isDsFoundSignCorrect)
+      vIndexesDWatedSwapped = vIndexesDWatedSignCorrectSeperated;
     else
       vIndexesDWatedSwapped = vIndexesDWated;
     std::sort(vIndexesDWatedSwapped.begin(), vIndexesDWatedSwapped.end());
     
     // Check the signs of genParId's and genMomParId's
     Int_t nParticlesToMatch = 4;
-    bool findAMatch = false;
-    if (isDsFoundStrict || (Int_t)vIndexesDWated.size() == nParticlesToMatch) {
+    bool findAMatchSeparately = false;
+    if (isDsFoundSignCorrect || (Int_t)vIndexesDWated.size() == nParticlesToMatch) {
       
       // Match uning DeltaR
       do {
@@ -189,22 +191,40 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
           for (int j=indexJetMatchedLast + 1; j<nJets; j++) {
             if (((TLorentzVector*)genParP4->At(vIndexesDWatedSwapped[i]))
                 ->DeltaR(*(TLorentzVector*)thinjetP4->At(j)) < dRMax) {
-               vIndexesJetMatched.push_back(j);
+               vIndexesJetMatchedSeparately.push_back(j);
               if (i == nParticlesToMatch-1) {
-                findAMatch = true;
+                findAMatchSeparately = true;
+                nJetMatchedSeparately = nParticlesToMatch;
                 break;
               }
               indexJetMatchedLast = j;
             }
           }
-          if (findAMatch) break;
-          if (indexJetMatchedLast==nJets-1) break;
+          if (findAMatchSeparately) break;
+          if (indexJetMatchedLast==nJets-1) {
+            if (i>nJetMatchedSeparately)
+              nJetMatchedSeparately = i;
+            break;
+          }
         }
-        if (findAMatch)break;
+        if (findAMatchSeparately)break;
       } while (std::next_permutation(vIndexesDWatedSwapped.begin(), vIndexesDWatedSwapped.end()));
     }
     
-    if (isDsFoundStrict && findAMatch) {
+    std::vector<Int_t> vIndexesJetMatched;
+    vIndexesJetMatchedSeparately.clear();
+    Int_t nJetMatched = 0;
+    for (int i=0; i<nParticlesToMatch; i++) {
+      for (int j=0; j<nJets; j++) {
+        if (((TLorentzVector*)genParP4->At(vIndexesDWatedSwapped[i]))
+              ->DeltaR(*(TLorentzVector*)thinjetP4->At(j)) < dRMax) {
+              vIndexesJetMatched.push_back(j);
+        }
+      }
+    }
+    nJetMatched = vIndexesJetMatched.size();
+    
+    if (isDsFoundSignCorrect && findAMatchSeparately) {
       // Check id signs
       if (debug) {
         bool boolsSignCheckResult[4];
@@ -232,7 +252,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
         vIndexesDPairsOrdered[
         (genParId[vIndexesDWatedSwapped[i]]<0 ? 0b01 : 0)
         + (genMomParId[vIndexesDWatedSwapped[i]]<0 ? 0b10 : 0)] =
-        vIndexesJetMatched[i];
+        vIndexesJetMatchedSeparately[i];
       }
       if (debug) {
           printf("vIndexesDPairsOrdered: {%d,\t%d,\t%d,\t%d}\n", 
@@ -260,8 +280,9 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
     // if(!findAMatch)continue;
     
     hNumDWanted->Fill(vIndexesDWated.size());
-    hIsDsFoundStrict->Fill((int)isDsFoundStrict);
-    hIsTHINMatched->Fill((int)findAMatch); // findAMatch ? 1 : 0
+    hIsDsFoundSignCorrect->Fill((int)isDsFoundSignCorrect);
+    hnTHINMatchedSeparately->Fill(nJetMatchedSeparately);
+    hnTHINMatched->Fill(nJetMatched);
     // hTHINjetPairP4M->Fill(thinjetPairP4->M());
     // hTHINjetPairP4Pt->Fill(thinjetPairP4->Pt());
     // hTHINjetPairP4Rho->Fill(thinjetPairP4->Rho());
@@ -277,8 +298,9 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
   
   TFile* outFile = new TFile(outputFile.data(), toRecreateOutFile ? "recreate" : "update");
   hNumDWanted->Write();
-  hIsDsFoundStrict->Write();
-  hIsTHINMatched->Write();
+  hIsDsFoundSignCorrect->Write();
+  hnTHINMatchedSeparately->Write();
+  hnTHINMatched->Write();
   hDeltaRTHINjetPairsFromChi2ordi->Write();
   hDeltaRTHINjetPairsFromChi2bar->Write();
   hDeltaRBetweenTwoTHINjetPairs->Write();

@@ -55,3 +55,12 @@ p_t transverse momentum
 // will be close to the direction of the particle with the highest direction
 
 // BTW, see the deltaR between d-dbar from the same chi1.
+
+Two particles could possibly match the same jet
+
+	if(thatJet->Pt()<30)continue;
+	if(fabs(thatJet->Eta())>2.5)continue;
+	if(!passThinJetLooseID[jj])continue;
+	if(!passThinJetPUID[jj])continue; //pileup removal
+	
+Plot the momentum of the d quarks and the angles between them.
