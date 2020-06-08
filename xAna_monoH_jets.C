@@ -185,13 +185,19 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
     if (isDsFoundSignCorrect || (Int_t)vIndexesDWated.size() == nParticlesToMatch) {
       
       // Match uning DeltaR
+      // Swap jet's permutation.
       do {
         int indexJetMatchedLast = -1;
+        // Iterate particles
         for (int i=0; i<nParticlesToMatch; i++) {
+          // Iterate jets
           for (int j=indexJetMatchedLast + 1; j<nJets; j++) {
+            if (debug) std::cout<< "First is looping!" << std::endl;
+            // See if matched
             if (((TLorentzVector*)genParP4->At(vIndexesDWatedSwapped[i]))
                 ->DeltaR(*(TLorentzVector*)thinjetP4->At(j)) < dRMax) {
                vIndexesJetMatchedSeparately.push_back(j);
+              // See if all matched (if it is the last one)
               if (i == nParticlesToMatch-1) {
                 findAMatchSeparately = true;
                 nJetMatchedSeparately = nParticlesToMatch;
@@ -209,6 +215,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
           }
         }
         if (findAMatchSeparately)break;
+        // if one of them does not mach, swap the permutation and find again.
       } while (std::next_permutation(vIndexesDWatedSwapped.begin(), vIndexesDWatedSwapped.end()));
     }
     
@@ -217,6 +224,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
     Int_t nJetMatched = 0;
     for (int i=0; i<nParticlesToMatch; i++) {
       for (int j=0; j<nJets; j++) {
+        if (debug) std::cout<< "Second is looping!" << std::endl;
         if (((TLorentzVector*)genParP4->At(vIndexesDWatedSwapped[i]))
               ->DeltaR(*(TLorentzVector*)thinjetP4->At(j)) < dRMax) {
               vIndexesJetMatched.push_back(j);
