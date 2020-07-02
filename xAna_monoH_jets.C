@@ -41,6 +41,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
   // TH1F* hTHINjetPairP4M = new TH1F("hTHINjetPairP4M", "Static Mass of THINjet Pairs", 50, 0, 500);
   TH1F* hTHINjetP4Pt00 = new TH1F("hTHINjetP4Pt00", "Pt of the first (ordinary-ordinary) THINjet", 100, 0, 1000);
   TH1F* hTHINjetPairP4Pt0 = new TH1F("hTHINjetPairP4Pt0", "Pt of the first (ordinary) THINjet Pairs", 100, 0, 1000);
+  TH1F* hTHINjetP4Pt00Mismatched = new TH1F("hTHINjetP4Pt00Mismatched", "Pt of the first (ordinary) THINjet Pairs that matched 1 jets", 100, 0, 1000);
   // TH1F* hTHINjetPairP4Rho = new TH1F("hTHINjetPairP4Rho", "Rho of THINjet Pairs", 500, 0, 5000);
   // TH1F* hTHINjetPairP4Phi = new TH1F("hTHINjetPairP4Phi", "Phi of THINjet Pairs", 200, -M_PI, M_PI);
   // TH1F* hTHINjetPairP4Theta = new TH1F("hTHINjetPairP4Theta", "Theta of THINjet Pairs", 100, 0, M_PI);
@@ -191,6 +192,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
     std::vector<Int_t> vIndexesJetMatchedSeparately;
     vIndexesJetMatchedSeparately.clear();
     Int_t nJetMatchedSeparately = 0;
+    /*
     std::vector<Int_t> vIndexesDWatedSwapped;
     if (isDsFoundSignCorrect) {
       vIndexesDWatedSwapped = vIndexesDWatedSignCorrect;
@@ -198,6 +200,7 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
       vIndexesDWatedSwapped = vIndexesDWated;
     }
     std::sort(vIndexesDWatedSwapped.begin(), vIndexesDWatedSwapped.end());
+    */
     
     // Check the signs of genParId's and genMomParId's
     Int_t nParticlesToMatch = 4;
@@ -276,64 +279,89 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
     }
     
     
-    if (isDsFoundSignCorrect && findAMatch) {
-      // Check id signs
-      if (debug) {
-        bool boolsSignCheckResult[4];
-        for (int k=0; k<4; k++) boolsSignCheckResult[k] = false;
-        for (int k=0; k<4; k++) {
-          int i = (genParId[vIndexesDWatedSwapped[k]] < 0) ? 1 : 0;
-          int j = (genMomParId[vIndexesDWatedSwapped[k]] < 0) ? 1 : 0;
-          boolsSignCheckResult[i + (j<<1)] = true;
-        }
-        for (int k=0; k<4; k++) {
-          if (!boolsSignCheckResult[k]) {
-            printf("boolsSignCheckResult: {%d,\t%d,\t%d,\t%d}\n", 
-                 boolsSignCheckResult[0], 
-                 boolsSignCheckResult[1], 
-                 boolsSignCheckResult[2], 
-                 boolsSignCheckResult[3]);
-            std::cout << "Makeup of vIndexesDWatedSwapped is not correct!" << std::endl;
-            throw "Makeup of vIndexesDWatedSwapped is not correct!";
+      if (isDsFoundSignCorrect) {
+        /*
+        // Check id signs
+        if (debug) {
+          bool boolsSignCheckResult[4];
+          for (int k=0; k<4; k++) boolsSignCheckResult[k] = false;
+          for (int k=0; k<4; k++) {
+            int i = (genParId[vIndexesDWatedSwapped[k]] < 0) ? 1 : 0;
+            int j = (genMomParId[vIndexesDWatedSwapped[k]] < 0) ? 1 : 0;
+            boolsSignCheckResult[i + (j<<1)] = true;
+          }
+          for (int k=0; k<4; k++) {
+            if (!boolsSignCheckResult[k]) {
+              printf("boolsSignCheckResult: {%d,\t%d,\t%d,\t%d}\n", 
+                   boolsSignCheckResult[0], 
+                   boolsSignCheckResult[1], 
+                   boolsSignCheckResult[2], 
+                   boolsSignCheckResult[3]);
+              std::cout << "Makeup of vIndexesDWatedSwapped is not correct!" << std::endl;
+              throw "Makeup of vIndexesDWatedSwapped is not correct!";
+            }
           }
         }
-      }
-      if (debug) std::cout<< "Find a match!" << std::endl;
-      std::vector<Int_t> vIndexesDPairsOrdered;
-      vIndexesDPairsOrdered.resize(4);
-      for (int i=0; i<4; i++) {
-        vIndexesDPairsOrdered[
-        (genParId[vIndexesDWated[i]]<0 ? 0b01 : 0)
-        + (genMomParId[vIndexesDWated[i]]<0 ? 0b10 : 0)] =
-        vIndexesJetMatched[i];
-      }
-      if (debug) {
-          printf("vIndexesDPairsOrdered: {%d,\t%d,\t%d,\t%d}\n", 
-                 vIndexesDPairsOrdered[0], 
-                 vIndexesDPairsOrdered[1], 
-                 vIndexesDPairsOrdered[2], 
-                 vIndexesDPairsOrdered[3]);
-      }
-      hDeltaRTHINjetPairsFromChi2ordi->Fill(
+        */
+        if (debug) std::cout<< "Find a match!" << std::endl;
+
+        std::vector<Int_t> vIndexesDPairsOrdered;
+        vIndexesDPairsOrdered.resize(4);
+        bool boolsSignCheckResult[] = {false, false, false, false};
+        for (int i=0; i<4; i++) {
+          vIndexesDPairsOrdered[
+          (genParId[vIndexesDWated[i]]<0 ? 0b01 : 0)
+          + (genMomParId[vIndexesDWated[i]]<0 ? 0b10 : 0)] =
+          vIndexesJetMatched[i];
+          boolsSignCheckResult[
+          (genParId[vIndexesDWated[i]]<0 ? 0b01 : 0)
+          + (genMomParId[vIndexesDWated[i]]<0 ? 0b10 : 0)] = true;
+        }
+        if (debug) {
+            printf("vIndexesDPairsOrdered: {%d,\t%d,\t%d,\t%d}\n", 
+                   vIndexesDPairsOrdered[0], 
+                   vIndexesDPairsOrdered[1], 
+                   vIndexesDPairsOrdered[2], 
+                   vIndexesDPairsOrdered[3]);
+        }
+        if (findAMatch) {
+        
+        hDeltaRTHINjetPairsFromChi2ordi->Fill(
           ((TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[0]))
           ->DeltaR(*(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[1]))
                                  );
-      hDeltaRTHINjetPairsFromChi2bar->Fill(
+        hDeltaRTHINjetPairsFromChi2bar->Fill(
           ((TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[2]))
           ->DeltaR(*(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[3]))
                                  );
-      hTHINjetP4Pt00->Fill(((TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[0]))->Pt());
-      hTHINjetP4Eta00->Fill(((TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[0]))->Eta());
-      TLorentzVector jetPairsP4[2];
-      jetPairsP4[0] = (*(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[0]) 
-          + *(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[1]));
-      jetPairsP4[1] = *(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[2])
-          + *(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[3]);
-      hDeltaRBetweenTwoTHINjetPairs->Fill(jetPairsP4[0].DeltaR(jetPairsP4[1]));
-      hTHINjetPairP4Pt0->Fill(jetPairsP4[0].Pt());
-      hTHINjetPairP4Eta0->Fill(jetPairsP4[0].Eta());
-    };
+        hTHINjetP4Pt00->Fill(((TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[0]))->Pt());
+        hTHINjetP4Eta00->Fill(((TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[0]))->Eta());
+        TLorentzVector jetPairsP4[2];
+        jetPairsP4[0] = (*(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[0]) 
+            + *(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[1]));
+        jetPairsP4[1] = *(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[2])
+            + *(TLorentzVector*)thinjetP4->At(vIndexesDPairsOrdered[3]);
+        hDeltaRBetweenTwoTHINjetPairs->Fill(jetPairsP4[0].DeltaR(jetPairsP4[1]));
+        hTHINjetPairP4Pt0->Fill(jetPairsP4[0].Pt());
+        hTHINjetPairP4Eta0->Fill(jetPairsP4[0].Eta());
+      };
+      if (!boolsSignCheckResult[0]) {
+        hTHINjetP4Pt00Mismatched->Fill( ((TLorentzVector*)genParP4->At(vIndexesDWatedSignCorrect[0]))->Pt() );
+      }
+      /*
+      if (nJetMatched == 1) {
+        hTHINjetP4Pt00nJetMatched1->Fill((*(TLorentzVector*)thinjetP4->At(vIndexesJetMatched[0])).Pt());
+      }
+      if (nJetMatched <= 1) {
+        std::cout << "(jEntry, nJetMatched, ): " << jEntry << '\t' << nJetMatched << "\t";
+        for (int i=0; i<4; i++) {
+          std::cout <<0 vIndexesDPairsOrdered[i] == NULL;
+        }
+      }
+      */
     }
+  
+  }
 
     // if(!findAMatch)continue;
     
@@ -373,6 +401,8 @@ void xAna_monoH_jets(std::string inputFile,std::string outputFile, bool toRecrea
   hTHINjetP4Eta00->Write();
   hTHINjetPairP4Eta0->Write();
   // hTHINjetPairP4Rapidity->Write();
+  hTHINjetP4Pt00Mismatched->Write();
   outFile->Close();
 
 }
+
