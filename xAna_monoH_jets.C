@@ -382,7 +382,7 @@ void xAna_monoH_jets(std::string inputFile, std::string outputFile,
       for (int k = 0; k < 4; k++) {
         if (!boolsSignCheckResult[k]) {
           for (int ig = 0; ig < nGenPar; ig++) {
-            if (genParId[ig] == 1 && genMomParId[ig] == 18) {
+            if (genParId[ig] == (((k & 1) == 1) ? -1 : 1) && genMomParId[ig] == ((k >= 2) ? -18 : 18)) {
               arrHDP4PtMismatched[k]->Fill(
                   ((TLorentzVector*)genParP4->At(ig))->Pt());
               break;
