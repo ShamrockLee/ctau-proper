@@ -64,3 +64,6 @@ Two particles could possibly match the same jet
 	if(!passThinJetPUID[jj])continue; //pileup removal
 	
 Plot the momentum of the d quarks and the angles between them.
+
+treeMaker->Scan("genParId:genMomParId:genParP4.Pt():genParP4.Eta():genParP4.Phi()","","",1,1)
+treeMaker->Scan("genParId:genMomParId:genParP4.Pt():genParP4.Eta():genParP4.Phi()","","",1,9)
