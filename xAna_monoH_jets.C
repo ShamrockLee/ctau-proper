@@ -5,6 +5,9 @@
 #include <TMath.h>
 #include <assert.h>
 
+#include <TCanvas.h>
+#include <TStyle.h>
+
 #include <algorithm>  // for std::next_permutation(v)
 #include <fstream>
 #include <iostream>
@@ -60,8 +63,8 @@ void xAna_monoH_jets(std::string inputFile,
   TH2F* arrHDeltaRMinTHINjetVsPt[4];
   std::vector<Int_t> vDeltaRMaxX100;
   vDeltaRMaxX100.clear();
-  const int nDeltaRMax = 6;
-  TH1F *(aaHTHINjetP4Pt[nDeltaRMax][4]), *(aaHTHINjetP4PtMismatched[nDeltaRMax][4]);
+  const Int_t nDeltaRMax = 6;
+  TClonesArray tcflHTHINjetP4Pt("TH1F", (nDeltaRMax<<2)), tcflHTHINjetP4PtMismatched("TH1F", (nDeltaRMax << 2));
   for (Int_t val = 40; val <= 50; val += 2) vDeltaRMaxX100.push_back(val);
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < 2; j++) {
@@ -89,17 +92,22 @@ void xAna_monoH_jets(std::string inputFile,
     //TH1F *arrHTHINjetP4Pt[4], *arrHTHINjetP4PtMismatched[4];
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 2; j++) {
-        int k = (i << 1) + 1;
+        int k = (i << 1) + j;
         TString nameHead = (TString) "hTHINjetP4Pt" + i + j;
         TString titleHead = (TString) "The Pt of d" + i + j;
-        aaHTHINjetP4Pt[m][k] =
-            new TH1F(nameHead + "Matched" + deltaRMaxX100,
+        Int_t indexTcfl = (m<<2) + k;
+        if (debug) std::cout << "testing: " << "k: " << k << std::endl;
+        new(tcflHTHINjetP4Pt[indexTcfl]) TH1F(nameHead + "Matched" + deltaRMaxX100,
                      titleHead + "that matches (dRMax = " + deltaRMaxX100 + ")",
-                     100, 0, 1000);
-        aaHTHINjetP4PtMismatched[m][k] = (TH1F*)(aaHTHINjetP4Pt[m][k]->Clone(
-            nameHead + "Mismatched" + deltaRMaxX100));
-        aaHTHINjetP4PtMismatched[m][k]->SetTitle(
-            titleHead + "that doesn't match (dRMax = " + deltaRMaxX100 + ")");
+                     100, 0, 500);
+        if (debug) std::cout << "testing " << "generating the next one";
+        // tcflHTHINjetP4PtMismatched[indexTcfl] = (TH1F*)(tcflHTHINjetP4Pt[indexTcfl]->Clone(
+        //     nameHead + "Mismatched" + deltaRMaxX100));
+        // ((TH1F*)tcflHTHINjetP4PtMismatched[indexTcfl])->SetTitle(
+        //     titleHead + "that doesn't match (dRMax = " + deltaRMaxX100 + ")");
+        new(tcflHTHINjetP4PtMismatched[indexTcfl]) TH1F(nameHead + "Mismatched" + deltaRMaxX100,
+                     titleHead + "that doesn't match (dRMax = " + deltaRMaxX100/100 + ")",
+                     100, 0, 500);
       }
     }
   }
@@ -232,12 +240,13 @@ void xAna_monoH_jets(std::string inputFile,
         for (uint m = 0; m < nDeltaRMax; m++) {
           Double_t ptJetCurrent =
               ((TLorentzVector*)thinjetP4->At(indexTHINjetMatched))->Pt();
-          std::cout << "testing " << "m: " << m << "i: " << i << "dRThisMin: " << dRThisMin << "vDeltaRMaxX100[i]: " << vDeltaRMaxX100[i] <<  std::endl;
-          if (dRThisMin <= (Double_t)vDeltaRMaxX100[i] / 100) {
-            std::cout << "testing " << "aaHTHINjetP4Pt[m][i]: " << aaHTHINjetP4Pt[m][i] << std::endl;
-            aaHTHINjetP4Pt[m][i]->Fill(ptJetCurrent);
+          if (debug) std::cout << "testing " << "m: " << m << "i: " << i << "dRThisMin: " << dRThisMin << "vDeltaRMaxX100[i]: " << vDeltaRMaxX100[i] <<  std::endl;
+          Int_t indexTcfl = (m<<2) + i;
+          if (dRThisMin <= (Double_t)vDeltaRMaxX100[m] / 100) {
+            if (debug) std::cout << "testing " << "tcflHTHINjetP4Pt[indexTcfc]: " << tcflHTHINjetP4Pt[indexTcfl] << std::endl;
+            ((TH1F*)tcflHTHINjetP4Pt[indexTcfl])->Fill(ptJetCurrent);
           } else {
-            aaHTHINjetP4PtMismatched[m][i]->Fill(ptJetCurrent);
+            ((TH1F*)tcflHTHINjetP4PtMismatched[indexTcfl])->Fill(ptJetCurrent);
           }
         }
         if (dRThisMin > dRMaxTHIN) {
@@ -249,8 +258,18 @@ void xAna_monoH_jets(std::string inputFile,
       }
     }
   }
-
   file_mismatched.close();
+
+  TH1F *arrHDeltaRMinTHINjetCumuBack[4];
+  for (int k=0; k<4; k++) {
+    TH1F *hDeltaRMinTHINjetCurrent = arrHDeltaRMinTHINjet[k];
+    TH1F *hDeltaRMinTHINjetCumuBackCurrent =
+      (TH1F*)hDeltaRMinTHINjetCurrent->GetCumulative(kFALSE, "CumuBack");
+    hDeltaRMinTHINjetCumuBackCurrent->SetTitle(
+      (TString)hDeltaRMinTHINjetCurrent->GetTitle() + " (Cumulative)");
+    arrHDeltaRMinTHINjetCumuBack[k] = hDeltaRMinTHINjetCumuBackCurrent;
+  }
+
   TString outputFile = (TString) "output_" + outputFileHead + "_" +
                        outputFileVar + "_" + outputFileTail + ".root";
   TFile* outFile =
@@ -264,9 +283,41 @@ void xAna_monoH_jets(std::string inputFile,
     arrHDeltaRMinTHINjet[k]->Write();
     arrHDeltaRMinTHINjet[k]->GetCumulative(kFALSE, "CumuBack")->Write();
     arrHDeltaRMinTHINjetVsPt[k]->Write();
-    for (uint m=0; m<vDeltaRMaxX100.size(); m++) {
-      aaHTHINjetP4Pt[m][k]->Write();
-      aaHTHINjetP4PtMismatched[m][k]->Write();
+    for (int m=0; m<nDeltaRMax; m++) {
+      Int_t indexTcfl = (m<<2) + k;
+      ((TH1F*)tcflHTHINjetP4Pt[indexTcfl])->Write();
+      ((TH1F*)tcflHTHINjetP4PtMismatched[indexTcfl])->Write();
     }
+  }
+  if (true) {
+    TCanvas *c1 = new TCanvas;
+    gStyle->SetOptStat(111111);
+    TString outDir = (TString)"../out_images/output_" + outputFileHead + "_" + outputFileTail;
+    TString outImageNameHead = (TString)outputFileHead + "_" + outputFileVar;
+    TString outImageCommonPath = outDir + "/" + outImageNameHead + "_";
+    for (int k=0; k<4; k++) {
+      TH1F *hDeltaRMinTHINjetCurrent = arrHDeltaRMinTHINjet[k];
+      hDeltaRMinTHINjetCurrent->Draw();
+      c1->Print(outImageCommonPath + hDeltaRMinTHINjetCurrent->GetName() + ".svg");
+      hDeltaRMinTHINjetCurrent->GetCumulative(kFALSE, "CumuBack")->Draw();
+      c1->Print(outImageCommonPath + hDeltaRMinTHINjetCurrent->GetName() + "CumuBack" + ".svg");
+      TH2F *hDeltaRMinTHINjetVsPtCurrent = arrHDeltaRMinTHINjetVsPt[k];
+      c1->Print(outImageCommonPath + hDeltaRMinTHINjetVsPtCurrent->GetName() + ".svg");
+      c1->Clear();
+      ((TH1F*)tcflHTHINjetP4Pt[k])->Draw();
+      for (int m=1; m<nDeltaRMax; m++) {
+        TH1F *hTHINjetP4PtCurrent = (TH1F*)tcflHTHINjetP4Pt[(m<<2)+k];
+        hTHINjetP4PtCurrent->Draw("SAME");
+      }
+      c1->Print(outImageCommonPath + "hTHINjetP4Pt" + (k>=2) + ((k & 1) > 0) + "40to50" + ".svg");
+      c1->Clear();
+      ((TH1F*)tcflHTHINjetP4PtMismatched[k])->Draw();
+      for (int m=1; m<nDeltaRMax; m++) {
+        TH1F *hTHINjetP4PtMismatchedCurrent = (TH1F*)tcflHTHINjetP4PtMismatched[(m<<2)+k];
+        hTHINjetP4PtMismatchedCurrent->Draw("SAME");
+      }
+      c1->Print(outImageCommonPath + "hTHINjetP4Pt" + (k>=2) + ((k & 1) > 0) + "Mismatched40to50" + ".svg");
+    }
+    c1->Close();
   }
 }
