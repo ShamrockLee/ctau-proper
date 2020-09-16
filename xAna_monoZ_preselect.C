@@ -1,82 +1,136 @@
+#include <TCanvas.h>
 #include <TClonesArray.h>
+#include <TFile.h>
 #include <TH1.h>
 #include <TLorentzVector.h>
-#include <TFile.h>
 #include <TString.h>
-#include <TCanvas.h>
 #include <TStyle.h>
 
-
+#include <cstring>  // std::memcpy
 #include <iostream>
 #include <vector>
-#include <cstring> // std::memcpy
 
 #include "untuplizer.h"
 
 // template <typename TypeData>
-// TBranch* branchAdder(TTree* tree, const char* name, TypeData* address, const char* typestring=nullptr, Int_t buffsize=32000) {
+// TBranch* branchAdder(TTree* tree, const char* name, TypeData* address, const
+// char* typestring=nullptr, Int_t buffsize=32000) {
 //   if (typestring == nullptr) {
 //     return tree->Branch(name, address);
 //   } else {
-//     return tree->Branch(name, address, ((TString)name + "/" + typestring), buffsize);
+//     return tree->Branch(name, address, ((TString)name + "/" + typestring),
+//     buffsize);
 //   }
 // }
 
-typedef std::vector<Bool_t>::iterator IteratorVBool_t;
-typedef std::vector<Int_t>::iterator IteratorVInt_t;
-typedef std::vector<UInt_t>::iterator IteratorVUInt_t;
-typedef std::vector<Float_t>::iterator IteratorVFloat_t;
+/// Preselection
+void xAna_monoZ_preselect(
+    std::string inputFile,       //< Path of input file
+    std::string outputFileHead,  //< Output filename head ex: "preselected"
+    std::string outputFileVar,   //< Variables of the data ex:
+                                 //"Mx2-150_Mv-500_Mx1-1_ctau-1"
+    std::string outputFileTail,  //< Output filename tail (date) ex: "20200730"
+    bool toRecreateOutFile = true, bool debug = false) {
+  const Double_t massZ = 91.1876;  //< static mass of Z (constant)
+  const Double_t massElectron = 0.0005109989461; //< static mass of electron (constant)
+  const Int_t pdgZ = 23;        //< pdgid of Z
+  const Int_t pdgZp = 55;       //< pdgid of Z'
+  const Int_t pdgX2 = 18;       //< pdgid of x2
+  const Int_t pdgX1 = 5000522;  //< pdgid of x1
+  const Int_t pdgDown = 1;      //< pdgid of down quark
 
-
-void xAna_monoZ_preselect(std::string inputFile,
-                          std::string outputFileHead,  // "jets-newdata"
-                          std::string outputFileVar,   // "Mx2-150_Mx1-1_ctau-1"
-                          std::string outputFileTail,  // "20200730"
-                          bool toRecreateOutFile = true, bool debug = false) {
-
-  const Double_t massZ = 91.1876;
-  const Int_t pdgZ = 23;
-  const Int_t pdgZp = 55;
-  const Int_t pdgX2 = 18;
-  const Int_t pdgX1 = 5000522;
-  const Int_t pdgDown = 1;
-
+  /// path to the output file to store the trees
   TString outputFileTree = (TString) "output_" + outputFileHead + "_" +
-                       outputFileVar + "_" + outputFileTail + "_tree" + ".root";
-  TFile* outFileTree =
-      new TFile(outputFileTree.Data(), toRecreateOutFile ? "recreate" : "update");
+                           outputFileVar + "_" + outputFileTail + "_tree" +
+                           ".root";
+  /// output fle to store the tree
+  TFile* outFileTree = new TFile(outputFileTree.Data(),
+                                 toRecreateOutFile ? "recreate" : "update");
 
-  const char* nameTreeIn = "Events";
-  TreeReader data(inputFile.data(), nameTreeIn);
-  const Long64_t nEntry = data.GetEntriesFast();
+  const char* nameTreeIn = "Events";              //< the input tree
+  TreeReader data(inputFile.data(), nameTreeIn);  //< the TreeReader
+  const Long64_t nEntry = data.GetEntriesFast();  //< number of entries
   // if (debug) std::cout<< "nEntry: " << nEntry << std::endl;
 
-  TTree* ttNumCorrect = new TTree("NumCorrect", "Variables of entries with 2 electrons/2 muons");
-  TTree* ttPreselected = new TTree("Preselected", "Preselected variables");
+  const TString namesLepton[] = {"Electron", "Muon", "Tau"}; //< the name of the leptons (Xxx)
+  const TString namesLeptonLower[] = {"electron", "muon", "tau"}; //< the name of the leptons (xxx)
+  // TTree* ttGenElectron = new TTree("GenElectron", "GEN-level electron
+  // events");
 
+  /// Tree for GEN-correct  electron/muon/tau
+  TTree *arrTTGen[3];
+
+  /// Tree for events with correct numbers of electron/muon
+  TTree *arrTTNumCorrect[2];
+
+  /// Tree for events whose electron/muon pairs pass Z mass cut
+  TTree *arrTTZMassCutted[2];
+
+  for (Byte_t i = 0; i < 3; i++) {
+    arrTTGen[i] =
+        new TTree((TString) "Gen" + namesLepton[i],
+                  (TString) "GEN-level " + namesLeptonLower[i] + " events");
+  }
+  for (Byte_t i = 0; i < 2; i++) {
+    arrTTNumCorrect[i] = new TTree(
+        (TString) "NumCorrect" + namesLepton[i],
+        (TString) "Events with correct number of " + namesLeptonLower[i]);
+  }
+  for (Byte_t i = 0; i < 2; i++) {
+    arrTTZMassCutted[i] =
+        new TTree((TString) "ZMassCutted" + namesLepton[i],
+                  (TString) "Z mass cutted " + namesLeptonLower[i] + " events");
+  }
+  TTree* ttNumCorrect = new TTree(
+      "NumCorrect",
+      "Variables of entries with 2 electrons/2 muons");  //< tree filled when
+                                                         //the number is right
+  TTree* ttZMassCutted = new TTree(
+      "ZMassCutted",
+      "Preselected variables");  //< tree filled when passing Z mass cut
+
+  /// Index of entry, bounded to the trees.
   Long64_t jEntry;
-  ttNumCorrect->Branch("jEntryOriginal", &jEntry, "jEntryOriginal/l", 64);
-  ttPreselected->Branch("jEntryOriginal", &jEntry, "jEntryOriginal/l", 64);
+  // ttNumCorrect->Branch("jEntryOriginal", &jEntry);
+  // ttZMassCutted->Branch("jEntryOriginal", &jEntry);
+  for (Byte_t i=0; i<3; i++) {
+    arrTTGen[i]->Branch("jEntry", &jEntry);
+  }
+  for (Byte_t i=0; i<2; i++) {
+    arrTTNumCorrect[i]->Branch("jEntry", &jEntry);
+  }
+  for (Byte_t i=0; i<2; i++) {
+    arrTTZMassCutted[i]->Branch("jEntry", &jEntry);
+  }
 
+  /// Number of electron pairs (1 or 0), bounded to the trees
   UInt_t nElectronPair;
-  ttNumCorrect->Branch("nElectronPair", &nElectronPair, "nElectronPair/I", __SIZEOF_INT__);
-  ttPreselected->Branch("nElectronPair", &nElectronPair, "nElectronPair/I", __SIZEOF_INT__);
+  ttNumCorrect->Branch("nElectronPair", &nElectronPair, "nElectronPair/I",
+                       __SIZEOF_INT__);
+  ttZMassCutted->Branch("nElectronPair", &nElectronPair, "nElectronPair/I",
+                        __SIZEOF_INT__);
 
+  /// Electron pair mass, bounded to the trees
   std::vector<Float_t> vElectronPair_massNumCorrect;
   vElectronPair_massNumCorrect.clear();
-  ttNumCorrect->Branch("ElectronPair_mass", &vElectronPair_massNumCorrect, "ElectronPair_mass/F", __SIZEOF_FLOAT__);
-  ttPreselected->Branch("ElectronPair_mass", &vElectronPair_massNumCorrect, "ElectronPair_mass/F", __SIZEOF_FLOAT__);
+  ttNumCorrect->Branch("ElectronPair_mass", &vElectronPair_massNumCorrect);
+  ttZMassCutted->Branch("ElectronPair_mass", &vElectronPair_massNumCorrect);
 
+  /// Number of muon pairs (1 or 0), bounded to the trees
   UInt_t nMuonPair;
   ttNumCorrect->Branch("nMuonPair", &nMuonPair, "nMuonPair/I", __SIZEOF_INT__);
-  ttPreselected->Branch("nMuonPair", &nMuonPair, "nMuonPair/I", __SIZEOF_INT__);
+  ttZMassCutted->Branch("nMuonPair", &nMuonPair, "nMuonPair/I", __SIZEOF_INT__);
 
+  /// Muon pair mass, bounded to the treess
   std::vector<Float_t> vMuonPair_massNumCorrect;
-  ttNumCorrect->Branch("MuonPair_mass", &vMuonPair_massNumCorrect, "MuonPair_mass/F", __SIZEOF_FLOAT__);
-  ttPreselected->Branch("MuonPair_mass", &vMuonPair_massNumCorrect, "MuonPair_mass/F", __SIZEOF_FLOAT__);
+  ttNumCorrect->Branch("MuonPair_mass", &vMuonPair_massNumCorrect);
+  ttZMassCutted->Branch("MuonPair_mass", &vMuonPair_massNumCorrect);
 
-  Float_t leptonPair_massNumCorrect;
-  ttNumCorrect->Branch("LeptonPair_massNumCorrect", &leptonPair_massNumCorrect, "LeptonPair_massNumCorrect/F", __SIZEOF_FLOAT__);
+  // /// lepton pair mass, bounded to the trees
+  // Float_t leptonPair_massNumCorrect;
+  // ttNumCorrect->Branch("LeptonPair_massNumCorrect",
+  // &leptonPair_massNumCorrect, "LeptonPair_massNumCorrect/F",
+  // __SIZEOF_FLOAT__);
 
   typedef struct {
     TString name;
@@ -85,11 +139,8 @@ void xAna_monoZ_preselect(std::string inputFile,
 
   UInt_t nJet;
   UInt_t nLeafOriginal;
-  std::vector<ObjectDescription>
-  vLeafDescriptionJetBool,
-  vLeafDescriptionJetUInt,
-  vLeafDescriptionJetInt,
-  vLeafDescriptionJetFloat;
+  std::vector<ObjectDescription> vLeafDescriptionJetBool,
+      vLeafDescriptionJetUInt, vLeafDescriptionJetInt, vLeafDescriptionJetFloat;
   {
     TFile* tfIn = new TFile(inputFile.data(), "READ");
     TTree* ttIn = (TTree*)tfIn->Get(nameTreeIn);
@@ -115,8 +166,10 @@ void xAna_monoZ_preselect(std::string inputFile,
         } else if (typeNameCurrent == "Float_t") {
           vLeafDescriptionJetFloat.push_back(descriptionCurrent);
         } else if (debug) {
-          std::cout << (TString)"LeafJet missed: " + descriptionCurrent.name
-          + "\t" + typeNameCurrent + "\t" + descriptionCurrent.title << std::endl;
+          std::cout << (TString) "LeafJet missed: " + descriptionCurrent.name +
+                           "\t" + typeNameCurrent + "\t" +
+                           descriptionCurrent.title
+                    << std::endl;
         }
       }
     }
@@ -128,70 +181,79 @@ void xAna_monoZ_preselect(std::string inputFile,
   UInt_t nLeafJetFloat = vLeafDescriptionJetFloat.size();
 
   std::vector<Float_t> arrVLeafJetFloat[nLeafJetFloat],
-  arrVLeafJetUInt[nLeafJetUInt],
-  arrVLeafJetInt[nLeafJetInt],
-  arrVLeafJetBool[nLeafJetBool];
+      arrVLeafJetUInt[nLeafJetUInt], arrVLeafJetInt[nLeafJetInt],
+      arrVLeafJetBool[nLeafJetBool];
   // Histograms for jets
   // TH1F *arrHLeafJetBool[nLeafJetBool],
   // *arrHLeafJetInt[nLeafJetInt],
   // *arrHLeafJetUInt[nLeafJetUInt],
   // *arrHLeafJetFloat[nLeafJetFloat];
-  for (UInt_t i=0; i<nLeafJetFloat; i++) {
+  for (UInt_t i = 0; i < nLeafJetFloat; i++) {
     TString name = vLeafDescriptionJetFloat[i].name;
     TString title = vLeafDescriptionJetFloat[i].title;
-    ttPreselected->Branch(name, &(arrVLeafJetFloat[i]), name + "/F", __SIZEOF_FLOAT__ * 100)
-    ->SetTitle(title);
-    // arrHLeafJetFloat[i] = new TH1F((TString)"h" + vLeafDescriptionJetFloat[i].name,
-    // vLeafDescriptionJetFloat[i].title,
+    ttZMassCutted->Branch(name, &(arrVLeafJetFloat[i]))->SetTitle(title);
+    // arrHLeafJetFloat[i] = new TH1F((TString)"h" +
+    // vLeafDescriptionJetFloat[i].name, vLeafDescriptionJetFloat[i].title,
     // 20000, -100, 1900);
   }
-  for (UInt_t i=0; i<nLeafJetUInt; i++) {
+  for (UInt_t i = 0; i < nLeafJetUInt; i++) {
     TString name = vLeafDescriptionJetUInt[i].name;
     TString title = vLeafDescriptionJetUInt[i].title;
-    ttPreselected->Branch(name, &(arrVLeafJetUInt[i]), name + "/I", __SIZEOF_INT__ * 100)
-    ->SetTitle(title);
-    // arrHLeafJetUInt[i] = new TH1F((TString)"h" + vLeafDescriptionJetUInt[i].name,
-    // vLeafDescriptionJetUInt[i].title,
-    // 30, -0.5, 0.5);
+    ttZMassCutted->Branch(name, &(arrVLeafJetUInt[i]))->SetTitle(title);
+    // arrHLeafJetUInt[i] = new TH1F((TString)"h" +
+    // vLeafDescriptionJetUInt[i].name, vLeafDescriptionJetUInt[i].title, 30,
+    // -0.5, 0.5);
   }
-  for (UInt_t i=0; i<nLeafJetInt; i++) {
+  for (UInt_t i = 0; i < nLeafJetInt; i++) {
     TString name = vLeafDescriptionJetInt[i].name;
     TString title = vLeafDescriptionJetInt[i].title;
-    ttPreselected->Branch(name, &(arrVLeafJetInt[i]), name + "/i", __SIZEOF_INT__ * 100)
-    ->SetTitle(title);
-    // arrHLeafJetInt[i] = new TH1F((TString)"h" + vLeafDescriptionJetInt[i].name,
-    // vLeafDescriptionJetInt[i].title,
-    // 30, -0.5, 30-0.5);
+    ttZMassCutted->Branch(name, &(arrVLeafJetInt[i]))->SetTitle(title);
+    // arrHLeafJetInt[i] = new TH1F((TString)"h" +
+    // vLeafDescriptionJetInt[i].name, vLeafDescriptionJetInt[i].title, 30,
+    // -0.5, 30-0.5);
   }
-  for (UInt_t i=0; i<nLeafJetBool; i++) {
+  for (UInt_t i = 0; i < nLeafJetBool; i++) {
     TString name = vLeafDescriptionJetBool[i].name;
     TString title = vLeafDescriptionJetBool[i].title;
-    ttPreselected->Branch(name, &(arrVLeafJetBool[i]), name + "/O", __SIZEOF_INT__ * 100)
-    ->SetTitle(title);
-    // arrHLeafJetBool[i] = new TH1F((TString)"h" + vLeafDescriptionJetBool[i].name,
-    // vLeafDescriptionJetBool[i].title,
-    // 2, -0.5, 0.5);
+    ttZMassCutted->Branch(name, &(arrVLeafJetBool[i]))->SetTitle(title);
+    // arrHLeafJetBool[i] = new TH1F((TString)"h" +
+    // vLeafDescriptionJetBool[i].name, vLeafDescriptionJetBool[i].title, 2,
+    // -0.5, 0.5);
   }
 
   for (jEntry = 0; jEntry < nEntry; jEntry++) {
+    data.GetEntry(jEntry);
 
     vElectronPair_massNumCorrect.clear();
     vMuonPair_massNumCorrect.clear();
 
-    data.GetEntry(jEntry);
+    for (UInt_t i = 0; i < nLeafJetFloat; i++) {
+      arrVLeafJetFloat[i].clear();
+    }
+    for (UInt_t i = 0; i < nLeafJetUInt; i++) {
+      arrVLeafJetUInt[i].clear();
+    }
+    for (UInt_t i = 0; i < nLeafJetInt; i++) {
+      arrVLeafJetInt[i].clear();
+    }
+    for (UInt_t i = 0; i < nLeafJetBool; i++) {
+      arrVLeafJetBool[i].clear();
+    }
 
     nJet = data.GetInt("nJet");
     // if (debug) std::cout << "nJet: " << nJet << std::endl;
 
     // Int_t nGenPart = data.GetInt("nGenPart");
     // Int_t* ptrGenPart_pdgId = data.GetPtrInt("GenPart_pdgId");
-    // Int_t* ptrGenPart_genPartIdxMother = data.GetPtrInt("GenPart_genPartIdxMother");
+    // Int_t* ptrGenPart_genPartIdxMother =
+    // data.GetPtrInt("GenPart_genPartIdxMother");
 
     Int_t nElectron = data.GetInt("nElectron");
     Bool_t* ptrElectron_mvaFall17V2Iso_WPL =
         data.GetPtrBool("Electron_mvaFall17V2Iso_WPL");
     // Bool_t* ptrElectron_mvaFall17V2Iso_WP90 =
-    //     data.GetPtrBool("Electron_mvaFall17V2Iso_WP90"); // Probably too tight
+    //     data.GetPtrBool("Electron_mvaFall17V2Iso_WP90"); // Probably too
+    //     tight
     // Bool_t* ptrElectron_mvaFall17V2Iso_WP80 =
     //     data.GetPtrBool("Electron_mvaFall17V2Iso_WP80");
     Bool_t* ptrElectron_isSoft = ptrElectron_mvaFall17V2Iso_WPL;
@@ -227,14 +289,14 @@ void xAna_monoZ_preselect(std::string inputFile,
     if (isNumElectronCorrect == isNumMuonCorrect) {
       continue;
     }
-    if (debug) std::cout << "elepair, mupair: "
-    << (Int_t)isNumElectronCorrect
-    << (Int_t)isNumMuonCorrect << std::endl;
+    if (debug)
+      std::cout << "elepair, mupair: " << (Int_t)isNumElectronCorrect
+                << (Int_t)isNumMuonCorrect << std::endl;
 
     Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
     Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
     Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
-    Float_t* ptrElectron_mass = data.GetPtrFloat("Electron_mass");
+    Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
 
     TLorentzVector* ppElectronP4NumberCorrect[nElectronTight];
     TLorentzVector* ptrElectronP4NumberCorrectSum;
@@ -242,22 +304,29 @@ void xAna_monoZ_preselect(std::string inputFile,
       ptrElectronP4NumberCorrectSum = new TLorentzVector();
       for (Int_t i = 0; i < nElectronTight; i++) {
         ppElectronP4NumberCorrect[i] = new TLorentzVector();
+        // ppElectronP4NumberCorrect[i]->SetPtEtaPhiE(
+        //     ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
+        //     ptrElectron_eCorr[i]);
         ppElectronP4NumberCorrect[i]->SetPtEtaPhiM(
             ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
-            ptrElectron_mass[i]);
+            massElectron);
         *ptrElectronP4NumberCorrectSum += *ppElectronP4NumberCorrect[i];
       }
       Double_t electronPair_mass = ptrElectronP4NumberCorrectSum->M();
       vElectronPair_massNumCorrect.push_back(electronPair_mass);
-      leptonPair_massNumCorrect = electronPair_mass;
+      // leptonPair_massNumCorrect = electronPair_mass;
+      // Mass z cuts
       Double_t massZCutUpper = massZ + 20;
       Double_t massZCutLower = massZ - 20;
       // Z mass cut for electron pairs
-      if (massZCutLower > electronPair_mass || electronPair_mass > massZCutUpper) {
-        ttNumCorrect->Fill();
+      if (massZCutLower > electronPair_mass ||
+          electronPair_mass > massZCutUpper) {
+        // ttNumCorrect->Fill();
         continue;
       }
-      if (debug) std::cout << "massLPair: " << electronPair_mass << std::endl;
+      if (debug)
+        std::cout << "massLPair: " << vElectronPair_massNumCorrect[0]
+                  << std::endl;
     }
 
     Float_t* ptrMuon_pt = data.GetPtrFloat("Muon_pt");
@@ -277,15 +346,16 @@ void xAna_monoZ_preselect(std::string inputFile,
       }
       Double_t muonPair_mass = ptrMuonP4NumberCorrectSum->M();
       vMuonPair_massNumCorrect.push_back(muonPair_mass);
-      leptonPair_massNumCorrect = muonPair_mass;
+      // leptonPair_massNumCorrect = muonPair_mass;
       Double_t massZCutUpper = massZ + 20;
       Double_t massZCutLower = massZ - 20;
       // Z mass cut for muon pairs
       if (massZCutLower > muonPair_mass || muonPair_mass > massZCutUpper) {
-        ttNumCorrect->Fill();
+        // ttNumCorrect->Fill();
         continue;
       }
-      if (debug) std::cout << "massLPair: " << muonPair_mass << std::endl;
+      if (debug)
+        std::cout << "massLPair: " << vMuonPair_massNumCorrect[0] << std::endl;
     }
 
     // std::vector<Int_t> vIdxZ_all, vIdxZp_all;
@@ -302,64 +372,66 @@ void xAna_monoZ_preselect(std::string inputFile,
 
     ttNumCorrect->Fill();
     // Jet_*
-    for (UInt_t i=0; i<nLeafJetFloat; i++) {
+    for (UInt_t i = 0; i < nLeafJetFloat; i++) {
       TString name = vLeafDescriptionJetFloat[i].name;
-      Float_t *ptrFloat = data.GetPtrFloat(name);
+      Float_t* ptrFloat = data.GetPtrFloat(name);
       arrVLeafJetFloat[i].clear();
-        for (UInt_t j = 0; j < nJet; j++) {
-          // arrHLeafJetFloat[i]->Fill(ptrFloat[j]);
-          arrVLeafJetFloat[i].push_back(ptrFloat[j]);
-          // if (debug) std::cout << ptrFloat[j] << ", ";
-        }
-        // if (debug) std::cout << std::endl;
+      for (UInt_t j = 0; j < nJet; j++) {
+        // arrHLeafJetFloat[i]->Fill(ptrFloat[j]);
+        arrVLeafJetFloat[i].push_back(ptrFloat[j]);
+        // if (debug) std::cout << ptrFloat[j] << ", ";
+      }
+      // if (debug) std::cout << std::endl;
     }
-    for (UInt_t i=0; i<nLeafJetUInt; i++) {
-      TString name  = vLeafDescriptionJetUInt[i].name;
-      Int_t *ptrUInt = data.GetPtrInt(name);
+    for (UInt_t i = 0; i < nLeafJetUInt; i++) {
+      TString name = vLeafDescriptionJetUInt[i].name;
+      Int_t* ptrUInt = data.GetPtrInt(name);
       arrVLeafJetUInt[i].clear();
-      for (UInt_t j=0; j<nJet; j++) {
+      for (UInt_t j = 0; j < nJet; j++) {
         // arrHLeafJetUInt[i]->Fill(ptrUInt[j]);
         arrVLeafJetUInt[i].push_back(ptrUInt[j]);
       }
     }
-    for (UInt_t i=0; i<nLeafJetInt; i++) {
+    for (UInt_t i = 0; i < nLeafJetInt; i++) {
       TString name = vLeafDescriptionJetInt[i].name;
-      Int_t *ptrInt = data.GetPtrInt(name);
+      Int_t* ptrInt = data.GetPtrInt(name);
       arrVLeafJetInt[i].clear();
-      for (UInt_t j=0; j<nJet; j++) {
+      for (UInt_t j = 0; j < nJet; j++) {
         // arrHLeafJetInt[i]->Fill(ptrInt[j]);
         arrVLeafJetInt[i].push_back(ptrInt[j]);
       }
     }
-    for (UInt_t i=0; i<nLeafJetBool; i++) {
+    for (UInt_t i = 0; i < nLeafJetBool; i++) {
       TString name = vLeafDescriptionJetBool[i].name;
-      Bool_t *ptrBool = data.GetPtrBool(name);
-      for (UInt_t j=0; j<nJet; j++) {
+      Bool_t* ptrBool = data.GetPtrBool(name);
+      for (UInt_t j = 0; j < nJet; j++) {
         // arrHLeafJetBool[i]->Fill(ptrBool[j]);
         arrVLeafJetBool[i].push_back(ptrBool[j]);
       }
     }
-    ttPreselected->Fill();
+    ttZMassCutted->Fill();
   }
 
   // ttNumCorrect->GetCurrentFile()->Write();
-  ttPreselected->GetCurrentFile()->Write();
+  // ttZMassCutted->GetCurrentFile()->Write();
+  outFileTree->Write();
 
-  TString outImageDir = (TString)"../out_images/output_" + outputFileHead + "_" + outputFileTail;
+  TString outImageDir =
+      (TString) "../out_images/output_" + outputFileHead + "_" + outputFileTail;
   TString outImageNameHead = (TString)outputFileHead + "_" + outputFileVar;
   TString outImageCommonPath = outImageDir + "/" + outImageNameHead + "_";
-  TCanvas *c1 = new TCanvas;
+  TCanvas* c1 = new TCanvas;
   gStyle->SetOptStat(111111);
 
-  for (TObject *leafObject: *(ttPreselected->GetListOfLeaves())) {
-    TLeaf *leaf = (TLeaf *) leafObject;
+  for (TObject* leafObject : *(ttZMassCutted->GetListOfLeaves())) {
+    TLeaf* leaf = (TLeaf*)leafObject;
     TString nameLeaf = leaf->GetName();
-    if (nameLeaf.First("[") >=0 ) {
+    if (nameLeaf.First("[") >= 0) {
       nameLeaf.Resize(nameLeaf.First("["));
     }
     TString outImagePath = outImageCommonPath + nameLeaf + ".svg";
     c1->Clear();
-    ttPreselected->Draw(nameLeaf);
+    ttZMassCutted->Draw(nameLeaf);
     c1->Print(outImagePath);
   }
   c1->Close();
@@ -367,21 +439,25 @@ void xAna_monoZ_preselect(std::string inputFile,
   outFileTree->Close();
   delete outFileTree;
   outFileTree = new TFile(outputFileTree.Data(), "update");
-  for (UInt_t i=0; i<nLeafJetFloat; i++) {
+  for (UInt_t i = 0; i < nLeafJetFloat; i++) {
     // arrHLeafJetFloat[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetFloat[i], arrHLeafJetFloat[i]->GetName());
+    // outFileTree->WriteObject(arrHLeafJetFloat[i],
+    // arrHLeafJetFloat[i]->GetName());
   }
-  for (UInt_t i=0; i<nLeafJetUInt; i++) {
+  for (UInt_t i = 0; i < nLeafJetUInt; i++) {
     // arrHLeafJetUInt[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetUInt[i], arrHLeafJetUInt[i]->GetName());
+    // outFileTree->WriteObject(arrHLeafJetUInt[i],
+    // arrHLeafJetUInt[i]->GetName());
   }
-  for (UInt_t i=0; i<nLeafJetInt; i++) {
+  for (UInt_t i = 0; i < nLeafJetInt; i++) {
     // arrHLeafJetInt[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetInt[i], arrHLeafJetInt[i]->GetName());
+    // outFileTree->WriteObject(arrHLeafJetInt[i],
+    // arrHLeafJetInt[i]->GetName());
   }
-  for (UInt_t i=0; i<nLeafJetBool; i++) {
+  for (UInt_t i = 0; i < nLeafJetBool; i++) {
     // arrHLeafJetBool[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetBool[i], arrHLeafJetBool[i]->GetName());
+    // outFileTree->WriteObject(arrHLeafJetBool[i],
+    // arrHLeafJetBool[i]->GetName());
   }
 
   outFileTree->Close();
