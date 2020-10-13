@@ -27,10 +27,11 @@
 /// Preselection
 void xAna_monoZ_preselect(
     std::string inputFile,       //< Path of input file
-    std::string outputFileHead,  //< Output filename head ex: "preselected"
-    std::string outputFileVar,   //< Variables of the data ex:
-                                 //"Mx2-150_Mv-500_Mx1-1_ctau-1"
-    std::string outputFileTail,  //< Output filename tail (date) ex: "20200730"
+    TString outputFileTree,
+    // std::string outputFileHead,  //< Output filename head ex: "preselected"
+    // std::string outputFileVar,   //< Variables of the data ex:
+    //                              //"Mx2-150_Mv-500_Mx1-1_ctau-1"
+    // std::string outputFileTail,  //< Output filename tail (date) ex: "20200730"
     bool toRecreateOutFile = true, bool debug = false) {
   const Double_t massZ = 91.1876;  //< static mass of Z (constant)
   const Double_t massElectron =
@@ -45,9 +46,10 @@ void xAna_monoZ_preselect(
   const Int_t pdgTau = 15;
 
   /// path to the output file to store the trees
-  TString outputFileTree = (TString) "output_" + outputFileHead + "_" +
-                           outputFileVar + "_" + outputFileTail + "_tree" +
-                           ".root";
+  // TString outputFileTree = (TString) "output_" + outputFileHead + "_" +
+  //                          outputFileVar + "_" + outputFileTail + "_tree" +
+  //                          ".root";
+
   /// output fle to store the tree
   TFile* outFileTree = new TFile(outputFileTree.Data(),
                                  toRecreateOutFile ? "recreate" : "update");
@@ -565,77 +567,78 @@ void xAna_monoZ_preselect(
   outFileTree->Write();
 
   
-  // TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
-  //                          outputFileVar + "_" + outputFileTail + "_hist" + ".root";
+  // // TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
+  // //                          outputFileVar + "_" + outputFileTail + "_hist" + ".root";
 
-  // TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile ? "recreate" : "update");
+  // // TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile ? "recreate" : "update");
 
-  TString outImageDir =
-      (TString) "../out_images/output_" + outputFileHead + "_" + outputFileTail;
+  // TString outImageDir =
+  //     (TString) "../out_images/output_" + outputFileHead + "_" + outputFileTail;
   
-  // TCanvas* c1 = new TCanvas;
-  gStyle->SetOptStat(111111);
-  auto lambdaPrintHistograms = [/*&c1,*/ /*&outFileHist,*/ toRecreateOutFile, outImageDir, outputFileHead, outputFileVar, outputFileTail](TTree *tt)-> void {
-    std::cout << "Printing " << tt->GetName() << std::endl;
-    TString nameTree = tt->GetName();
-    TString outImageNameHead = (TString)outputFileHead + "_" + outputFileVar + "_" + nameTree;
-    TString outImageCommonPath = outImageDir + "/" + outImageNameHead + "_";
-    TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
-                           outputFileVar + "_" + outputFileTail + "_hist_" + nameTree + ".root";
-    TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile ? "recreate" : "update");
-    for (TObject* leafObject : *(tt->GetListOfLeaves())) {
-      TLeaf* leaf = (TLeaf*)leafObject;
-      TString nameLeaf = leaf->GetName();
-      if (nameLeaf.First("[") >= 0) {
-        nameLeaf.Resize(nameLeaf.First("["));
-      }
-      TString nameHist = "h" + nameLeaf;
-      tt->Draw(nameLeaf + ">>" + nameHist);
-      TH1 *hist = (TH1 *) gDirectory->Get(nameHist);
-      hist->SetTitle((TString)leaf->GetBranch()->GetTitle() + " (" + nameTree + ")");
-      TString outImagePath = outImageCommonPath + nameLeaf + ".svg";
-      // c1->Clear();
-      // hist->Draw();
-      // c1->Print(outImagePath);
-      outFileHist->WriteObject(hist, nameHist);
-    }
-    outFileHist->Close();
-  };
-  if (true) {
-  for (Byte_t i=0; i<3; i++) {
-    lambdaPrintHistograms(arrTTGen[i]);
-  }
-  }
-  // for (Byte_t i=0; i<2; i++) {
-  //   lambdaPrintHistograms(arrTTNumCorrect[i]);
+  // // TCanvas* c1 = new TCanvas;
+  // gStyle->SetOptStat(111111);
+  // auto lambdaPrintHistograms = [/*&c1,*/ /*&outFileHist,*/ toRecreateOutFile, outImageDir, outputFileHead, outputFileVar, outputFileTail](TTree *tt)-> void {
+  //   std::cout << "Printing " << tt->GetName() << std::endl;
+  //   TString nameTree = tt->GetName();
+  //   TString outImageNameHead = (TString)outputFileHead + "_" + outputFileVar + "_" + nameTree;
+  //   TString outImageCommonPath = outImageDir + "/" + outImageNameHead + "_";
+  //   TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
+  //                          outputFileVar + "_" + outputFileTail + "_hist_" + nameTree + ".root";
+  //   TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile ? "recreate" : "update");
+  //   for (TObject* leafObject : *(tt->GetListOfLeaves())) {
+  //     TLeaf* leaf = (TLeaf*)leafObject;
+  //     TString nameLeaf = leaf->GetName();
+  //     if (nameLeaf.First("[") >= 0) {
+  //       nameLeaf.Resize(nameLeaf.First("["));
+  //     }
+  //     TString nameHist = "h" + nameLeaf;
+  //     tt->Draw(nameLeaf + ">>" + nameHist);
+  //     TH1 *hist = (TH1 *) gDirectory->Get(nameHist);
+  //     hist->SetTitle((TString)leaf->GetBranch()->GetTitle() + " (" + nameTree + ")");
+  //     TString outImagePath = outImageCommonPath + nameLeaf + ".svg";
+  //     // c1->Clear();
+  //     // hist->Draw();
+  //     // c1->Print(outImagePath);
+  //     outFileHist->WriteObject(hist, nameHist);
+  //   }
+  //   outFileHist->Close();
+  // };
+  // if (true) {
+  // for (Byte_t i=0; i<3; i++) {
+  //   lambdaPrintHistograms(arrTTGen[i]);
   // }
-  for (Byte_t i=0; i<2; i++) {
-    lambdaPrintHistograms(arrTTZMassCutted[i]);
-  }
-  // c1->Close();
+  // }
+  // // for (Byte_t i=0; i<2; i++) {
+  // //   lambdaPrintHistograms(arrTTNumCorrect[i]);
+  // // }
+  // for (Byte_t i=0; i<2; i++) {
+  //   lambdaPrintHistograms(arrTTZMassCutted[i]);
+  // }
+  // // c1->Close();
 
   outFileTree->Close();
-  delete outFileTree;
-  for (UInt_t i = 0; i < nLeafJetFloat; i++) {
-    // arrHLeafJetFloat[i]->Write();
-    // outFileHist->WriteObject(arrHLeafJetFloat[i],
-    // arrHLeafJetFloat[i]->GetName());
-  }
-  for (UInt_t i = 0; i < nLeafJetUInt; i++) {
-    // arrHLeafJetUInt[i]->Write();
-    // outFileHist->WriteObject(arrHLeafJetUInt[i],
-    // arrHLeafJetUInt[i]->GetName());
-  }
-  for (UInt_t i = 0; i < nLeafJetInt; i++) {
-    // arrHLeafJetInt[i]->Write();
-    // outFileHist->WriteObject(arrHLeafJetInt[i],
-    // arrHLeafJetInt[i]->GetName());
-  }
-  for (UInt_t i = 0; i < nLeafJetBool; i++) {
-    // arrHLeafJetBool[i]->Write();
-    // outFileHist->WriteObject(arrHLeafJetBool[i],
-    // arrHLeafJetBool[i]->GetName());
-  }
+  // delete outFileTree;
+  // for (UInt_t i = 0; i < nLeafJetFloat; i++) {
+  //   // arrHLeafJetFloat[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetFloat[i],
+  //   // arrHLeafJetFloat[i]->GetName());
+  // }
+  // for (UInt_t i = 0; i < nLeafJetUInt; i++) {
+  //   // arrHLeafJetUInt[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetUInt[i],
+  //   // arrHLeafJetUInt[i]->GetName());
+  // }
+  // for (UInt_t i = 0; i < nLeafJetInt; i++) {
+  //   // arrHLeafJetInt[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetInt[i],
+  //   // arrHLeafJetInt[i]->GetName());
+  // }
+  // for (UInt_t i = 0; i < nLeafJetBool; i++) {
+  //   // arrHLeafJetBool[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetBool[i],
+  //   // arrHLeafJetBool[i]->GetName());
+  // }
 
-  // outFileHist->Close();
+  // // outFileHist->Close();
+
 }

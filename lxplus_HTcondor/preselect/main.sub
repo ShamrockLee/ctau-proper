@@ -1,0 +1,39 @@
+##########################################################
+## user setting area
+
+listFile              = dataTest.txt
+exeMacro              = xAna_monoZ_preselect.C
+
++JobFlavour           = "longlunch"
+
+# Name          Duration
+# espresso      20min   
+# microcentury  1h  
+# longlunch     2h  
+# workday       8h  
+# tomorrow      1d  
+# testmatch     3d  
+# nextweek      1w  
+
+##########################################################
+
+
+outputTransfer        = $Fn(listFile)/output_$(ClusterId)_$(ProcId).root
+outputVar             = testOut.root
+
+universe              = vanilla
+executable            = subMacro.sh
+output                = $Fn(listFile)/out/job_$(ClusterId)_$(ProcId).out
+error                 = $Fn(listFile)/err/job_$(ClusterId)_$(ProcId).err
+log                   = $Fn(listFile)/job_$(ClusterId).log
+arguments             = $(exeMacro) $(inputFile) $(outputVar)
+
+
+#transfer input file
+should_transfer_files   = Yes
+when_to_transfer_output = ON_EXIT
+transfer_output_remaps  = "$(outputVar)=$(outputTransfer)"
+transfer_input_files   = $(exeMacro), untuplizer.h
+
+queue inputFile from $(listFile)
+
