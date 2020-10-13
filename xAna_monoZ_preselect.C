@@ -23,6 +23,7 @@
 //   }
 // }
 
+
 /// Preselection
 void xAna_monoZ_preselect(
     std::string inputFile,       //< Path of input file
@@ -201,16 +202,18 @@ void xAna_monoZ_preselect(
     TString title;
   } ObjectDescription;
 
-  UInt_t nJet;
+  UInt_t nJet, nJetPassed;
   for (Byte_t i=0; i<3; i++) {
     TString name = "nJet";
     TString title = "Number of jets";
-    arrTTGen[i]->Branch(name, &nJet, name + "/I", __SIZEOF_INT__);
+    arrTTGen[i]->Branch(name, &nJet, name + "/I", __SIZEOF_INT__)->SetTitle(title);
+    arrTTGen[i]->Branch(name + "Passed", &nJetPassed, name + "Passed" + "/I", __SIZEOF_INT__)->SetTitle(title + " passing preselections");
   }
   for (Byte_t i=0; i<2; i++) {
     TString name = "nJet";
     TString title = "Number of jets";
-    arrTTZMassCutted[i]->Branch(name, &nJet, name + "/I", __SIZEOF_INT__);
+    arrTTZMassCutted[i]->Branch(name, &nJet, name + "/I", __SIZEOF_INT__)->SetTitle(title);
+    arrTTZMassCutted[i]->Branch(name + "Passed", &nJetPassed, name + "Passed" + "/I", __SIZEOF_INT__)->SetTitle(title + " passing preselections");
   }
 
   UInt_t nLeafOriginal;
@@ -505,11 +508,21 @@ void xAna_monoZ_preselect(
     // ttNumCorrect->Fill();
 
     // Jet_*
+    std::vector<UInt_t> vJJetPassed(nJet);
+    vJJetPassed.clear();
+    Float_t *ptrJet_pt_original = data.GetPtrFloat("Jet_pt");
+    Float_t *ptrJet_eta_original = data.GetPtrFloat("Jet_eta");
+    for (UInt_t jJet=0; jJet<nJet; jJet++) {
+      if (ptrJet_pt_original[jJet] < 30) continue;
+      if (ptrJet_eta_original[jJet] > 3) continue;
+      vJJetPassed.push_back(jJet);
+    }
+    nJetPassed = vJJetPassed.size();
     for (UInt_t i = 0; i < nLeafJetFloat; i++) {
       TString name = vLeafDescriptionJetFloat[i].name;
       Float_t* ptrFloat = data.GetPtrFloat(name);
       arrVLeafJetFloat[i].clear();
-      for (UInt_t j = 0; j < nJet; j++) {
+      for (UInt_t j: vJJetPassed) {
         // arrHLeafJetFloat[i]->Fill(ptrFloat[j]);
         arrVLeafJetFloat[i].push_back(ptrFloat[j]);
         // if (debug) std::cout << ptrFloat[j] << ", ";
@@ -520,7 +533,7 @@ void xAna_monoZ_preselect(
       TString name = vLeafDescriptionJetUInt[i].name;
       Int_t* ptrUInt = data.GetPtrInt(name);
       arrVLeafJetUInt[i].clear();
-      for (UInt_t j = 0; j < nJet; j++) {
+      for (UInt_t j: vJJetPassed) {
         // arrHLeafJetUInt[i]->Fill(ptrUInt[j]);
         arrVLeafJetUInt[i].push_back(ptrUInt[j]);
       }
@@ -529,7 +542,7 @@ void xAna_monoZ_preselect(
       TString name = vLeafDescriptionJetInt[i].name;
       Int_t* ptrInt = data.GetPtrInt(name);
       arrVLeafJetInt[i].clear();
-      for (UInt_t j = 0; j < nJet; j++) {
+      for (UInt_t j: vJJetPassed) {
         // arrHLeafJetInt[i]->Fill(ptrInt[j]);
         arrVLeafJetInt[i].push_back(ptrInt[j]);
       }
@@ -537,7 +550,7 @@ void xAna_monoZ_preselect(
     for (UInt_t i = 0; i < nLeafJetBool; i++) {
       TString name = vLeafDescriptionJetBool[i].name;
       Bool_t* ptrBool = data.GetPtrBool(name);
-      for (UInt_t j = 0; j < nJet; j++) {
+      for (UInt_t j: vJJetPassed) {
         // arrHLeafJetBool[i]->Fill(ptrBool[j]);
         arrVLeafJetBool[i].push_back(ptrBool[j]);
       }
@@ -551,16 +564,25 @@ void xAna_monoZ_preselect(
   // ttZMassCutted->GetCurrentFile()->Write();
   outFileTree->Write();
 
+  
+  // TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
+  //                          outputFileVar + "_" + outputFileTail + "_hist" + ".root";
+
+  // TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile ? "recreate" : "update");
+
   TString outImageDir =
       (TString) "../out_images/output_" + outputFileHead + "_" + outputFileTail;
   
-  TCanvas* c1 = new TCanvas;
+  // TCanvas* c1 = new TCanvas;
   gStyle->SetOptStat(111111);
-  auto lambdaPrintHistograms = [&c1, outImageDir, outputFileHead, outputFileVar](TTree *tt)-> void {
+  auto lambdaPrintHistograms = [/*&c1,*/ /*&outFileHist,*/ toRecreateOutFile, outImageDir, outputFileHead, outputFileVar, outputFileTail](TTree *tt)-> void {
     std::cout << "Printing " << tt->GetName() << std::endl;
     TString nameTree = tt->GetName();
     TString outImageNameHead = (TString)outputFileHead + "_" + outputFileVar + "_" + nameTree;
     TString outImageCommonPath = outImageDir + "/" + outImageNameHead + "_";
+    TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
+                           outputFileVar + "_" + outputFileTail + "_hist_" + nameTree + ".root";
+    TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile ? "recreate" : "update");
     for (TObject* leafObject : *(tt->GetListOfLeaves())) {
       TLeaf* leaf = (TLeaf*)leafObject;
       TString nameLeaf = leaf->GetName();
@@ -572,45 +594,48 @@ void xAna_monoZ_preselect(
       TH1 *hist = (TH1 *) gDirectory->Get(nameHist);
       hist->SetTitle((TString)leaf->GetBranch()->GetTitle() + " (" + nameTree + ")");
       TString outImagePath = outImageCommonPath + nameLeaf + ".svg";
-      c1->Clear();
-      hist->Draw();
-      c1->Print(outImagePath);
+      // c1->Clear();
+      // hist->Draw();
+      // c1->Print(outImagePath);
+      outFileHist->WriteObject(hist, nameHist);
     }
+    outFileHist->Close();
   };
+  if (true) {
   for (Byte_t i=0; i<3; i++) {
     lambdaPrintHistograms(arrTTGen[i]);
   }
-  for (Byte_t i=0; i<2; i++) {
-    lambdaPrintHistograms(arrTTNumCorrect[i]);
   }
+  // for (Byte_t i=0; i<2; i++) {
+  //   lambdaPrintHistograms(arrTTNumCorrect[i]);
+  // }
   for (Byte_t i=0; i<2; i++) {
     lambdaPrintHistograms(arrTTZMassCutted[i]);
   }
-  c1->Close();
+  // c1->Close();
 
   outFileTree->Close();
   delete outFileTree;
-  outFileTree = new TFile(outputFileTree.Data(), "update");
   for (UInt_t i = 0; i < nLeafJetFloat; i++) {
     // arrHLeafJetFloat[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetFloat[i],
+    // outFileHist->WriteObject(arrHLeafJetFloat[i],
     // arrHLeafJetFloat[i]->GetName());
   }
   for (UInt_t i = 0; i < nLeafJetUInt; i++) {
     // arrHLeafJetUInt[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetUInt[i],
+    // outFileHist->WriteObject(arrHLeafJetUInt[i],
     // arrHLeafJetUInt[i]->GetName());
   }
   for (UInt_t i = 0; i < nLeafJetInt; i++) {
     // arrHLeafJetInt[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetInt[i],
+    // outFileHist->WriteObject(arrHLeafJetInt[i],
     // arrHLeafJetInt[i]->GetName());
   }
   for (UInt_t i = 0; i < nLeafJetBool; i++) {
     // arrHLeafJetBool[i]->Write();
-    // outFileTree->WriteObject(arrHLeafJetBool[i],
+    // outFileHist->WriteObject(arrHLeafJetBool[i],
     // arrHLeafJetBool[i]->GetName());
   }
 
-  outFileTree->Close();
+  // outFileHist->Close();
 }
