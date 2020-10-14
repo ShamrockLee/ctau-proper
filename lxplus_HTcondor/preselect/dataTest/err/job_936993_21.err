@@ -1,0 +1,4 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_3898/./xAna_monoZ_preselect_C.so
+Error in <TFile::TFile>: file name is not specified
+Error in <TFile::TFile>: file testOut.root does not exist
+FATAL: TFile::Open() failed

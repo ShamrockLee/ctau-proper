@@ -14,7 +14,7 @@ fi
 SECONDS=0
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 export SCRAM_ARCH=slc7_amd64_gcc530
-export X509_USER_PROXY=/afs/cern.ch/user/s/shuxiao/private/grid.proxy
+export X509_USER_PROXY=/afs/cern.ch/user/y/yuehshun/private/grid.proxy
 echo "X509_USER_PROXY=$X509_USER_PROXY"
 # setting cmsenv
 
