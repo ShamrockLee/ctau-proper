@@ -1,0 +1,3 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_24057/./xAna_monoZ_preselect_C.so
+Error in <TNetXNGFile::Open>: [ERROR] Server responded with an error: [3000] Unable to open /store/mc/RunIISummer16NanoAODv7/DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/NANOAODSIM/PUMoriond17_Nano02Apr2020_102X_mcRun2_asymptotic_v8_ext1-v1/270000/9303B938-8D22-A341-98E2-E6ECCE391475.root; invalid argument
+FATAL: TFile::Open() failed

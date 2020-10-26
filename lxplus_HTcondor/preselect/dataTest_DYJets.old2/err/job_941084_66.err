@@ -1,0 +1,125 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_18767/./xAna_monoZ_preselect_C.so
+Warning in <TClass::Init>: no dictionary for class edm::ProcessHistory is available
+Warning in <TClass::Init>: no dictionary for class edm::ProcessConfiguration is available
+Warning in <TClass::Init>: no dictionary for class edm::ParameterSetBlob is available
+Warning in <TClass::Init>: no dictionary for class edm::Hash<1> is available
+Warning in <TClass::Init>: no dictionary for class pair<edm::Hash<1>,edm::ParameterSetBlob> is available
+Error in <TFile::TFile>: file /store/mc/RunIISummer16NanoAODv7/DYJetsToLL_M-50_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/NANOAODSIM/PUMoriond17_Nano02Apr2020_102X_mcRun2_asymptotic_v8-v1/120000/F938834B-DBD4-5343-B708-56B65F65511B.root does not exist
+
+ *** Break *** segmentation violation
+
+
+
+===========================================================
+There was a crash.
+This is the entire stack trace of all threads:
+===========================================================
+    gdb.printing.register_pretty_printer(gdb.current_objfile(),
+    gdb.printing.register_pretty_printer(gdb.current_objfile(),
+
+Thread 6 (Thread 0x2b1474a64700 (LWP 172)):
+#0  0x00002b1461233eb3 in epoll_wait () from /lib64/libc.so.6
+#1  0x00002b1472a0a1d2 in XrdSys::IOEvents::PollE::Begin(XrdSysSemaphore*, int&, char const**) () from /lib64/libXrdUtils.so.2
+#2  0x00002b1472a06a3d in XrdSys::IOEvents::BootStrap::Start(void*) () from /lib64/libXrdUtils.so.2
+#3  0x00002b1472a0f897 in XrdSysThread_Xeq () from /lib64/libXrdUtils.so.2
+#4  0x00002b146249dea5 in start_thread () from /lib64/libpthread.so.0
+#5  0x00002b14612338dd in clone () from /lib64/libc.so.6
+
+Thread 5 (Thread 0x2b1474c65700 (LWP 173)):
+#0  0x00002b14611fa85d in nanosleep () from /lib64/libc.so.6
+#1  0x00002b1472a10149 in XrdSysTimer::Wait(int) () from /lib64/libXrdUtils.so.2
+#2  0x00002b1472cea8d2 in XrdCl::TaskManager::RunTasks() () from /lib64/libXrdCl.so.2
+#3  0x00002b1472ceaa49 in RunRunnerThread () from /lib64/libXrdCl.so.2
+#4  0x00002b146249dea5 in start_thread () from /lib64/libpthread.so.0
+#5  0x00002b14612338dd in clone () from /lib64/libc.so.6
+
+Thread 4 (Thread 0x2b1474e66700 (LWP 174)):
+#0  0x00002b14624a3b3b in do_futex_wait.constprop.1 () from /lib64/libpthread.so.0
+#1  0x00002b14624a3bcf in __new_sem_wait_slow.constprop.0 () from /lib64/libpthread.so.0
+#2  0x00002b14624a3c6b in sem_wait
+
+GLIBC_2.2.5 () from /lib64/libpthread.so.0
+#3  0x00002b1472d4bee2 in XrdCl::JobManager::RunJobs() () from /lib64/libXrdCl.so.2
+#4  0x00002b1472d4bf89 in RunRunnerThread () from /lib64/libXrdCl.so.2
+#5  0x00002b146249dea5 in start_thread () from /lib64/libpthread.so.0
+#6  0x00002b14612338dd in clone () from /lib64/libc.so.6
+
+Thread 3 (Thread 0x2b1475067700 (LWP 175)):
+#0  0x00002b14624a3b3b in do_futex_wait.constprop.1 () from /lib64/libpthread.so.0
+#1  0x00002b14624a3bcf in __new_sem_wait_slow.constprop.0 () from /lib64/libpthread.so.0
+#2  0x00002b14624a3c6b in sem_wait
+
+GLIBC_2.2.5 () from /lib64/libpthread.so.0
+#3  0x00002b1472d4bee2 in XrdCl::JobManager::RunJobs() () from /lib64/libXrdCl.so.2
+#4  0x00002b1472d4bf89 in RunRunnerThread () from /lib64/libXrdCl.so.2
+#5  0x00002b146249dea5 in start_thread () from /lib64/libpthread.so.0
+#6  0x00002b14612338dd in clone () from /lib64/libc.so.6
+
+Thread 2 (Thread 0x2b1475268700 (LWP 176)):
+#0  0x00002b14624a3b3b in do_futex_wait.constprop.1 () from /lib64/libpthread.so.0
+#1  0x00002b14624a3bcf in __new_sem_wait_slow.constprop.0 () from /lib64/libpthread.so.0
+#2  0x00002b14624a3c6b in sem_wait
+
+GLIBC_2.2.5 () from /lib64/libpthread.so.0
+#3  0x00002b1472d4bee2 in XrdCl::JobManager::RunJobs() () from /lib64/libXrdCl.so.2
+#4  0x00002b1472d4bf89 in RunRunnerThread () from /lib64/libXrdCl.so.2
+#5  0x00002b146249dea5 in start_thread () from /lib64/libpthread.so.0
+#6  0x00002b14612338dd in clone () from /lib64/libc.so.6
+
+Thread 1 (Thread 0x2b14601de280 (LWP 123)):
+#0  0x00002b14611fa4b9 in waitpid () from /lib64/libc.so.6
+#1  0x00002b1461177f62 in do_system () from /lib64/libc.so.6
+#2  0x00002b1461178311 in system () from /lib64/libc.so.6
+#3  0x00002b14608955dc in TUnixSystem::StackTrace() () from /usr/lib64/root/libCore.so.6.22
+#4  0x00002b146089806a in TUnixSystem::DispatchSignals(ESignals) () from /usr/lib64/root/libCore.so.6.22
+#5  <signal handler called>
+#6  xAna_monoZ_preselect (inputFile="root://cms-xrd-global.cern.ch//store/mc/RunIISummer16NanoAODv7/DYJetsToLL_M-50_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/NANOAODSIM/PUMoriond17_Nano02Apr2020_102X_mcRun2_asymptotic_v8-v1/12"..., outputFileTree=..., toRecreateOutFile=<optimized out>, debug=false) at /pool/condor/dir_18767/./xAna_monoZ_preselect.C:228
+#7  0x00002b14601b40a6 in ?? ()
+#8  0x00000000043159e0 in ?? ()
+#9  0x00002b14642edc9c in void std::vector<TCling::MutexStateAndRecurseCount, std::allocator<TCling::MutexStateAndRecurseCount> >::_M_emplace_back_aux<>() () from /usr/lib64/root/libCling.so
+#10 0x74754f7473657418 in ?? ()
+#11 0x000000746f6f722e in ?? ()
+#12 0xc43f342549b78e00 in ?? ()
+#13 0x000000000236e458 in ?? ()
+#14 0x00002b146432deb7 in cling::MultiplexInterpreterCallbacks::EnteringUserCode() () from /usr/lib64/root/libCling.so
+#15 0x00002b146438b7ab in cling::IncrementalExecutor::executeWrapper(llvm::StringRef, cling::Value*) const () from /usr/lib64/root/libCling.so
+#16 0x00002b146432f21c in cling::Interpreter::RunFunction(clang::FunctionDecl const*, cling::Value*) () from /usr/lib64/root/libCling.so
+#17 0x00002b146432ffce in cling::Interpreter::EvaluateInternal(std::string const&, cling::CompilationOptions, cling::Value*, cling::Transaction**, unsigned long) () from /usr/lib64/root/libCling.so
+#18 0x00002b1464330233 in cling::Interpreter::process(std::string const&, cling::Value*, cling::Transaction**, bool) () from /usr/lib64/root/libCling.so
+#19 0x00002b14643cc138 in cling::MetaProcessor::process(llvm::StringRef, cling::Interpreter::CompilationResult&, cling::Value*, bool) () from /usr/lib64/root/libCling.so
+#20 0x00002b14642aa8aa in HandleInterpreterException(cling::MetaProcessor*, char const*, cling::Interpreter::CompilationResult&, cling::Value*) () from /usr/lib64/root/libCling.so
+#21 0x00002b14642bccc0 in TCling::ProcessLine(char const*, TInterpreter::EErrorCode*) () from /usr/lib64/root/libCling.so
+#22 0x00002b14642bd1b6 in TCling::ProcessLineSynch(char const*, TInterpreter::EErrorCode*) () from /usr/lib64/root/libCling.so
+#23 0x00002b1460764bbc in TApplication::ExecuteFile(char const*, int*, bool) () from /usr/lib64/root/libCore.so.6.22
+#24 0x00002b1460764139 in TApplication::ProcessLine(char const*, bool, int*) () from /usr/lib64/root/libCore.so.6.22
+#25 0x00002b14603c3e15 in TRint::ProcessLineNr(char const*, char const*, int*) () from /usr/lib64/root/libRint.so.6.22
+#26 0x00002b14603c5541 in TRint::Run(bool) () from /usr/lib64/root/libRint.so.6.22
+#27 0x00000000004008da in main ()
+===========================================================
+
+
+The lines below might hint at the cause of the crash.
+You may get help by asking at the ROOT forum http://root.cern.ch/forum
+Only if you are really convinced it is a bug in ROOT then please submit a
+report at http://root.cern.ch/bugs Please post the ENTIRE stack trace
+from above as an attachment in addition to anything else
+that might help us fixing this issue.
+===========================================================
+#6  xAna_monoZ_preselect (inputFile="root://cms-xrd-global.cern.ch//store/mc/RunIISummer16NanoAODv7/DYJetsToLL_M-50_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/NANOAODSIM/PUMoriond17_Nano02Apr2020_102X_mcRun2_asymptotic_v8-v1/12"..., outputFileTree=..., toRecreateOutFile=<optimized out>, debug=false) at /pool/condor/dir_18767/./xAna_monoZ_preselect.C:228
+#7  0x00002b14601b40a6 in ?? ()
+#8  0x00000000043159e0 in ?? ()
+#9  0x00002b14642edc9c in void std::vector<TCling::MutexStateAndRecurseCount, std::allocator<TCling::MutexStateAndRecurseCount> >::_M_emplace_back_aux<>() () from /usr/lib64/root/libCling.so
+#10 0x74754f7473657418 in ?? ()
+#11 0x000000746f6f722e in ?? ()
+#12 0xc43f342549b78e00 in ?? ()
+#13 0x000000000236e458 in ?? ()
+#14 0x00002b146432deb7 in cling::MultiplexInterpreterCallbacks::EnteringUserCode() () from /usr/lib64/root/libCling.so
+#15 0x00002b146438b7ab in cling::IncrementalExecutor::executeWrapper(llvm::StringRef, cling::Value*) const () from /usr/lib64/root/libCling.so
+#16 0x00002b146432f21c in cling::Interpreter::RunFunction(clang::FunctionDecl const*, cling::Value*) () from /usr/lib64/root/libCling.so
+#17 0x00002b146432ffce in cling::Interpreter::EvaluateInternal(std::string const&, cling::CompilationOptions, cling::Value*, cling::Transaction**, unsigned long) () from /usr/lib64/root/libCling.so
+#18 0x00002b1464330233 in cling::Interpreter::process(std::string const&, cling::Value*, cling::Transaction**, bool) () from /usr/lib64/root/libCling.so
+#19 0x00002b14643cc138 in cling::MetaProcessor::process(llvm::StringRef, cling::Interpreter::CompilationResult&, cling::Value*, bool) () from /usr/lib64/root/libCling.so
+#20 0x00002b14642aa8aa in HandleInterpreterException(cling::MetaProcessor*, char const*, cling::Interpreter::CompilationResult&, cling::Value*) () from /usr/lib64/root/libCling.so
+===========================================================
+
+

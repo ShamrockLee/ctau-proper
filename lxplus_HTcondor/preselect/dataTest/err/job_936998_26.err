@@ -1,0 +1,3 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_16596/./xAna_monoZ_preselect_C.so
+Error in <TNetXNGFile::Open>: [FATAL] Socket error
+FATAL: TFile::Open() failed

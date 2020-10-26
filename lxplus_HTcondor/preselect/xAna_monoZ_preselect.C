@@ -51,8 +51,8 @@ void xAna_monoZ_preselect(
   //                          ".root";
 
   /// output fle to store the tree
-  TFile* outFileTree = new TFile(outputFileTree.Data(),
-                                 toRecreateOutFile ? "recreate" : "update");
+  TFile* outFileTree = TFile::Open(outputFileTree.Data(),
+                                   toRecreateOutFile ? "recreate" : "update");
 
   const char* nameTreeIn = "Events";              //< the input tree
   TreeReader data(inputFile.data(), nameTreeIn);  //< the TreeReader
@@ -222,7 +222,7 @@ void xAna_monoZ_preselect(
   std::vector<ObjectDescription> vLeafDescriptionJetBool,
       vLeafDescriptionJetUInt, vLeafDescriptionJetInt, vLeafDescriptionJetFloat;
   {
-    TFile* tfIn = new TFile(inputFile.data(), "READ");
+    TFile* tfIn = TFile::Open(inputFile.data(), "READ");
     TTree* ttIn = (TTree*)tfIn->Get(nameTreeIn);
     TObjArray* tarrLeafOriginal = ttIn->GetListOfLeaves();
 

@@ -1,0 +1,3 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_29472/./xAna_monoZ_preselect_C.so
+Error in <TNetXNGFile::Open>: [ERROR] Server responded with an error: [3010] Opening relative path 'store/mc/RunIISummer16NanoAODv7/DYJetsToLL_M-50_HT-600to800_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/NANOAODSIM/PUMoriond17_Nano02Apr2020_102X_mcRun2_asymptotic_v8-v1/130000/C8CB2AF9-6143-B449-B0D8-C62DE4690039.root?' is disallowed.
+FATAL: TFile::Open() failed

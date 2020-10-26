@@ -1,7 +1,9 @@
 ##########################################################
 ## user setting area
 
-listFile              = dataTest.txt
+datagroupName           = TT 
+#listFile              = dataTest.txt
+listFile              = dataTest_$(datagroupName).txt
 exeMacro              = xAna_monoZ_preselect.C
 
 +JobFlavour           = "longlunch"
@@ -18,7 +20,7 @@ exeMacro              = xAna_monoZ_preselect.C
 ##########################################################
 
 
-outputTransfer        = $Fn(listFile)/output_$(ClusterId)_$(ProcId).root
+outputTransfer        = $Fn(listFile)/output_$(datagroupName)_$(ClusterId)_$(ProcId).root
 outputVar             = testOut.root
 
 universe              = vanilla
