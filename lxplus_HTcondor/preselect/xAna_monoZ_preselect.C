@@ -1,3 +1,4 @@
+#include <Rtypes.h>
 #include <TCanvas.h>
 #include <TClonesArray.h>
 #include <TFile.h>
@@ -5,6 +6,8 @@
 #include <TLorentzVector.h>
 #include <TString.h>
 #include <TStyle.h>
+#include <TVectorT.h>
+#include <TVectorFfwd.h>
 
 #include <cstring>  // std::memcpy
 #include <iostream>
@@ -23,6 +26,10 @@
 //   }
 // }
 
+// Bool_t getIsMatchAt(TString target, TString pattern, Ssiz_t startExpected) {
+//   TSubString substring = target.SubString(pattern);
+//   return substring.Start() == startExpected;
+// }
 
 /// Preselection
 void xAna_monoZ_preselect(
@@ -66,6 +73,10 @@ void xAna_monoZ_preselect(
   const TString namesLeptonNota[] = {"e", "mu", "tau"};
   // TTree* ttGenElectron = new TTree("GenElectron", "GEN-level electron
   // events");
+
+  TVectorD tvdNEntry(1);
+  tvdNEntry[0] = nEntry;
+  tvdNEntry.Write("tvdNEntryOriginal");
 
   /// Tree for GEN-correct  electron/muon/tau
   TTree* arrTTGen[3];
@@ -221,6 +232,7 @@ void xAna_monoZ_preselect(
   UInt_t nLeafOriginal;
   std::vector<ObjectDescription> vLeafDescriptionJetBool,
       vLeafDescriptionJetUInt, vLeafDescriptionJetInt, vLeafDescriptionJetFloat;
+  std::vector<ObjectDescription> vLeafDescriptionHTFloat;
   {
     TFile* tfIn = TFile::Open(inputFile.data(), "READ");
     TTree* ttIn = (TTree*)tfIn->Get(nameTreeIn);
@@ -237,7 +249,7 @@ void xAna_monoZ_preselect(
       descriptionCurrent.name = (TString)tlfCurrent->GetName();
       descriptionCurrent.title = (TString)tlfCurrent->GetBranch()->GetTitle();
       TString typeNameCurrent = tlfCurrent->GetTypeName();
-      if (descriptionCurrent.name.First("Jet_") == 0) {
+      if (descriptionCurrent.name.SubString("Jet_").Start() == 0) {
         if (typeNameCurrent == "Bool_t") {
           vLeafDescriptionJetBool.push_back(descriptionCurrent);
         } else if (typeNameCurrent == "Int_t") {
@@ -253,6 +265,12 @@ void xAna_monoZ_preselect(
                     << std::endl;
         }
       }
+      if (descriptionCurrent.name.SubString("SoftActivityJetHT").Start() == 0) {
+        if (typeNameCurrent == "Float_t") {
+          if (debug) std::cout << "Found " << descriptionCurrent.name << " with type " << typeNameCurrent << std::endl;
+          vLeafDescriptionHTFloat.push_back(descriptionCurrent);
+        }
+      }
     }
   }
 
@@ -260,6 +278,7 @@ void xAna_monoZ_preselect(
   UInt_t nLeafJetInt = vLeafDescriptionJetInt.size();
   UInt_t nLeafJetUInt = vLeafDescriptionJetUInt.size();
   UInt_t nLeafJetFloat = vLeafDescriptionJetFloat.size();
+  UInt_t nLeafHTFloat = vLeafDescriptionHTFloat.size();
 
   std::vector<Float_t> arrVLeafJetFloat[nLeafJetFloat],
       arrVLeafJetUInt[nLeafJetUInt], arrVLeafJetInt[nLeafJetInt],
@@ -326,6 +345,18 @@ void xAna_monoZ_preselect(
     // arrHLeafJetBool[i] = new TH1F((TString)"h" +
     // vLeafDescriptionJetBool[i].name, vLeafDescriptionJetBool[i].title, 2,
     // -0.5, 0.5);
+  }
+
+  Float_t arrHTFloat[nLeafHTFloat];
+  for(UInt_t i=0; i<nLeafHTFloat; i++) {
+    TString name = vLeafDescriptionHTFloat[i].name;
+    TString title = vLeafDescriptionHTFloat[i].title;
+    for (Byte_t j=0; j<3; j++) {
+      arrTTGen[j]->Branch(name, &(arrHTFloat[i]), __SIZEOF_FLOAT__)->SetTitle(title);
+    }
+    for (Byte_t j=0; j<2; j++) {
+      arrTTZMassCutted[j]->Branch(name, &(arrHTFloat[i]), __SIZEOF_FLOAT__);
+    }
   }
 
   for (jEntry = 0; jEntry < nEntry; jEntry++) {
@@ -556,6 +587,10 @@ void xAna_monoZ_preselect(
         // arrHLeafJetBool[i]->Fill(ptrBool[j]);
         arrVLeafJetBool[i].push_back(ptrBool[j]);
       }
+    }
+    for (UInt_t i=0; i<nLeafHTFloat; i++) {
+      TString name = vLeafDescriptionHTFloat[i].name;
+      arrHTFloat[i] = data.GetFloat(name);
     }
 
     lambdaFillTheTrees();
