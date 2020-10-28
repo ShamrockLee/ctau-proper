@@ -16,12 +16,20 @@ if test ""(string sub -s (string length $redirector) -l 1 $redirector) = "/"
 end
 
 set pathOutput "dataTest_"$datagroupName".txt"
+set pathOutputNumbers (basename -s ".txt" $pathOutput)"_numbers.txt"
+echo pathOutputNumbers: $pathOutputNumbers
 set dirDatasetLists "dataset_list"
 
 echo -n "" > $pathOutput
+echo -n "" > $pathOutputNumbers
 
 for dataset in (cat $dirDatasetLists"/"$datagroupName"_list")
-    dasgoclient --query="file dataset="$dataset  >> $pathOutput
+    set filelistSub (dasgoclient --query="file dataset="$dataset)
+    for filePath in $filelistSub
+        echo $filePath >> $pathOutput
+    end
+    echo writing (count $filelistSub) files
+    count $filelistSub >> $pathOutputNumbers
 end
 
 sed -i -r "s/(^.*\$)/"(echo $redirector | sed "s/\\//\\\\\\//g")\\/\\1"/g" $pathOutput
