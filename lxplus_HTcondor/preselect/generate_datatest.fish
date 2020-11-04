@@ -16,7 +16,7 @@ if test ""(string sub -s (string length $redirector) -l 1 $redirector) = "/"
 end
 
 set pathOutput "dataTest_"$datagroupName".txt"
-set pathOutputNumbers (basename -s ".txt" $pathOutput)"_numbers.txt"
+set pathOutputNumbers "fileNumbers_"$datagroupName".txt"
 echo pathOutputNumbers: $pathOutputNumbers
 set dirDatasetLists "dataset_list"
 
