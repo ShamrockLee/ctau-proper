@@ -73,7 +73,8 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
 
   std::vector<TString> vNameTT;
   vNameTT.clear();
-  for (TString nameLeptonCurrent: namesLepton) {
+  for (UShort_t i=0; i<2; i++) {
+    TString nameLeptonCurrent = namesLepton[i];
     vNameTT.push_back((TString) "ZMassCutted" + nameLeptonCurrent);
   }
 
@@ -151,26 +152,31 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
       std::cerr << "Unable to open file " << pathTextFileNumbers << std::endl;
     }
     while (!infileText) {
-      if (infileText >> valNumberFileCurrent) {
-        vNumberFile.push_back(valNumberFileCurrent);
-      } else {
-        std::cerr << "One line failed to parse." << std::endl;
-      }
+      infileText >> valNumberFileCurrent;
+      // if (infileText >> valNumberFileCurrent) {
+      vNumberFile.push_back(valNumberFileCurrent);
+      // } else {
+      //   std::cerr << "One line failed to parse." << std::endl;
+      // }
     }
     infileText.close();
+    vNumberFile = {3, 3}; //TODO
     infileText.open(pathTextCrossSections);
-    Double_t valCrossSectionCurrentt;
+    Double_t valCrossSectionCurrent;
     if (!infileText) {
       std::cerr << "Unable to open file " << pathTextCrossSections << std::endl;
     }
     while (!infileText) {
-      if (infileText >> valCrossSectionCurrentt) {
-        vCrossSection.push_back(valNumberFileCurrent);
-      } else {
-        std::cerr << "One line failed to parse." << std::endl;
-      }
+      infileText >> valCrossSectionCurrent;
+      // if (infileText >> valCrossSectionCurrentt) {
+      vCrossSection.push_back(valNumberFileCurrent);
+      // } else {
+      //   std::cerr << "One line failed to parse." << std::endl;
+      // }
+
     }
     infileText.close();
+    vCrossSection = {730.6, 730.6}; //TODO
     nDataset = vNumberFile.size();
     if (nDataset != vCrossSection.size()) {
       std::cerr << "The length of fileNumbers (" << nDataset << ") does not match that of the crossSection (" << vCrossSection.size() << ")" << std::endl;
@@ -182,6 +188,7 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
     }
   }
 
+  if (debug) std::cout << "nFileTot: " << nFileTot << std::endl;
   TCanvas *c1;
   TString filenameGeneralCurrentCluster = "output_" + nameDatagroup + "_" + nameClusterID;
   TObjArray* toatltlHistFileLeafTree = new TObjArray(nTT);
@@ -200,12 +207,20 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
   UInt_t iFile = 0;
   for (UInt_t iDataset=0; iDataset<nDataset; iDataset++) {
     Long64_t nEntryOriginalDatasetCurrent = 0;
+    if (debug) std::cout << "iDataset: " << iDataset << std::endl;
     for (UInt_t jFile=0; jFile<vNumberFile[iDataset]; jFile++, iFile++) {
       TString filenameCurrent = filenameGeneralCurrentCluster + "_" + iFile + ".root";
-      TFile *tfCurrent = TFile::Open(dirCondorPackCurrent + "/" + filenameCurrent, "READ");
+      if (debug) std::cout << "Opening TFile " << filenameCurrent << " ..." << std::endl;
+      TFile *tfCurrent = TFile::Open(dirCondorPackCurrent + "/" + "dataTest_" + nameDatagroup + "/" + filenameCurrent, "READ");
+      if (debug) std::cout << "Done." << std::endl;
+      if (debug) std::cout << "Mounting variables from the file ..." << std::endl;
       mountVariablesFromFile(tfCurrent);
+      if (debug) std::cout << "Done." << std::endl;
+      if (debug) std::cout << "nEntryOriginal: " << nEntryOriginal << std::endl;
       nEntryOriginalDatasetCurrent += nEntryOriginal;
-      for (UInt_t iTree=0; iTree=nTT; iTree++) {
+      for (UInt_t iTree=0; iTree<nTT; iTree++) {
+        if (debug) std::cout << "iTree: " << iTree << std::endl;
+        if (debug) std::cout << "Getting leafnames from the tree ..." << std::endl;
         TList *tltlHistFileLeaf = (TList *) (*toatltlHistFileLeafTree)[iTree];
         for (TObject *leafRaw: *(arrTT[iTree]->GetListOfLeaves())) {
           TLeaf *leaf = (TLeaf *) leafRaw;
@@ -215,13 +230,18 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
           UInt_t indexName = 0;
           // TList *tlHistFileCurrent;
           for (TString nameIncluded: vvNameLeafTree[iTree]) {
+            if (debug) std::cout << "indexName : " << indexName;
             if (nameLeafModified == nameIncluded) {
               isIncluded = true;
+              if (debug) std::cout << " is included.";
               break;
             }
             indexName++;
           }
+          if (debug) std::cout << std::endl;
           if (!isIncluded) {
+            if (debug) std::cout << "Found new leafname." << std::endl;
+            if (debug) std::cout << "nameLeaf: " << nameLeaf << ", nameLeafModified:" << nameLeafModified << std::endl;
             vvNameLeafTree[iTree].push_back(nameLeafModified);
             std::vector<Bool_t> vIsHistFile(nFileTot);
             for (UInt_t i=0; i<nFileTot; i++) {
@@ -233,28 +253,43 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
           }
           vvvIsHistFileLeafTree[iTree][indexName][iFile] = true;
           TString nameHist = (TString)"h" + vNameTT[iTree] + nameLeafModified + iFile;
+          if (debug) std::cout << "Drawing " << nameLeaf << " as " << nameHist << " ...";
           arrTT[iTree]->Draw(nameLeaf + ">>" + nameHist);
+          if (debug) std::cout << " Done." << std::endl;
         }
         Int_t indexName = 0;
-        for (auto tlHistFileRaw: *tltlHistFileLeaf) {
-          TList *tlHistFile = (TList *) tlHistFileRaw;
-          TString nameLeafModified = vvNameLeafTree[iTree][indexName];
-          TString nameHist = (TString)"h" + vNameTT[iTree] + nameLeafModified + iFile;
-          tlHistFile->AddLast(gDirectory->Get(nameHist));
+        for (const auto&& tlHistFileRaw: *tltlHistFileLeaf) {
+          // if (debug) std::cout << "Looping." << std::endl;
+          if (vvvIsHistFileLeafTree[iTree][indexName][iFile]) {
+            TList *tlHistFile = (TList *) tlHistFileRaw;
+            TString nameLeafModified = vvNameLeafTree[iTree][indexName];
+            TString nameHist = (TString)"h" + vNameTT[iTree] + nameLeafModified + iFile;
+            if (debug) std::cout << "Picking up " << nameHist << " ...";
+            tlHistFile->AddLast(gDirectory->Get(nameHist));
+            if (debug) std::cout << " Done." << std::endl;
+          }
+          indexName++;
         }
       }
+      if (debug) std::cout << "Done getting name." << std::endl;
     }
+    if (debug) std::cout << "nEntryOriginalDatasetCurrent: " << nEntryOriginalDatasetCurrent << std::endl;
     tvdWeightDataset[iDataset] = vCrossSection[iDataset]/nEntryOriginalDatasetCurrent;
+    if (debug) std::cout << "tvdWeightDataset[" << iDataset << "]: " << tvdWeightDataset[iDataset] << "," << std::endl;
+    if (debug) std::cout << "coposed of files index";
     for (UInt_t jFile=0; jFile<vNumberFile[iDataset]; jFile++) {
-      tvdWeightFile[iFile - vNumberFile[iDataset] + jFile] = tvdWeightDataset[iDataset];
+      UInt_t indexFile = iFile - vNumberFile[iDataset] + jFile;
+      if (debug) std::cout << " " << indexFile;
+      tvdWeightFile[indexFile] = tvdWeightDataset[iDataset];
     }
+    if (debug) std::cout << "." << std::endl;
   }
 
   TObjArray *toatlResult = new TObjArray(nTT);
   for (UInt_t iTree=0; iTree<nTT; iTree++) {
     (*toatlResult)[iTree] = new TList;
     UInt_t indexName = 0;
-    for (auto tlHistFileLeafRaw: toatltlHistFileLeafTree[iTree]) {
+    for (const auto&& tlHistFileLeafRaw: *((TList *) (*toatltlHistFileLeafTree)[iTree])) {
       TList *tlHistFileLeaf = (TList *) tlHistFileLeafRaw;
       TH1 *histFirst = (TH1 *) tlHistFileLeaf->First();
       TH1 *histResult = (TH1 *) histFirst->Clone("h" + vvNameLeafTree[iTree][indexName]);
