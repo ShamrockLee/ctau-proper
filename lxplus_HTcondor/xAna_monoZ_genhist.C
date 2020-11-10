@@ -10,10 +10,29 @@
 #include <TList.h>
 #include <TClonesArray.h>
 #include <TObjArray.h>
+#include <TMath.h>
 
 #include <iostream>
 #include <fstream>
 #include <vector>
+
+template<typename TBase, typename TIndex, typename TRatio>
+TRatio intpow(TBase base, TIndex index, TRatio ratio) {
+  if (index == 0) {
+    return ratio;
+  }
+  TBase result = ratio;
+  if (index > 0) {
+    for (TIndex i=0; i<index; i++) {
+      result *= base;
+    }
+  } else {
+    for (TIndex i=0; i<-index; i++) {
+      result /= base;
+    }
+  }
+  return result;
+}
 
 TString modifyNameLeaf(TString nameLeaf) {
   TString nameLeafNew = TString(nameLeaf);
@@ -24,7 +43,7 @@ TString modifyNameLeaf(TString nameLeaf) {
   return nameLeafNew;
 }
 
-void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString nameClusterID,
+void xAna_monoZ_genhistFile(TString nameCondorPack, TString nameDatagroup, TString nameClusterID,
                      TString dirCondorPacks = ".", Bool_t toRecreateOutFile = true,
                      Bool_t debug = false) {
   const TString namesLepton[] = {"Electron", "Muon",
@@ -190,17 +209,45 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
 
   if (debug) std::cout << "nFileTot: " << nFileTot << std::endl;
   TCanvas *c1;
-  TString filenameGeneralCurrentCluster = "output_" + nameDatagroup + "_" + nameClusterID;
-  TObjArray* toatltlHistFileLeafTree = new TObjArray(nTT);
-  TVectorD tvdWeightDataset(nDataset);
-  TVectorD tvdWeightFile(nFileTot);
-  std::vector<std::vector<std::vector<Bool_t>>> vvvIsHistFileLeafTree(nTT);
-  std::vector<std::vector<TString>> vvNameLeafTree(nTT);
+  // TString filenameGeneralCurrentCluster = "output_" + nameDatagroup + "_" + nameClusterID;
+  auto getFilenameCurrent = [nameDatagroup, nameClusterID](UInt_t iFile) {
+    return "output_" + nameDatagroup + "_" + nameClusterID + "_" + iFile + ".root";
+  };
+  TFile *arrFile[nFileTot];
+  TObjArray* toatltlHistFileLeafTree = new TObjArray(nTT); //< The histogram in each file of each leaf in each tree
+  TVectorD tvdWeightDataset(nDataset); //< The weight of each dataset
+  TVectorD tvdWeightFile(nFileTot); //< The weight of each file
+  std::vector<std::vector<std::vector<Bool_t>>> vvvIsHistFileLeafTree(nTT); //< The existence in each file of each leaf in each tree
+  // std::vector<std::vector<std::vector<TString>>> vvvNameEffectiveFileLeafTree(nTT); //< The leafname in each file of each (existing) leaf in each tree
+  // std::vector<std::vector<std::vector<Int_t>>> vvvNEntryFileLeafTree(nTT); //< The number of entries of the histogram in each file of each (existing) leaf in each tree
+  // std::vector<std::vector<std::vector<Double_t>>> vvvHistMinFileLeafTree(nTT); //< The minimum value of each histogram in each file of each (existing) leaf in each tree
+  // std::vector<std::vector<std::vector<Double_t>>> vvvHistMaxFileLeafTree(nTT); //< The maximum value of each histogram in each file of each (existing) leaf in each tree
+  // std::vector<std::vector<std::vector<Int_t>>> vvvNBinFileLeafTree(nTT); //< The bin-number of the histogram in each file of each (existing) leaf in each tree
+  // std::vector<std::vector<std::vector<Double_t>>> vvvLowerFileLeafTree(nTT); //< The lower limit of the histogram in each file in each (existing) leaf in each tree
+  // std::vector<std::vector<std::vector<Double_t>>> vvvUpperFileLeafTree(nTT); //< The upper limit of the histogram in each file in each (existing) leaf in each tree
+  std::vector<std::vector<TString>> vvNameModifiedLeafTree(nTT); //< The modified leafname of each leaf in each tree
+  std::vector<std::vector<TString>> vvTitleLeafTree(nTT); // The title of the branch of each leaf in each tree
   for (UInt_t iTree=0; iTree<nTT; iTree++) {
     std::vector<std::vector<Bool_t>> vvIsHistFileLeaf;
     vvvIsHistFileLeafTree.push_back(vvIsHistFileLeaf);
-    std::vector<TString> vNameLeaf;
-    vvNameLeafTree.push_back(vNameLeaf);
+    // std::vector<std::vector<TString>> vvNameEffectiveFileLeaf;
+    // vvvNameEffectiveFileLeafTree.push_back(vvNameEffectiveFileLeaf);
+    // std::vector<std::vector<Int_t>> vvNEntryFileLeaf;
+    // vvvNBinFileLeafTree.push_back(vvNEntryFileLeaf);
+    // std::vector<std::vector<Double_t>> vvHistMinFileLeaf;
+    // vvvHistMinFileLeafTree.push_back(vvHistMinFileLeaf);
+    // std::vector<std::vector<Double_t>> vvHistMaxFileLeaf;
+    // vvvHistMaxFileLeafTree.push_back(vvHistMaxFileLeaf);
+    // std::vector<std::vector<Int_t>> vvNBinFileLeaf;
+    // vvvNBinFileLeafTree.push_back(vvNBinFileLeaf);
+    // std::vector<std::vector<Double_t>> vvLowerFileLeaf;
+    // vvvLowerFileLeafTree.push_back(vvLowerFileLeaf);
+    // std::vector<std::vector<Double_t>> vvUpperFileLeaf;
+    // vvvUpperFileLeafTree.push_back(vvUpperFileLeaf);
+    std::vector<TString> vNameModifiedLeaf;
+    vvNameModifiedLeafTree.push_back(vNameModifiedLeaf);
+    std::vector<TString> vTitleLeaf;
+    vvTitleLeafTree.push_back(vTitleLeaf);
     TList *tltlHistFileLeaf = new TList;
     (*toatltlHistFileLeafTree)[iTree] = tltlHistFileLeaf;
   }
@@ -209,9 +256,11 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
     Long64_t nEntryOriginalDatasetCurrent = 0;
     if (debug) std::cout << "iDataset: " << iDataset << std::endl;
     for (UInt_t jFile=0; jFile<vNumberFile[iDataset]; jFile++, iFile++) {
-      TString filenameCurrent = filenameGeneralCurrentCluster + "_" + iFile + ".root";
+      // TString filenameCurrent = filenameGeneralCurrentCluster + "_" + iFile + ".root";
+      TString filenameCurrent = getFilenameCurrent(iFile);
       if (debug) std::cout << "Opening TFile " << filenameCurrent << " ..." << std::endl;
       TFile *tfCurrent = TFile::Open(dirCondorPackCurrent + "/" + "dataTest_" + nameDatagroup + "/" + filenameCurrent, "READ");
+      arrFile[iFile] = tfCurrent;
       if (debug) std::cout << "Done." << std::endl;
       if (debug) std::cout << "Mounting variables from the file ..." << std::endl;
       mountVariablesFromFile(tfCurrent);
@@ -229,7 +278,7 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
           Bool_t isIncluded = false;
           UInt_t indexName = 0;
           // TList *tlHistFileCurrent;
-          for (TString nameIncluded: vvNameLeafTree[iTree]) {
+          for (TString nameIncluded: vvNameModifiedLeafTree[iTree]) {
             if (debug) std::cout << "indexName : " << indexName;
             if (nameLeafModified == nameIncluded) {
               isIncluded = true;
@@ -242,7 +291,8 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
           if (!isIncluded) {
             if (debug) std::cout << "Found new leafname." << std::endl;
             if (debug) std::cout << "nameLeaf: " << nameLeaf << ", nameLeafModified:" << nameLeafModified << std::endl;
-            vvNameLeafTree[iTree].push_back(nameLeafModified);
+            vvNameModifiedLeafTree[iTree].push_back(nameLeafModified);
+            vvTitleLeafTree[iTree].push_back(leaf->GetBranch()->GetTitle());
             std::vector<Bool_t> vIsHistFile(nFileTot);
             for (UInt_t i=0; i<nFileTot; i++) {
               vIsHistFile.push_back(false);
@@ -252,9 +302,10 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
             tltlHistFileLeaf->AddLast(tlHistFileCurrent);
           }
           vvvIsHistFileLeafTree[iTree][indexName][iFile] = true;
-          TString nameHist = (TString)"h" + vNameTT[iTree] + nameLeafModified + iFile;
+          TString nameHist = (TString)"h" + vNameTT[iTree] + nameLeafModified + "Autogen" + iFile;
           if (debug) std::cout << "Drawing " << nameLeaf << " as " << nameHist << " ...";
           arrTT[iTree]->Draw(nameLeaf + ">>" + nameHist);
+          ((TH1 *)gDirectory->Get(nameHist))->SetTitle(nameLeaf);
           if (debug) std::cout << " Done." << std::endl;
         }
         Int_t indexName = 0;
@@ -262,10 +313,12 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
           // if (debug) std::cout << "Looping." << std::endl;
           if (vvvIsHistFileLeafTree[iTree][indexName][iFile]) {
             TList *tlHistFile = (TList *) tlHistFileRaw;
-            TString nameLeafModified = vvNameLeafTree[iTree][indexName];
-            TString nameHist = (TString)"h" + vNameTT[iTree] + nameLeafModified + iFile;
+            TString nameLeafModified = vvNameModifiedLeafTree[iTree][indexName];
+            TString nameHist = (TString)"h" + vNameTT[iTree] + nameLeafModified + "Autogen" + iFile;
             if (debug) std::cout << "Picking up " << nameHist << " ...";
-            tlHistFile->AddLast(gDirectory->Get(nameHist));
+            TH1* hist = (TH1 *) gDirectory->Get(nameHist);
+            if (debug) std::cout << " (" << hist->GetNbinsX() << ", " << hist->GetBinContent(1) << hist->GetBinContent(hist->GetNbinsX()) << ")";
+            tlHistFile->AddLast(hist);
             if (debug) std::cout << " Done." << std::endl;
           }
           indexName++;
@@ -286,25 +339,149 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
   }
 
   TObjArray *toatlResult = new TObjArray(nTT);
+  std::vector<std::vector<Bool_t>> vvIsAllEmptyLeafTree(nTT); //< Whether all the histograms have zero entry of each leaf in each tree
+  std::vector<std::vector<TString>> vvHistsettingLeafTree(nTT); //< The histogram settings "(binnumber, lower, upper)" of each leaf in each tree;
   for (UInt_t iTree=0; iTree<nTT; iTree++) {
+    TFile *tfOutHist = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + vNameTT[iTree] + "_" + nameClusterID + "_hist.root", toRecreateOutFile ? "recreate" : "update");
+    {
+      std::vector<Bool_t> vIsAllEmptyLeaf;
+      vvIsAllEmptyLeafTree.push_back(vIsAllEmptyLeaf);
+      std::vector<TString> vHistsettingLeaf;
+      vvHistsettingLeafTree.push_back(vHistsettingLeaf);
+    }
     (*toatlResult)[iTree] = new TList;
     UInt_t indexName = 0;
-    for (const auto&& tlHistFileLeafRaw: *((TList *) (*toatltlHistFileLeafTree)[iTree])) {
-      TList *tlHistFileLeaf = (TList *) tlHistFileLeafRaw;
-      TH1 *histFirst = (TH1 *) tlHistFileLeaf->First();
-      TH1 *histResult = (TH1 *) histFirst->Clone("h" + vvNameLeafTree[iTree][indexName]);
-      UInt_t iDataset = 0;
-      UInt_t iFile = 0;
-      for (auto histFileRaw: *tlHistFileLeaf) {
+    for (const auto&& tlHistFileRaw: *((TList *) (*toatltlHistFileLeafTree)[iTree])) {
+      TList *tlHistFile = (TList *) tlHistFileRaw;
+      TH1 *histFirst = (TH1 *) tlHistFile->First();
+      // TH1 *histResult = (TH1 *) histFirst->Clone("h" + vvNameModifiedLeafTree[iTree][indexName]);
+      // histResult->Clear();
+      TH1 *histResult;
+      TString nameHistResult = "h" + vvNameModifiedLeafTree[iTree][indexName];
+      // UInt_t iDataset = 0;
+      // UInt_t iFile = 0;
+      UInt_t nHistAllFile = tlHistFile->GetEntries();
+      Int_t arrNEntryFile[nHistAllFile];
+      Double_t arrMinimumFile[nHistAllFile];
+      Double_t arrMaximumFile[nHistAllFile];
+      Int_t arrNBinFile[nHistAllFile];
+      Double_t arrLowerFile[nHistAllFile];
+      Double_t arrUpperFile[nFileTot];
+      TString arrLeafnameFile[nFileTot];
+      Bool_t isAllEmpty = true;
+      UInt_t iHist = 0;
+      for (auto histFileRaw: *tlHistFile) {
         TH1 *histFile = (TH1 *)histFileRaw;
-        histFile->Scale(tvdWeightFile[iFile]);
+        // histFile->Scale(tvdWeightFile[iFile]);-
+        arrNEntryFile[iHist] = histFile->GetEntries();
+        arrMinimumFile[iHist] = histFile->GetMinimum();
+        arrMaximumFile[iHist] = histFile->GetMaximum();
+        Int_t nBin = histFile->GetNbinsX();
+        arrNBinFile[iHist] = nBin;
+        if (nBin > 0) {
+          isAllEmpty = false;
+        }
+        arrLowerFile[iHist] = histFile->GetBinContent(1);
+        arrUpperFile[iHist] = histFile->GetBinContent(nBin);
+        arrLeafnameFile[iHist] = histFile->GetTitle();
+        iHist++;
       }
-      histResult->Merge(tlHistFileLeaf);
-      ((TList *)(*toatlResult)[iTree])->AddLast(histResult);
+      if (isAllEmpty) {
+        if (debug) std::cerr << "Empty leaf encountered: " << vvNameModifiedLeafTree[iTree][indexName] << ">>" << nameHistResult << std::endl;
+        histResult =
+            (TH1 *)((TH1 *)tlHistFile->First())->Clone(nameHistResult);
+      } else {
+        Int_t lowerCorrect;
+        Int_t upperCorrect;
+        Int_t nBinCorrect;
+        {
+          Double_t binDensityAverage = 0;
+          for (UInt_t iHist = 0; iHist < nHistAllFile; iHist++) {
+            binDensityAverage += arrNBinFile[iHist] /
+                                 (arrUpperFile[iHist] - arrLowerFile[iHist]) /
+                                 nHistAllFile;
+          }
+          Double_t minimumWholeFile = arrMinimumFile[0],
+                   maximumWholeFile = arrMaximumFile[0];
+          for (UInt_t iHist = 1; iHist < nHistAllFile; iHist++) {
+            if (minimumWholeFile > arrMinimumFile[iHist])
+              minimumWholeFile = arrMinimumFile[iHist];
+            if (maximumWholeFile < arrMaximumFile[iHist])
+              maximumWholeFile = arrMaximumFile[iHist];
+          }
+          if (TMath::Abs(minimumWholeFile) > 1) {
+            Int_t nDigitM1MinimumWholeFile =
+                (Int_t)TMath::Floor(TMath::Log10(TMath::Abs(minimumWholeFile)));
+            lowerCorrect =
+                intpow((Int_t)10, nDigitM1MinimumWholeFile,
+                       TMath::Floor(intpow((Int_t)10, -nDigitM1MinimumWholeFile,
+                                           (Int_t)minimumWholeFile)));
+          } else {
+            lowerCorrect = TMath::Floor(minimumWholeFile);
+          }
+          if (TMath::Abs(maximumWholeFile) > 1) {
+            Int_t nDigitM1MaximumWholeFile =
+                (Int_t)TMath::Floor(TMath::Log10(TMath::Abs(minimumWholeFile)));
+            upperCorrect = lowerCorrect =
+                intpow((Int_t)10, nDigitM1MaximumWholeFile,
+                       TMath::Ceil(intpow((Int_t)10, -nDigitM1MaximumWholeFile,
+                                          (Int_t)maximumWholeFile)));
+          } else {
+            upperCorrect = TMath::Ceil(maximumWholeFile);
+          }
+          if (lowerCorrect == upperCorrect) {
+            upperCorrect += 1;
+            nBinCorrect = TMath::Ceil(binDensityAverage);
+          } else {
+            nBinCorrect = (upperCorrect - lowerCorrect) * binDensityAverage;
+          }
+          if (TMath::Abs(nBinCorrect) > 1) {
+            Int_t nDigitM1NBinCorrect =
+                (Int_t)TMath::Floor(TMath::Log10(nBinCorrect));
+            nBinCorrect = 
+                intpow((Int_t)10, nDigitM1NBinCorrect,
+                       TMath::Ceil(intpow((Int_t)10, -nDigitM1NBinCorrect,
+                       nBinCorrect)));
+          }
+          if (nBinCorrect <= 0) {
+            nBinCorrect = 1;
+          }
+        }
+        TString tstrSettingHistLeaf = (TString) "(" + nBinCorrect + "," + lowerCorrect + "," + upperCorrect + ")";
+        TList *tlHistCorrected = new TList;
+        UInt_t iFile=0;
+        for (UInt_t iHist=0; iHist<nHistAllFile; iHist++, iFile++) {
+          while (!vvvIsHistFileLeafTree[iTree][indexName][iFile] || iFile >= nFileTot) {
+            std::cerr << "(Tree index, Leaf index) (" << iTree << ", " << indexName
+            << ") not found in file index " << iFile
+            << " (" << vvNameModifiedLeafTree[iTree][indexName] << ")" << std::endl; 
+            iFile++;
+          }
+          TString nameHistCorrected = "h" + vvNameModifiedLeafTree[iTree][indexName] + "Corrected" + iFile;
+          arrTT[iTree]->Draw(arrLeafnameFile[iHist] + ">>" + nameHistCorrected + tstrSettingHistLeaf);
+          TH1 *histCorrected = (TH1 *) gDirectory->Get(nameHistCorrected);
+          histCorrected->Scale(tvdWeightFile[iFile]);
+          tlHistCorrected->AddLast(histCorrected);
+        }
+        if (tlHistCorrected->IsEmpty()) {
+          std::cout << "Fatel: " << "No histograms found for (" << iTree << ", " << indexName 
+          << ") (" << vvNameModifiedLeafTree[iTree][indexName] << ")";
+          histResult = nullptr;
+        } else {
+          histResult = (TH1 *) tlHistCorrected->First()->Clone(nameHistResult);
+          histResult->Clear();
+          histResult->Merge(tlHistCorrected);
+        }
+      }
+      histResult->SetTitle(vvTitleLeafTree[iTree][indexName]);
+      histResult->Write();
+      // histResult->Merge(tlHistFileLeaf);
+      // ((TList *)(*toatlResult)[iTree])->AddLast(histResult);
+      indexName++;
     }
   }
-  TFile *tfOut = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + nameClusterID + "_hist.root", toRecreateOutFile ? "recreate" : "update");
-  toatlResult->Write("toatlResult");
-  tfOut->Close();
+  // TFile *tfOut = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + nameClusterID + "_hist.root", toRecreateOutFile ? "recreate" : "update");
+  // toatlResult->Write("toatlResult");
+  // tfOut->Close();
 
 }
