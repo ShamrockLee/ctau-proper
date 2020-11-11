@@ -216,6 +216,7 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
   };
   TFile *arrFile[nFileTot];
   // TObjArray* toatltlHistFileLeafTree = new TObjArray(nTT); //< The histogram in each file of each leaf in each tree
+  // std::vector<std::vector<std::vector<TH1 *>>> vvvHistFileLeafTree(nTT);
   TVectorD tvdWeightDataset(nDataset); //< The weight of each dataset
   TVectorD tvdWeightFile(nFileTot); //< The weight of each file
   std::vector<std::vector<std::vector<Bool_t>>> vvvIsHistFileLeafTree(nTT); //< The existence in each file of each leaf in each tree
@@ -229,12 +230,14 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
   std::vector<std::vector<TString>> vvNameModifiedLeafTree(nTT); //< The modified leafname of each leaf in each tree
   std::vector<std::vector<TString>> vvTitleLeafTree(nTT); // The title of the branch of each leaf in each tree
   std::vector<std::vector<TString>> vvTypeNameLeafTree(nTT); // The type name of each each leaf in each tree
-  auto getNameHistOfFile = [&vvNameModifiedLeafTree](UInt_t iTree, UInt_t indexName, UInt_t iFile, TString suffixStage) -> TString {
-    return "h" + vvNameModifiedLeafTree[iTree][indexName] + suffixStage + iFile;
+  auto getNameHistOfFile = [&vNameTT, &vvNameModifiedLeafTree](UInt_t iTree, UInt_t indexName, UInt_t iFile, TString suffixStage) -> TString {
+    return (TString)"h" + vNameTT[iTree] + vvNameModifiedLeafTree[iTree][indexName] + suffixStage + iFile;
   };
   for (UInt_t iTree=0; iTree<nTT; iTree++) {
     std::vector<std::vector<Bool_t>> vvIsHistFileLeaf;
     vvvIsHistFileLeafTree.push_back(vvIsHistFileLeaf);
+    std::vector<std::vector<TH1 *>> vvHistFileLeaf;
+    // vvvHistFileLeafTree.push_back(vvHistFileLeaf);
     // std::vector<std::vector<TString>> vvNameEffectiveFileLeaf;
     // vvvNameEffectiveFileLeafTree.push_back(vvNameEffectiveFileLeaf);
     // std::vector<std::vector<Int_t>> vvNEntryFileLeaf;
@@ -258,8 +261,9 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
     // TList *tltlHistFileLeaf = new TList;
     // (*toatltlHistFileLeafTree)[iTree] = tltlHistFileLeaf;
   }
-  UInt_t iFile = 0;
-  for (UInt_t iDataset=0; iDataset<nDataset; iDataset++) {
+  // UInt_t iFile = 0;
+  TFile *tfAutogenHist = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + "Autogen" + "_" + nameClusterID + "_hist.root", toRecreateOutFile ? "recreate" : "update");
+  for (UInt_t iDataset=0, iFile=0; iDataset<nDataset; iDataset++) {
     Long64_t nEntryOriginalDatasetCurrent = 0;
     if (debug) std::cout << "iDataset: " << iDataset << std::endl;
     for (UInt_t jFile=0; jFile<vNumberFile[iDataset]; jFile++, iFile++) {
@@ -286,10 +290,10 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
           UInt_t indexName = 0;
           // TList *tlHistFileCurrent;
           for (TString nameIncluded: vvNameModifiedLeafTree[iTree]) {
-            if (debug) std::cout << "indexName : " << indexName;
+            // if (debug) std::cout << "indexName : " << indexName;
             if (nameLeafModified == nameIncluded) {
               isIncluded = true;
-              if (debug) std::cout << " is included.";
+              // if (debug) std::cout << " is included.";
               break;
             }
             indexName++;
@@ -302,18 +306,27 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
             vvTitleLeafTree[iTree].push_back(leaf->GetBranch()->GetTitle());
             vvTypeNameLeafTree[iTree].push_back(leaf->GetTypeName());
             std::vector<Bool_t> vIsHistFile(nFileTot);
+            std::vector<TH1 *> vHistFile(nFileTot);
             for (UInt_t i=0; i<nFileTot; i++) {
               vIsHistFile.push_back(false);
             }
             vvvIsHistFileLeafTree[iTree].push_back(vIsHistFile);
+            // vvvHistFileLeafTree[iTree].push_back(vHistFile);
             // TList *tlHistFileCurrent = new TList;
             // tltlHistFileLeaf->AddLast(tlHistFileCurrent);
+            
           }
           vvvIsHistFileLeafTree[iTree][indexName][iFile] = true;
           TString nameHistAutogen = getNameHistOfFile(iTree, indexName, iFile, "Autogen");
           if (debug) std::cout << "Drawing " << nameLeaf << " as " << nameHistAutogen << " ...";
           arrTT[iTree]->Draw(nameLeaf + ">>" + nameHistAutogen);
-          ((TH1 *)gDirectory->Get(nameHistAutogen))->SetTitle(nameLeaf);
+          TH1 *histAutogen = (TH1 *)gDirectory->Get(nameHistAutogen);
+          histAutogen->SetTitle(nameLeaf);
+          histAutogen->SetName(nameHistAutogen);
+          histAutogen->SetDirectory(tfAutogenHist);
+          // vvvHistFileLeafTree[iTree][indexName].push_back(histAutogen);
+          if (debug && histAutogen == nullptr) std::cerr << "Fatal: " << nameHistAutogen << " is nullptr!" << std::endl;
+          if (debug) std::cout << " " << histAutogen;
           if (debug) std::cout << " Done." << std::endl;
         }
         // Int_t indexName = 0;
@@ -347,14 +360,18 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
     }
     if (debug) std::cout << "." << std::endl;
   }
+  tfAutogenHist->Write();
+  tfAutogenHist->Close();
+  delete tfAutogenHist;
 
+  tfAutogenHist = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + "Autogen" + "_" + nameClusterID + "_hist.root", "read");
   gStyle->SetOptStat(111111);
-
   // TObjArray *toatlResult = new TObjArray(nTT);
   std::vector<std::vector<Bool_t>> vvIsAllEmptyLeafTree(nTT); //< Whether all the histograms have zero entry of each leaf in each tree
   std::vector<std::vector<TString>> vvHistsettingLeafTree(nTT); //< The histogram settings "(binnumber, lower, upper)" of each leaf in each tree;
   for (UInt_t iTree=0; iTree<nTT; iTree++) {
     TFile *tfOutHist = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + vNameTT[iTree] + "_" + nameClusterID + "_hist.root", toRecreateOutFile ? "recreate" : "update");
+    TFile *tfCorrectedHist = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + "Corrected" + "_" + nameClusterID + "_hist.root", toRecreateOutFile ? "recreate" : "update");
     {
       std::vector<Bool_t> vIsAllEmptyLeaf;
       vvIsAllEmptyLeafTree.push_back(vIsAllEmptyLeaf);
@@ -372,7 +389,9 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
 
       // Index of the first true element of vvvIsHistFileLeafTree[iTree][indexName]
       UInt_t iFileFirst = std::distance(vvvIsHistFileLeafTree[iTree][indexName].begin(), std::find(vvvIsHistFileLeafTree[iTree][indexName].begin(), vvvIsHistFileLeafTree[iTree][indexName].end(), true));
-      TH1 *histFirst = (TH1 *) gDirectory->Get(getNameHistOfFile(iTree, indexName, iFileFirst, "Autogen"));
+      //TH1 *histFirst = (TH1 *) gDirectory->Get(getNameHistOfFile(iTree, indexName, iFileFirst, "Autogen"));
+      TH1 *histFirst = (TH1 *) tfAutogenHist->Get(getNameHistOfFile(iTree, indexName, iFileFirst, "Autogen"));
+      // TH1 *histFirst = (TH1 *) vvvHistFileLeafTree[iTree][indexName][0];
       // TH1 *histResult = (TH1 *) histFirst->Clone("h" + vvNameModifiedLeafTree[iTree][indexName]);
       // histResult->Clear();
       TH1 *histResult;
@@ -395,11 +414,16 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
       // for (auto histFileRaw: *tlHistFile) {
       for (UInt_t iFile=0, iHist=0; iFile<nFileTot; iFile++) {
         if (!vvvIsHistFileLeafTree[iTree][indexName][iFile]) {
+          if (debug) std::cout << " Skipping iFile: " << iFile;
           continue;
         }
         if (debug) std::cout << " iHist: " << iHist;
         // TH1 *histFile = (TH1 *)histFileRaw;
-        TH1 *histAutogen = (TH1 *) gDirectory->Get(getNameHistOfFile(iTree, indexName, iFile, "Autogen"));
+        TString nameHistAutogen = getNameHistOfFile(iTree, indexName, iFile, "Autogen");
+        // TH1 *histAutogen = (TH1 *) gDirectory->Get(nameHistAutogen);
+        TH1 *histAutogen = (TH1 *) tfAutogenHist->Get(nameHistAutogen);
+        // TH1 *histAutogen = vvvHistFileLeafTree[iTree][indexName][iHist];
+        if (debug && histAutogen == nullptr) std::cerr << "Fatal: histAutogen from " << nameHistAutogen << " is nullptr!" << std::endl;
         // histFile->Scale(tvdWeightFile[iFile]);-
         arrNEntryFile[iHist] = histAutogen->GetEntries();
         arrMinimumFile[iHist] = histAutogen->GetBinCenter(histAutogen->FindFirstBinAbove()) - histAutogen->GetBinWidth(1) / 2;
@@ -419,6 +443,7 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
         if (debug) std::cout << "Empty leaf encountered: " << vvNameModifiedLeafTree[iTree][indexName] << ">>" << nameHistResult << std::endl;
         // histResult = (TH1 *)((TH1 *)tlHistFile->First())->Clone(nameHistResult);
         histResult = (TH1 *) histFirst->Clone(nameHistResult);
+        histResult->SetDirectory(tfOutHist);
       } else {
         if (debug) std::cout << "Calculating histogram settings ..." << std::endl;
         Long64_t lowerCorrect;
@@ -506,7 +531,8 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
         if (debug) std::cout << vvTypeNameLeafTree[iTree][indexName];
         if (debug) std::cout << " (nBinCorrect, lowerCorrect, upperCorrect): " << tstrSettingHistLeaf << std::endl;
         if (debug) std::cout << "Drawing histograms with correct settings ...";
-        TList *tlHistCorrected = new TList;
+        // TList *tlHistCorrected = new TList;
+        std::vector<TString> vNameHistCorrected;
         // UInt_t iFile=0;
         for (UInt_t iHist=0, iFile=0; iHist<nHistAllFile; iHist++, iFile++) {
           while (!vvvIsHistFileLeafTree[iTree][indexName][iFile] && iFile < nFileTot) {
@@ -516,36 +542,67 @@ void xAna_monoZ_genhist(TString nameCondorPack, TString nameDatagroup, TString n
             iFile++;
           }
           TString nameHistCorrected = getNameHistOfFile(iTree, indexName, iFile, "Corrected");
+          vNameHistCorrected.push_back(nameHistCorrected);
           arrTT[iTree]->Draw(arrLeafnameFile[iHist] + ">>" + nameHistCorrected + tstrSettingHistLeaf);
           TH1 *histCorrected = (TH1 *) gDirectory->Get(nameHistCorrected);
+          histCorrected->SetDirectory(tfCorrectedHist);
+          histCorrected->SetName(nameHistCorrected);
           histCorrected->Scale(tvdWeightFile[iFile]);
-          tlHistCorrected->AddLast(histCorrected);
+          // tlHistCorrected->AddLast(histCorrected);
           if (debug) std::cout << "iFile: " << iFile;
         }
+        // tfCorrectedHist->Write();
+        // tfCorrectedHist->Close();
+        // tfCorrectedHist->Delete();
+        // delete tfCorrectedHist;
+        // tfCorrectedHist = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + "Corrected" + "_" + nameClusterID + "_hist.root", "read");
         if (debug) std::cout << " Done." << std::endl;
         if (debug) std::cout << "Merging to histResult (" << nameHistResult << ")...";
-        if (tlHistCorrected->IsEmpty()) {
+        // TObjArray *toaHistCorrected = new TObjArray(vNameHistCorrected.size());
+        // for (UInt_t iHist=0; iHist<vNameHistCorrected.size(); iHist++) {
+        //   TString nameHistCorrected = vNameHistCorrected[iHist];
+        //   (*toaHistCorrected)[iHist] = (TH1 *) tfCorrectedHist->Get(nameHistCorrected);
+        // }
+        if (vNameHistCorrected.size() == 0) {
           std::cerr << "Fatal: " << "No histograms found for (" << iTree << ", " << indexName 
           << ") (" << vvNameModifiedLeafTree[iTree][indexName] << ")";
           histResult = nullptr;
         } else {
-          histResult = (TH1 *) tlHistCorrected->First()->Clone(nameHistResult);
+          // histResult = (TH1 *) (*toaHistCorrected)[0]->Clone(nameHistResult);
+          if (debug) std::cout << "Picking up " << vNameHistCorrected[0] << " to histResult ...";
+          TH1 *histCorrectedFirst = (TH1 *) tfCorrectedHist->Get(vNameHistCorrected[0]);
+          if (debug) std::cout << " histCorrectedFirst: " << histCorrectedFirst;
+          histResult = (TH1 *)histCorrectedFirst->Clone(nameHistResult);
+          if (debug) std::cout << " histResult: " << histResult << " Done. " << std::endl;
+          histResult->SetDirectory(tfOutHist);
           histResult->Clear();
           histResult->SetName(nameHistResult);
-          histResult->Merge(tlHistCorrected);
+          // histResult->Merge(toaHistCorrected);
+          for (UInt_t iHist=1; iHist<vNameHistCorrected.size(); iHist++) {
+            if (debug) std::cout << "Getting " << vNameHistCorrected[iHist] << " ...";
+            TH1 *histCorrected = (TH1 *) tfCorrectedHist->Get(vNameHistCorrected[iHist]);
+            if (debug) std::cout << " Adding " << histCorrected;
+            histResult->Add(histCorrected);
+            if (debug) std::cout << " Done." << std::endl;
+          }
         }
         if (debug) std::cout << " Done." << std::endl;
       }
       histResult->SetTitle(vvTitleLeafTree[iTree][indexName]);
-      if (debug) std::cout << "Writing histResult ...";
-      histResult->Write();
-      if (debug) std::cout << " Done." << std::endl;
+      // if (debug) std::cout << "Writing histResult ...";
+      // histResult->Write();
+      // if (debug) std::cout << " Done." << std::endl;
       // histResult->Merge(tlHistFileLeaf);
       // ((TList *)(*toatlResult)[iTree])->AddLast(histResult);
       indexName++;
     }
+    if (debug) std::cout << "Writing into tfOutHist ...";
+    tfOutHist->Write();
+    if (debug) std::cout << " Done." << std::endl;
     tfOutHist->Close();
+    tfCorrectedHist->Close();
   }
+  tfAutogenHist->Close();
   // TFile *tfOut = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + nameClusterID + "_hist.root", toRecreateOutFile ? "recreate" : "update");
   // toatlResult->Write("toatlResult");
   // tfOut->Close();
