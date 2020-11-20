@@ -200,7 +200,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
                                   (UInt_t iTree, UInt_t indexName, Int_t& nBinCorrect, Double_t& lowerCorrect, Double_t& upperCorrect) {
     TString nameLeafModified = vvNameModifiedLeafTree[iTree][indexName];
     TString typeName = vvTypeNameLeafTree[iTree][indexName];
-    if (containsOfTString(nameLeafModified, (TString)"loat") || containsOfTString(nameLeafModified, (TString)"ouble")) {
+    if (containsOfTString(typeName, (TString)"loat") || containsOfTString(typeName, (TString)"ouble")) {
       if (nameLeafModified.EndsWith("_phi")) {
         if (debug) std::cout << "Found _phi" << std::endl;
         lowerCorrect = -TMath::Pi();
@@ -226,7 +226,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         return;
       }
     }
-    if (debug) std::cout << "No additional settings to apply." << std::endl;
+    if (debug) std::cout << "No additional settings for " << nameLeafModified << " to apply." << std::endl;
   };
   for (UInt_t iTree=0; iTree<nTT; iTree++) {
     std::vector<std::vector<Bool_t>> vvIsHistFileLeaf;
@@ -284,10 +284,10 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
       if (isFileOpenable) {
         tfCurrent = TFile::Open(pathFileIn, "READ");
         isFileOpenable = tfCurrent != nullptr && !tfCurrent->IsZombie();
-        arrIsOpenableFile[iFile + nFileMissingTot] = isFileOpenable;
       } else {
         std::cerr << "File not exists!" << std::endl;
       }
+      arrIsOpenableFile[iFile + nFileMissingTot] = isFileOpenable;
       arrFile[iFile + nFileMissingTot] = tfCurrent;
       if (!isFileOpenable) {
         std::cerr << "File not openable: " << filenameCurrent << " (" << tfCurrent << ")" << std::endl;
@@ -419,8 +419,8 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
     << " (size:" << vWeightDataset.size() << ", iDataset:" << iDataset + 1 << ")" << std::endl;
   }
   tfAutogenHist->Write();
-  tfAutogenHist->Close();
-  delete tfAutogenHist;
+  // tfAutogenHist->Close();
+  // delete tfAutogenHist;
 
   // tfAutogenHist = TFile::Open(dirCondorPackCurrent + "/" + "output_" + nameDatagroup + "_" + "Autogen" + "_" + nameClusterID + "_hist.root", "read");
   gStyle->SetOptStat(111111);
@@ -449,7 +449,9 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
 
       // Index of the first true element of vvvIsHistFileLeafTree[iTree][indexName]
       UInt_t iFileFirst = std::distance(vvvIsHistFileLeafTree[iTree][indexName].begin(), std::find(vvvIsHistFileLeafTree[iTree][indexName].begin(), vvvIsHistFileLeafTree[iTree][indexName].end(), true));
-      tfAutogenHist = TFile::Open(pathTFAutogenHist);
+      // tfAutogenHist = TFile::Open(pathTFAutogenHist, "read");
+      tfAutogenHist->ReOpen("read");
+      // tfCorrectedHist = TFile::Open(pathTFCorrectedHist, toRecreateOutFile ? "recreate" : "update");
       //TH1 *histFirst = (TH1 *) gDirectory->Get(getNameHistOfFile(iTree, indexName, iFileFirst, "Autogen"));
       TH1 *histFirst = (TH1 *) tfAutogenHist->Get(getNameHistOfFile(iTree, indexName, iFileFirst, "Autogen"));
       // TH1 *histFirst = (TH1 *) vvvHistFileLeafTree[iTree][indexName][0];
@@ -599,8 +601,8 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         if (debug) std::cout << " (nBinCorrect, lowerCorrect, upperCorrect): " << tstrSettingHistLeaf << std::endl;
         if (debug) std::cout << "Drawing histograms with correct settings ...";
         // TList *tlHistCorrected = new TList;
-        std::vector<TString> vNameHistCorrected;
-        vNameHistCorrected.clear();
+        // std::vector<TString> vNameHistCorrected;
+        // vNameHistCorrected.clear();
         // UInt_t iFile=0;
         tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "update");
         for (UInt_t iHist=0, iFile=0; iHist<nHistAllFile; iHist++, iFile++) {
@@ -611,7 +613,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
             iFile++;
           }
           TString nameHistCorrected = getNameHistOfFile(iTree, indexName, iFile, "Corrected");
-          vNameHistCorrected.push_back(nameHistCorrected);
+          // vNameHistCorrected.push_back(nameHistCorrected);
           arrTT[iTree]->Draw(arrLeafnameFile[iHist] + ">>" + nameHistCorrected + tstrSettingHistLeaf);
           TH1 *histCorrected = (TH1 *) gDirectory->Get(nameHistCorrected);
           histCorrected->SetDirectory(tfCorrectedHist);
@@ -623,9 +625,9 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         }
         // histResult = new TH1F(nameHistResult, vvTitleLeafTree[iTree][indexName], 42, 0, 42); //TODO SKIPPED MERGING
         // tfCorrectedHist->Write();
-        tfCorrectedHist->ReOpen("read");
-        // tfCorrectedHist->Close();
-        // delete tfCorrectedHist;
+        // tfCorrectedHist->ReOpen("read");
+        tfCorrectedHist->Close();
+        delete tfCorrectedHist;
         // tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "read");
         if (debug) std::cout << " Done." << std::endl;
         // if (debug) std::cout << "Merging to histResult (" << nameHistResult << ")...";
@@ -633,7 +635,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         // for (UInt_t iHist=0; iHist<vNameHistCorrected.size(); iHist++) {
         //   TString nameHistCorrected = vNameHistCorrected[iHist];
         //   (*toaHistCorrected)[iHist] = (TH1 *) tfCorrectedHist->Get(nameHistCorrected);
-        tfCorrectedHist->Close();
+        // tfCorrectedHist->Close();
         if (debug) std::cout << " Done." << std::endl;
       }
       // indexName++; // LO THE BUG that cause half of the histogram to disappear
@@ -642,6 +644,8 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
   // tfAutogenHist->Close();
   // delete tfAutogenHist;
   tfAutogenHist->ReOpen("read");
+  tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "read");
+  // tfCorrectedHist->ReOpen("read");
 
   if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
   for (UInt_t iFileOriginal=0; iFileOriginal<nFileTotOriginal; iFileOriginal++) {
@@ -654,7 +658,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
 
   if (debug) std::cout << "Merging histograms ..." << std::endl;
   // tfAutogenHist = TFile::Open(pathTFAutogenHist, "read");
-  tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "read");
+  // tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "read");
   for (UInt_t iTree=0; iTree<nTT; iTree++) {
     if (debug) std::cout << "iTree: " << iTree << " (" << vNameTT[iTree] << ")" << std::endl;
     TFile *tfOutHist = TFile::Open(getPathTFOutHist(iTree), toRecreateOutFile ? "recreate" : "update");
