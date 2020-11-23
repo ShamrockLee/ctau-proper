@@ -143,6 +143,12 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         upperCorrect = 1;
         return;
       }
+      if (startsWithOfTString(nameLeafModified, (TString)"Jet_qgl")) {
+        if (debug) std::cout << "Found Jet_qgl" << std::endl;
+        lowerCorrect = 0;
+        upperCorrect = 1;
+        return;
+      }
     }
     if (debug) std::cout << "No additional settings for " << nameLeafModified << " to apply." << std::endl;
   };
