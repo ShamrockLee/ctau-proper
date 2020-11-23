@@ -13,6 +13,8 @@
 
 #include "mergeToHists.h"
 
+#ifndef TSTRING_UTILS
+#define TSTRING_UTILS
 Bool_t startsWithOfTString(const TString target, const TString pattern, const Ssiz_t displacement=0) {
   return target.SubString(pattern).Start() == displacement;
 }
@@ -24,6 +26,7 @@ Bool_t startsWithOfTString(const TString target, const TString pattern, const Ss
 Bool_t containsOfTString(const TString target, const TString pattern) {
   return target.SubString(pattern).Start() != -1;
 }
+#endif
 
 void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagroup, const TString nameClusterID,
                      TString dirCondorPacks = ".", const Bool_t toRecreateOutFile = true,

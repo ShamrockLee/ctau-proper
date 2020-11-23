@@ -3,7 +3,8 @@
 #include <TFile.h>
 #include <TH1.h>
 
-#include "mergeToHist.h"
+#include "mergeToHists.h"
+
 // #include <TH1F.h>
 #include <TLeaf.h>
 #include <TList.h>
@@ -22,6 +23,8 @@
 #include <iostream>
 #include <vector>
 
+#ifndef INTPOW_FUNCTION
+#define INTPOW_FUNCTION
 template <typename TBase, typename TIndex, typename TRatio>
 TRatio intpow(const TBase base, const TIndex index, const TRatio ratio) {
   if (index == 0) {
@@ -39,7 +42,10 @@ TRatio intpow(const TBase base, const TIndex index, const TRatio ratio) {
   }
   return result;
 }
+#endif
 
+#ifndef TSTRING_UTILS
+#define TSTRING_UTILS
 Bool_t startsWithOfTString(const TString target, const TString pattern,
                            const Ssiz_t displacement = 0) {
   return target.SubString(pattern).Start() == displacement;
@@ -54,31 +60,33 @@ Bool_t startsWithOfTString(const TString target, const TString pattern,
 Bool_t containsOfTString(const TString target, const TString pattern) {
   return target.SubString(pattern).Start() != -1;
 }
-
-TString modifyNameLeaf(TString nameLeaf) {
-  TString nameLeafNew = TString(nameLeaf);
-  Ssiz_t indexLeftSquareBracket = nameLeaf.First('[');
-  if (indexLeftSquareBracket != -1) {
-    nameLeafNew.Resize(indexLeftSquareBracket);
-  }
-  return nameLeafNew;
-}
+#endif
 
 void mergeToHists(const std::vector<TString> vNameTT,
-                 std::vector<UInt_t> vNumberFile,
-                 std::vector<Double_t> vCrossSection,
-                 std::function<TString(UInt_t)> funPathTFIn, TString dirTFTemp,
-                 std::function<TString(TString)> funNameTFTemp,
-                 TString dirTFOut, std::function<TString(TString)> funNameTFOut,
-                 TString seperatorPath = "/",
-                 std::function<void(Int_t &NBinCorrect, Double_t &lowerCorrect,
-                                    Double_t &upperCorrect, TString nameTT,
-                                    TString nameLeafModified,
-                                    TString typeNameLeaf, TString titleLeaf)>
-                     adjustHistSettingPerLeafTreeExtra = nullptr,
-                 const Bool_t toRecreateOutFile = true,
-                 const Bool_t debug = false,
-                 const Bool_t allowMissing = false) {
+                  std::vector<UInt_t> vNumberFile,
+                  std::vector<Double_t> vCrossSection,
+                  std::function<TString(UInt_t)> funPathTFIn, TString dirTFTemp,
+                  std::function<TString(TString)> funNameTFTemp,
+                  TString dirTFOut,
+                  std::function<TString(TString)> funNameTFOut,
+                  TString seperatorPath,
+                  std::function<void(Int_t &NBinCorrect, Double_t &lowerCorrect,
+                                     Double_t &upperCorrect, TString nameTT,
+                                     TString nameLeafModified,
+                                     TString typeNameLeaf, TString titleLeaf)>
+                      adjustHistSettingPerLeafTreeExtra,
+                  const Bool_t toRecreateOutFile, const Bool_t debug,
+                  const Bool_t allowMissing) {
+  std::function<TString(TString)> modifyNameLeaf =
+      [](TString nameLeaf) -> TString {
+    TString nameLeafNew = TString(nameLeaf);
+    Ssiz_t indexLeftSquareBracket = nameLeaf.First('[');
+    if (indexLeftSquareBracket != -1) {
+      nameLeafNew.Resize(indexLeftSquareBracket);
+    }
+    return nameLeafNew;
+  };
+
   Long64_t nEntryOriginal;
 
   const UInt_t nTT = vNameTT.size();
@@ -113,9 +121,9 @@ void mergeToHists(const std::vector<TString> vNameTT,
   const std::vector<UInt_t> vNumberFileOriginal = vNumberFile;
   TFile *arrFile[nFileTotOriginal];
   Bool_t arrIsOpenableFile[nFileTotOriginal];  //< Array of whether each file is
-                                               //openable or not (The per-file
-                                               //vectors cares only about
-                                               //openable files).
+                                               // openable or not (The per-file
+                                               // vectors cares only about
+                                               // openable files).
 
   std::vector<Double_t> vWeightDataset(
       nDataset);  //< The weight of each dataset
@@ -446,11 +454,11 @@ void mergeToHists(const std::vector<TString> vNameTT,
   // TObjArray *toatlResult = new TObjArray(nTT);
   std::vector<std::vector<Bool_t>> vvIsAllEmptyLeafTree(
       nTT);  //< Whether all the histograms have zero entry of each leaf in each
-             //tree
+             // tree
   vvIsAllEmptyLeafTree.clear();
   std::vector<std::vector<TString>> vvHistsettingLeafTree(
       nTT);  //< The histogram settings "(binnumber, lower, upper)" of each leaf
-             //in each tree;
+             // in each tree;
   vvHistsettingLeafTree.clear();
   for (UInt_t iTree = 0; iTree < nTT; iTree++) {
     {
