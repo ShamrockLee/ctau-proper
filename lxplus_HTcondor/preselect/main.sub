@@ -1,7 +1,7 @@
 ##########################################################
 ## user setting area
 
-datagroupName         = DYJets
+datagroupName         = signal_Mx2-150_Mv-500_Mx1-1_ctau-1
 #listFile              = dataTest.txt
 listFile              = dataTest_$(datagroupName).txt
 exeMacro              = xAna_monoZ_preselect.C
