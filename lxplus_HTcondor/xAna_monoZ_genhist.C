@@ -97,6 +97,9 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
       vCrossSection = {
 #include "preselect/crossSections_DYJets_withComma.txt"
       };
+    } else if (nameDatagroup == "signal_Mx2-150_Mv-500_Mx1-1_ctau-1") {
+      vNumberFile = {4};
+      vCrossSection = {1};
     }
   }
 
