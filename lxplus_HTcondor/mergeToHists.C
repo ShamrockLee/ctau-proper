@@ -443,7 +443,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
         closeTFilesIn(iFile + nFileMissingTot,
                       [&areSomeInfilesClosed, &tfAutogenHist]() {
                         areSomeInfilesClosed = true;
-                        tfAutogenHist->Write();
+                        // tfAutogenHist->Write();
                       });
       }
     }
