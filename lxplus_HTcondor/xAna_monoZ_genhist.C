@@ -120,7 +120,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
       return "output_" + nameDatagroup + "_" + nameTT + "_" + nameClusterID + "_hist.root";
     };
 
-  std::function<void (Int_t&, Double_t&, Double_t&, TString, TString, TString, TString)> adjustHistSetting = [debug](Int_t& nBinCorrect, Double_t& lowerCorrect, Double_t& upperCorrect, TString nameTT, TString nameLeafModified, TString typeNameLeaf, TString tytleLeaf) {
+  std::function<void (Int_t&, Double_t&, Double_t&, TString, TString, TString, TString)> adjustHistSetting = [debug](Int_t& nBinCorrect, Double_t& lowerCorrect, Double_t& upperCorrect, TString nameTT, TString nameLeafModified, TString typeNameLeaf, TString titleLeaf) {
 
     if (containsOfTString(typeNameLeaf, (TString)"loat") || containsOfTString(typeNameLeaf, (TString)"ouble")) {
       if (nameLeafModified.EndsWith("_phi")) {
@@ -151,6 +151,12 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         if (debug) std::cout << "Found Jet_qgl" << std::endl;
         lowerCorrect = 0;
         upperCorrect = 1;
+        return;
+      }
+      if (titleLeaf.EndsWith("Energy Fraction") || titleLeaf.EndsWith("energy fraction")) {
+        if (debug) std::cout << "Found Energy Fraction" << std::endl;
+        lowerCorrect = 0;
+        upperCorrect = 0;
         return;
       }
     }
