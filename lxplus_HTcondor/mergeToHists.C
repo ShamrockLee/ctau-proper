@@ -77,6 +77,9 @@ void mergeToHists(const std::vector<TString> vNameTT,
                       adjustHistSettingPerLeafTreeExtra,
                   const Bool_t toRecreateOutFile, const Bool_t debug,
                   const Bool_t allowMissing) {
+  UInt_t nInfileOpenMax = 30;
+  Bool_t areSomeInfilesClosed = false;
+  UInt_t nInfileOpen = 0;
   std::function<TString(TString)> modifyNameLeaf =
       [](TString nameLeaf) -> TString {
     TString nameLeafNew = TString(nameLeaf);
@@ -124,6 +127,26 @@ void mergeToHists(const std::vector<TString> vNameTT,
                                                // openable or not (The per-file
                                                // vectors cares only about
                                                // openable files).
+
+  auto closeTFilesIn = [&nInfileOpen, &nInfileOpenMax, &arrIsOpenableFile,
+                       &arrFile, debug](
+                          Int_t iFileOriginalToClose,
+                          std::function<void()> funDoBeforeClose = nullptr) {
+    // tfAutogenHist->Write();
+    // areSomeInfilesClosed = true;
+    if (funDoBeforeClose != nullptr) funDoBeforeClose();
+    while (nInfileOpen > 0 && iFileOriginalToClose >= 0) {
+      if (arrIsOpenableFile[iFileOriginalToClose]) {
+        arrFile[iFileOriginalToClose]->Close();
+        delete arrFile[iFileOriginalToClose];
+        nInfileOpen--;
+      }
+      iFileOriginalToClose--;
+    }
+    if (debug && nInfileOpen > 0) {
+      std::cerr << "Closing wrong number of files" << std::endl;
+    }
+  };
 
   std::vector<Double_t> vWeightDataset(
       nDataset);  //< The weight of each dataset
@@ -286,6 +309,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
           continue;
         }
       }
+      nInfileOpen++;
       if (debug) std::cout << "Done." << std::endl;
       if (debug)
         std::cout << "Mounting variables from the file ..." << std::endl;
@@ -416,6 +440,12 @@ void mergeToHists(const std::vector<TString> vNameTT,
         }
       }
       if (debug) std::cout << "Done getting names." << std::endl;
+      // TODO if
+      closeTFilesIn(iFile + nFileMissingTot,
+                   [&areSomeInfilesClosed, &tfAutogenHist]() {
+                     areSomeInfilesClosed = true;
+                     tfAutogenHist->Write();
+                   });
     }
     if (debug)
       std::cout << "nEntryOriginalDatasetCurrent: "
@@ -446,6 +476,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
   tfAutogenHist->Write();
   // tfAutogenHist->Close();
   // delete tfAutogenHist;
+  closeTFilesIn(nFileTotOriginal - 1);
 
   // tfAutogenHist = TFile::Open(dirCondorPackCurrent + seperatorPath +
   // "output_" + nameDatagroup + "_" + "Autogen" + "_" + nameClusterID +
@@ -460,6 +491,8 @@ void mergeToHists(const std::vector<TString> vNameTT,
       nTT);  //< The histogram settings "(binnumber, lower, upper)" of each leaf
              // in each tree;
   vvHistsettingLeafTree.clear();
+  std::vector<std::vector<std::vector<TString>>> vvvNameFileLeafTree(nTT);
+  vvvNameFileLeafTree.clear();
   for (UInt_t iTree = 0; iTree < nTT; iTree++) {
     {
       std::vector<Bool_t> vIsAllEmptyLeaf;
@@ -468,6 +501,9 @@ void mergeToHists(const std::vector<TString> vNameTT,
       std::vector<TString> vHistsettingLeaf;
       vHistsettingLeaf.clear();
       vvHistsettingLeafTree.push_back(vHistsettingLeaf);
+      std::vector<std::vector<TString>> vvNameFileLeaf;
+      vvNameFileLeaf.clear();
+      vvvNameFileLeafTree.push_back(vvNameFileLeaf);
     }
     // (*toatlResult)[iTree] = new TList;
     // UInt_t indexName = 0;
@@ -511,15 +547,17 @@ void mergeToHists(const std::vector<TString> vNameTT,
       Int_t arrNBinFile[nHistAllFile];
       Double_t arrLowerFile[nHistAllFile];
       Double_t arrUpperFile[nFileTot];
-      TString arrLeafnameFile[nFileTot];
       Bool_t isAllEmpty = true;
       // UInt_t iHist = 0;
       if (debug)
         std::cout << "Analyzing autogen histograms for "
                   << vvNameModifiedLeafTree[iTree][indexName] << "...";
       // for (auto histFileRaw: *tlHistFile) {
+      std::vector<TString> vLeafnameFile;
+      vLeafnameFile.clear();
       for (UInt_t iFile = 0, iHist = 0; iFile < nFileTot; iFile++) {
         if (!vvvIsHistFileLeafTree[iTree][indexName][iFile]) {
+          vLeafnameFile.push_back("");
           if (debug) std::cout << " Skipping iFile: " << iFile;
           continue;
         }
@@ -551,9 +589,10 @@ void mergeToHists(const std::vector<TString> vNameTT,
             histAutogen->GetBinCenter(1) - histAutogen->GetBinWidth(1) / 2;
         arrUpperFile[iHist] =
             histAutogen->GetBinCenter(nBin) + histAutogen->GetBinWidth(1) / 2;
-        arrLeafnameFile[iHist] = histAutogen->GetTitle();
+        vLeafnameFile.push_back(histAutogen->GetTitle());
         iHist++;
       }
+      vvvNameFileLeafTree[iTree].push_back(vLeafnameFile);
       if (debug) std::cout << " Done." << std::endl;
       vvIsAllEmptyLeafTree[iTree].push_back(isAllEmpty);
       if (isAllEmpty) {
@@ -568,6 +607,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
         // histResult->SetDirectory(tfOutHist);
         // tfAutogenHist->Close();
         // delete tfAutogenHist;
+        vvHistsettingLeafTree[iTree].push_back("");
       } else {
         if (debug)
           std::cout << "Calculating histogram settings ..." << std::endl;
@@ -665,45 +705,11 @@ void mergeToHists(const std::vector<TString> vNameTT,
                                                upperCorrect, iTree, indexName);
         TString tstrSettingHistLeaf = (TString) "(" + nBinCorrect + "," +
                                       lowerCorrect + "," + upperCorrect + ")";
+        vvHistsettingLeafTree[iTree].push_back(tstrSettingHistLeaf);
         if (debug) std::cout << vvTypeNameLeafTree[iTree][indexName];
         if (debug)
           std::cout << " (nBinCorrect, lowerCorrect, upperCorrect): "
                     << tstrSettingHistLeaf << std::endl;
-        if (debug) std::cout << "Drawing histograms with correct settings ...";
-        // TList *tlHistCorrected = new TList;
-        // std::vector<TString> vNameHistCorrected;
-        // vNameHistCorrected.clear();
-        // UInt_t iFile=0;
-        tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "update");
-        for (UInt_t iHist = 0, iFile = 0; iHist < nHistAllFile;
-             iHist++, iFile++) {
-          while (!vvvIsHistFileLeafTree[iTree][indexName][iFile] &&
-                 iFile < nFileTot) {
-            std::cerr << "(Tree index, Leaf index) (" << iTree << ", "
-                      << indexName << ") not found in file index " << iFile
-                      << " (" << vvNameModifiedLeafTree[iTree][indexName] << ")"
-                      << std::endl;
-            iFile++;
-          }
-          TString nameHistCorrected =
-              getNameHistOfFile(iTree, indexName, iFile, "Corrected");
-          // vNameHistCorrected.push_back(nameHistCorrected);
-          arrTT[iTree]->Draw(arrLeafnameFile[iHist] + ">>" + nameHistCorrected +
-                             tstrSettingHistLeaf);
-          TH1 *histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
-          histCorrected->SetDirectory(tfCorrectedHist);
-          histCorrected->SetName(nameHistCorrected);
-          histCorrected->Scale(vWeightFile[iFile]);
-          histCorrected->Write(nameHistCorrected);
-          // tlHistCorrected->AddLast(histCorrected);
-          if (debug) std::cout << "iFile: " << iFile;
-        }
-        // histResult = new TH1F(nameHistResult,
-        // vvTitleLeafTree[iTree][indexName], 42, 0, 42); //TODO SKIPPED MERGING
-        // tfCorrectedHist->Write();
-        // tfCorrectedHist->ReOpen("read");
-        tfCorrectedHist->Close();
-        delete tfCorrectedHist;
         // tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "read");
         if (debug) std::cout << " Done." << std::endl;
         // if (debug) std::cout << "Merging to histResult (" << nameHistResult
@@ -720,21 +726,72 @@ void mergeToHists(const std::vector<TString> vNameTT,
       // disappear
     }
   }
+  if (debug) std::cout << "Drawing histograms with correct settings ...";
+  tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "update");
+  for (UInt_t iFile = 0, iFileOriginal = 0; iFile < nFileTot;
+       iFile++, iFileOriginal++) {
+    if (debug) std::cout << "iFile: " << iFile;
+    TFile *tfInCurrent = nullptr;
+    while (!arrIsOpenableFile[iFileOriginal]) {
+      iFileOriginal++;
+    }
+    if (areSomeInfilesClosed) {
+      arrFile[iFileOriginal] = TFile::Open(funPathTFIn(iFileOriginal));
+      nInfileOpen++;
+    }
+    tfInCurrent = arrFile[iFileOriginal];
+    mountVarsFromTDir(tfInCurrent);
+    for (UInt_t iTree = 0; iTree < nTT; iTree++) {
+      UInt_t nNameModifiedCurrentTree = vvNameModifiedLeafTree[iTree].size();
+      for (UInt_t indexName = 0; indexName < nNameModifiedCurrentTree;
+           indexName++) {
+        // TList *tlHistCorrected = new TList;
+        // std::vector<TString> vNameHistCorrected;
+        // vNameHistCorrected.clear();
+        // UInt_t iFile=0;
+        if (!vvvIsHistFileLeafTree[iTree][indexName][iFile]) {
+          std::cerr << "(Tree index, Leaf index) (" << iTree << ", "
+                    << indexName << ") not found in file index " << iFile
+                    << " (" << vvNameModifiedLeafTree[iTree][indexName] << ")"
+                    << std::endl;
+          continue;
+        }
+        TString nameHistCorrected =
+            getNameHistOfFile(iTree, indexName, iFile, "Corrected");
+        arrTT[iTree]->Draw(vvvNameFileLeafTree[iTree][indexName][iFile] + ">>" +
+                           nameHistCorrected +
+                           vvHistsettingLeafTree[iTree][indexName]);
+        TH1 *histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
+        histCorrected->SetDirectory(tfCorrectedHist);
+        histCorrected->SetName(nameHistCorrected);
+        histCorrected->Scale(vWeightFile[iFile]);
+        histCorrected->Write(nameHistCorrected);
+      }
+    }
+    if (areSomeInfilesClosed && nInfileOpen >= nInfileOpenMax) {
+      closeTFilesIn(iFileOriginal);
+    }
+  }
+  if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
+  closeTFilesIn(nFileTotOriginal-1);
+  if (debug) std::cout << "Done." << std::endl;
+  tfCorrectedHist->Close();
+  delete tfCorrectedHist;
   // tfAutogenHist->Close();
   // delete tfAutogenHist;
   tfAutogenHist->ReOpen("read");
   tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "read");
   // tfCorrectedHist->ReOpen("read");
 
-  if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
-  for (UInt_t iFileOriginal = 0; iFileOriginal < nFileTotOriginal;
-       iFileOriginal++) {
-    if (arrIsOpenableFile[iFileOriginal]) {
-      if (debug) std::cout << "Closing iFileOriginal: " << iFileOriginal << " ";
-      arrFile[iFileOriginal]->Close();
-    }
-  }
-  if (debug) std::cout << "Done." << std::endl;
+  // if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
+  // for (UInt_t iFileOriginal = 0; iFileOriginal < nFileTotOriginal;
+  //      iFileOriginal++) {
+  //   if (arrIsOpenableFile[iFileOriginal]) {
+  //     if (debug) std::cout << "Closing iFileOriginal: " << iFileOriginal << " ";
+  //     arrFile[iFileOriginal]->Close();
+  //   }
+  // }
+  // if (debug) std::cout << "Done." << std::endl;
 
   if (debug) std::cout << "Merging histograms ..." << std::endl;
   // tfAutogenHist = TFile::Open(pathTFAutogenHist, "read");
