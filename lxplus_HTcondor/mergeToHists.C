@@ -727,7 +727,6 @@ void mergeToHists(const std::vector<TString> vNameTT,
     }
   }
   if (debug) std::cout << "Drawing histograms with correct settings ...";
-  tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "update");
   for (UInt_t iFile = 0, iFileOriginal = 0; iFile < nFileTot;
        iFile++, iFileOriginal++) {
     if (debug) std::cout << "iFile: " << iFile;
@@ -741,6 +740,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
     }
     tfInCurrent = arrFile[iFileOriginal];
     mountVarsFromTDir(tfInCurrent);
+    tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "update");
     for (UInt_t iTree = 0; iTree < nTT; iTree++) {
       UInt_t nNameModifiedCurrentTree = vvNameModifiedLeafTree[iTree].size();
       for (UInt_t indexName = 0; indexName < nNameModifiedCurrentTree;
@@ -771,11 +771,11 @@ void mergeToHists(const std::vector<TString> vNameTT,
     if (areSomeInfilesClosed && nInfileOpen >= nInfileOpenMax) {
       closeTFilesIn(iFileOriginal);
     }
+    tfCorrectedHist->Close();
   }
   if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
   closeTFilesIn(nFileTotOriginal-1);
   if (debug) std::cout << "Done." << std::endl;
-  tfCorrectedHist->Close();
   delete tfCorrectedHist;
   // tfAutogenHist->Close();
   // delete tfAutogenHist;
