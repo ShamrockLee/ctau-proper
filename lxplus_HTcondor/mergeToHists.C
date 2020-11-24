@@ -476,7 +476,11 @@ void mergeToHists(const std::vector<TString> vNameTT,
   tfAutogenHist->Write();
   // tfAutogenHist->Close();
   // delete tfAutogenHist;
-  closeTFilesIn(nFileTotOriginal - 1);
+
+  // Close all the input files if and only if the total number of opened input files are greater than nInfileOpenMax
+  if (areSomeInfilesClosed) {
+    closeTFilesIn(nFileTotOriginal - 1);
+  }
 
   // tfAutogenHist = TFile::Open(dirCondorPackCurrent + seperatorPath +
   // "output_" + nameDatagroup + "_" + "Autogen" + "_" + nameClusterID +
