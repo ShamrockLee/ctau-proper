@@ -727,12 +727,15 @@ void mergeToHists(const std::vector<TString> vNameTT,
     }
   }
   if (debug) std::cout << "Drawing histograms with correct settings ...";
-  for (UInt_t iFile = 0, iFileOriginal = 0; iFile < nFileTot;
+  for (UInt_t iFile = 0, iFileOriginal = 0; iFile < nFileTot || iFileOriginal < nFileTotOriginal;
        iFile++, iFileOriginal++) {
     if (debug) std::cout << "iFile: " << iFile;
     TFile *tfInCurrent = nullptr;
-    while (!arrIsOpenableFile[iFileOriginal]) {
+    while (iFileOriginal < nFileTotOriginal && !arrIsOpenableFile[iFileOriginal]) {
       iFileOriginal++;
+    }
+    if (iFileOriginal >= nFileTotOriginal) {
+      break;
     }
     if (areSomeInfilesClosed) {
       arrFile[iFileOriginal] = TFile::Open(funPathTFIn(iFileOriginal));
