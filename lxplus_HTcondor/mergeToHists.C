@@ -726,7 +726,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
       // disappear
     }
   }
-  if (debug) std::cout << "Drawing histograms with correct settings ...";
+  if (debug) std::cout << "Drawing histograms with correct settings ..." << std::endl;
   for (UInt_t iFile = 0, iFileOriginal = 0; iFile < nFileTot || iFileOriginal < nFileTotOriginal;
        iFile++, iFileOriginal++) {
     if (debug) std::cout << "iFile: " << iFile;
@@ -737,12 +737,18 @@ void mergeToHists(const std::vector<TString> vNameTT,
     if (iFileOriginal >= nFileTotOriginal) {
       break;
     }
+    if (debug) std::cout << " iFileOriginal: " << iFileOriginal << std::endl;
     if (areSomeInfilesClosed) {
+      if (debug) std::cout << "Opening input rootfiles ...";
       arrFile[iFileOriginal] = TFile::Open(funPathTFIn(iFileOriginal));
       nInfileOpen++;
+      if (debug) std::cout << " Done." << std::endl;
     }
     tfInCurrent = arrFile[iFileOriginal];
+    if (debug) std::cout << "tfInCurrent" << tfInCurrent << std::endl;
+    if (debug) std::cout << "Mounting variables ...";
     mountVarsFromTDir(tfInCurrent);
+    if (debug) std::cout << " Done." << std::endl;
     tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "update");
     for (UInt_t iTree = 0; iTree < nTT; iTree++) {
       UInt_t nNameModifiedCurrentTree = vvNameModifiedLeafTree[iTree].size();
