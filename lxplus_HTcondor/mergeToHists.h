@@ -19,7 +19,8 @@ void mergeToHists(const std::vector<TString> vNameTT,
                                     TString typeNameLeaf, TString titleLeaf)>
                      adjustHistSettingPerLeafTreeExtra = nullptr,
                  const Bool_t toRecreateOutFile = true,
-                 const Bool_t debug = false, const Bool_t allowMissing = false);
+                 const Bool_t debug = false, const Bool_t allowMissing = false,
+                 UInt_t nInfileOpenMax = 30);
 
 void mergeToHists(const std::vector<TString> vNameTT,
                  std::vector<UInt_t> vNumberFile,
@@ -33,7 +34,8 @@ void mergeToHists(const std::vector<TString> vNameTT,
                      adjustHistSettingPerLeafTreeExtra = nullptr,
                  const Bool_t toRecreateOutFile = true,
                  const Bool_t debug = false,
-                 const Bool_t allowMissing = false) {
+                 const Bool_t allowMissing = false,
+                 UInt_t nInfileOpenMax = 30) {
   std::function<TString(UInt_t)> funPathTFIn =
       [patternPathTFIn](UInt_t iFileOriginal) -> TString {
     return Form(patternPathTFIn.Data(), iFileOriginal);
@@ -51,6 +53,6 @@ void mergeToHists(const std::vector<TString> vNameTT,
               patternNameTFTemp == "" ? nullptr : funNameTFTemp, dirTFOut,
               patternNameTFOut == "" ? nullptr : funNameTFOut, seperatorPath,
               adjustHistSettingPerLeafTreeExtra, toRecreateOutFile, debug,
-              allowMissing);
+              allowMissing, nInfileOpenMax);
 }
 #endif

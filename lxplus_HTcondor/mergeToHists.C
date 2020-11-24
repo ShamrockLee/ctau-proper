@@ -76,8 +76,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
                                      TString typeNameLeaf, TString titleLeaf)>
                       adjustHistSettingPerLeafTreeExtra,
                   const Bool_t toRecreateOutFile, const Bool_t debug,
-                  const Bool_t allowMissing) {
-  UInt_t nInfileOpenMax = 30;
+                  const Bool_t allowMissing, UInt_t nInfileOpenMax) {
   Bool_t areSomeInfilesClosed = false;
   UInt_t nInfileOpen = 0;
   std::function<TString(TString)> modifyNameLeaf =
@@ -129,9 +128,9 @@ void mergeToHists(const std::vector<TString> vNameTT,
                                                // openable files).
 
   auto closeTFilesIn = [&nInfileOpen, &nInfileOpenMax, &arrIsOpenableFile,
-                       &arrFile, debug](
-                          Int_t iFileOriginalToClose,
-                          std::function<void()> funDoBeforeClose = nullptr) {
+                        &arrFile, debug](
+                           Int_t iFileOriginalToClose,
+                           std::function<void()> funDoBeforeClose = nullptr) {
     // tfAutogenHist->Write();
     // areSomeInfilesClosed = true;
     if (funDoBeforeClose != nullptr) funDoBeforeClose();
@@ -440,12 +439,13 @@ void mergeToHists(const std::vector<TString> vNameTT,
         }
       }
       if (debug) std::cout << "Done getting names." << std::endl;
-      // TODO if
-      closeTFilesIn(iFile + nFileMissingTot,
-                   [&areSomeInfilesClosed, &tfAutogenHist]() {
-                     areSomeInfilesClosed = true;
-                     tfAutogenHist->Write();
-                   });
+      if (nInfileOpen >= nInfileOpenMax) {
+        closeTFilesIn(iFile + nFileMissingTot,
+                      [&areSomeInfilesClosed, &tfAutogenHist]() {
+                        areSomeInfilesClosed = true;
+                        tfAutogenHist->Write();
+                      });
+      }
     }
     if (debug)
       std::cout << "nEntryOriginalDatasetCurrent: "
@@ -774,7 +774,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
     tfCorrectedHist->Close();
   }
   if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
-  closeTFilesIn(nFileTotOriginal-1);
+  closeTFilesIn(nFileTotOriginal - 1);
   if (debug) std::cout << "Done." << std::endl;
   delete tfCorrectedHist;
   // tfAutogenHist->Close();
@@ -783,12 +783,12 @@ void mergeToHists(const std::vector<TString> vNameTT,
   tfCorrectedHist = TFile::Open(pathTFCorrectedHist, "read");
   // tfCorrectedHist->ReOpen("read");
 
-  // if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
-  // for (UInt_t iFileOriginal = 0; iFileOriginal < nFileTotOriginal;
+  // if (debug) std::cout << "Closing openable input ROOT files ..." <<
+  // std::endl; for (UInt_t iFileOriginal = 0; iFileOriginal < nFileTotOriginal;
   //      iFileOriginal++) {
   //   if (arrIsOpenableFile[iFileOriginal]) {
-  //     if (debug) std::cout << "Closing iFileOriginal: " << iFileOriginal << " ";
-  //     arrFile[iFileOriginal]->Close();
+  //     if (debug) std::cout << "Closing iFileOriginal: " << iFileOriginal << "
+  //     "; arrFile[iFileOriginal]->Close();
   //   }
   // }
   // if (debug) std::cout << "Done." << std::endl;
