@@ -355,7 +355,11 @@ void mergeToHists(const std::vector<TString> vNameTT,
                         << ", nameLeafModified: " << nameLeafModified
                         << std::endl;
             vvNameModifiedLeafTree[iTree].push_back(nameLeafModified);
-            vvTitleLeafTree[iTree].push_back(leaf->GetBranch()->GetTitle());
+            TString titleLeaf = leaf->GetTitle();
+            if (titleLeaf == "") {
+              titleLeaf = leaf->GetBranch()->GetTitle();
+            }
+            vvTitleLeafTree[iTree].push_back(titleLeaf);
             vvTypeNameLeafTree[iTree].push_back(leaf->GetTypeName());
             std::vector<Bool_t> vIsHistFile(nFileTot);
             vIsHistFile.clear();
@@ -877,7 +881,8 @@ void mergeToHists(const std::vector<TString> vNameTT,
           histResult->Merge(tlHistCorrectedToMerge);
         }
         // if (isErrorUnexpected) continue;
-        histResult->SetTitle(vvTitleLeafTree[iTree][indexName]);
+        histResult->SetTitle(vvNameModifiedLeafTree[iTree][indexName]);
+        histResult->SetXTitle(vvTitleLeafTree[iTree][indexName]);
         histResult->SetDirectory(tfOutHist);
         histResult->Write(nameHistResult);
         std::cout << " Done." << std::endl;
