@@ -439,7 +439,7 @@ void mergeToHists(const std::vector<TString> vNameTT,
         }
       }
       if (debug) std::cout << "Done getting names." << std::endl;
-      if (nInfileOpen >= nInfileOpenMax) {
+      if (nInfileOpenMax && nInfileOpen >= nInfileOpenMax) {
         closeTFilesIn(iFile + nFileMissingTot,
                       [&areSomeInfilesClosed, &tfAutogenHist]() {
                         areSomeInfilesClosed = true;
@@ -477,7 +477,8 @@ void mergeToHists(const std::vector<TString> vNameTT,
   // tfAutogenHist->Close();
   // delete tfAutogenHist;
 
-  // Close all the input files if and only if the total number of opened input files are greater than nInfileOpenMax
+  // Close all the input files if and only if the total number of opened input
+  // files are greater than nInfileOpenMax
   if (areSomeInfilesClosed) {
     closeTFilesIn(nFileTotOriginal - 1);
   }
@@ -730,12 +731,15 @@ void mergeToHists(const std::vector<TString> vNameTT,
       // disappear
     }
   }
-  if (debug) std::cout << "Drawing histograms with correct settings ..." << std::endl;
-  for (UInt_t iFile = 0, iFileOriginal = 0; iFile < nFileTot || iFileOriginal < nFileTotOriginal;
+  if (debug)
+    std::cout << "Drawing histograms with correct settings ..." << std::endl;
+  for (UInt_t iFile = 0, iFileOriginal = 0;
+       iFile < nFileTot || iFileOriginal < nFileTotOriginal;
        iFile++, iFileOriginal++) {
     if (debug) std::cout << "iFile: " << iFile;
     TFile *tfInCurrent = nullptr;
-    while (iFileOriginal < nFileTotOriginal && !arrIsOpenableFile[iFileOriginal]) {
+    while (iFileOriginal < nFileTotOriginal &&
+           !arrIsOpenableFile[iFileOriginal]) {
       iFileOriginal++;
     }
     if (iFileOriginal >= nFileTotOriginal) {
@@ -786,9 +790,11 @@ void mergeToHists(const std::vector<TString> vNameTT,
     }
     tfCorrectedHist->Close();
   }
-  if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
-  closeTFilesIn(nFileTotOriginal - 1);
-  if (debug) std::cout << "Done." << std::endl;
+  if (nInfileOpenMax) {
+    if (debug) std::cout << "Closing openable input ROOT files ..." << std::endl;
+    closeTFilesIn(nFileTotOriginal - 1);
+    if (debug) std::cout << "Done." << std::endl;
+  }
   delete tfCorrectedHist;
   // tfAutogenHist->Close();
   // delete tfAutogenHist;
