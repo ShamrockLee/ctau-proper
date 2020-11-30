@@ -167,6 +167,6 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
   dirCondorPackCurrent, funNameTFTemp,
   dirCondorPackCurrent, funNameTFOut,
   seperatorPath,
-  adjustHistSetting,
+  adjustHistSetting, nullptr, nullptr,
   toRecreateOutFile, debug, allowMissing);
 }
