@@ -547,7 +547,7 @@ void xAna_monoZ_preselect(
     Float_t *ptrJet_eta_original = data.GetPtrFloat("Jet_eta");
     for (UInt_t jJet=0; jJet<nJet; jJet++) {
       if (ptrJet_pt_original[jJet] < 30) continue;
-      if (ptrJet_eta_original[jJet] > 3) continue;
+      if (TMath::Abs(ptrJet_eta_original[jJet]) > 3) continue;
       vJJetPassed.push_back(jJet);
     }
     nJetPassed = vJJetPassed.size();
