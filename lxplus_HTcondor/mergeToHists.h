@@ -35,40 +35,39 @@ class LeafAnalyzerAbstract {
   void Finalize(){};
 };
 
-void mergeToHists(const std::vector<TString> vNameTT,
-                 std::vector<UInt_t> vNumberFile,
-                 std::vector<Double_t> vCrossSection,
-                 std::function<TString(UInt_t)> funPathTFIn, TString dirTFTemp,
-                 std::function<TString(TString)> funNameTFTemp,
-                 TString dirTFOut, std::function<TString(TString)> funNameTFOut,
-                 TString seperatorPath = "/",
-                 std::function<void(Int_t& NBinCorrect, Double_t& lowerCorrect,
-                                    Double_t& upperCorrect, TString nameTT,
-                                    TString nameLeafModified,
-                                    TString typeNameLeaf, TString titleLeaf)>
-                     adjustHistSettingPerLeafTreeExtra = nullptr,
-                 std::function<TString (TString)> getNameLeafModified = nullptr,
-                 std::function<LeafAnalyzerAbstract *()> supplyLeafAnalyzer = nullptr,
-                 const Bool_t toRecreateOutFile = true,
-                 const Bool_t debug = false, const Bool_t allowMissing = false,
-                 UInt_t nInfileOpenMax = 30, UInt_t nLeafWithoutCorrectTempFileMin = 100);
+void mergeToHists(
+    const std::vector<TString> vNameTT, std::vector<UInt_t> vNumberFile,
+    std::vector<Double_t> vCrossSection,
+    std::function<TString(UInt_t iFile)> funPathTFIn, TString dirTFTemp,
+    std::function<TString(TString keywordTFTemp)> funNameTFTemp,
+    TString dirTFOut, std::function<TString(TString nameTT)> funNameTFOut,
+    TString seperatorPath = "/",
+    std::function<void(Int_t& NBinCorrect, Double_t& lowerCorrect,
+                       Double_t& upperCorrect, TString nameTT,
+                       TString nameLeafModified, TString typeNameLeaf,
+                       TString titleLeaf)>
+        adjustHistSettingPerLeafTreeExtra = nullptr,
+    std::function<TString(TString nameLeaf)> getNameLeafModified = nullptr,
+    std::function<LeafAnalyzerAbstract*()> supplyLeafAnalyzer = nullptr,
+    const Bool_t toRecreateOutFile = true, const Bool_t debug = false,
+    const Bool_t allowMissing = false, UInt_t nInfileOpenMax = 30,
+    UInt_t nLeavesToUseCorrectedTempFileMin = 100);
 
-void mergeToHists(const std::vector<TString> vNameTT,
-                 std::vector<UInt_t> vNumberFile,
-                 std::vector<Double_t> vCrossSection, TString patternPathTFIn,
-                 TString dirTFTemp, TString patternNameTFTemp, TString dirTFOut,
-                 TString patternNameTFOut, TString seperatorPath = "/",
-                 std::function<void(Int_t& NBinCorrect, Double_t& lowerCorrect,
-                                    Double_t& upperCorrect, TString nameTT,
-                                    TString nameLeafModified,
-                                    TString typeNameLeaf, TString titleLeaf)>
-                     adjustHistSettingPerLeafTreeExtra = nullptr,
-                 std::function<TString (TString)> getNameLeafModified = nullptr,
-                 std::function<LeafAnalyzerAbstract *()> supplyLeafAnalyzer = nullptr,
-                 const Bool_t toRecreateOutFile = true,
-                 const Bool_t debug = false,
-                 const Bool_t allowMissing = false,
-                 UInt_t nInfileOpenMax = 30, UInt_t nLeafWithoutCorrectTempFileMin = 100) {
+void mergeToHists(
+    const std::vector<TString> vNameTT, std::vector<UInt_t> vNumberFile,
+    std::vector<Double_t> vCrossSection, TString patternPathTFIn,
+    TString dirTFTemp, TString patternNameTFTemp, TString dirTFOut,
+    TString patternNameTFOut, TString seperatorPath = "/",
+    std::function<void(Int_t& NBinCorrect, Double_t& lowerCorrect,
+                       Double_t& upperCorrect, TString nameTT,
+                       TString nameLeafModified, TString typeNameLeaf,
+                       TString titleLeaf)>
+        adjustHistSettingPerLeafTreeExtra = nullptr,
+    std::function<TString(TString nameLeaf)> getNameLeafModified = nullptr,
+    std::function<LeafAnalyzerAbstract*()> supplyLeafAnalyzer = nullptr,
+    const Bool_t toRecreateOutFile = true, const Bool_t debug = false,
+    const Bool_t allowMissing = false, UInt_t nInfileOpenMax = 30,
+    UInt_t nLeavesToUseCorrectedTempFileMin = 100) {
   std::function<TString(UInt_t)> funPathTFIn =
       [patternPathTFIn](UInt_t iFileOriginal) -> TString {
     return Form(patternPathTFIn.Data(), iFileOriginal);
@@ -82,12 +81,11 @@ void mergeToHists(const std::vector<TString> vNameTT,
     return Form(patternNameTFOut.Data(), nameTT.Data());
   };
   mergeToHists(vNameTT, vNumberFile, vCrossSection,
-              patternPathTFIn == "" ? nullptr : funPathTFIn, dirTFTemp,
-              patternNameTFTemp == "" ? nullptr : funNameTFTemp, dirTFOut,
-              patternNameTFOut == "" ? nullptr : funNameTFOut, seperatorPath,
-              adjustHistSettingPerLeafTreeExtra, getNameLeafModified, supplyLeafAnalyzer,
-              toRecreateOutFile, debug,
-              allowMissing,
-              nInfileOpenMax, nLeafWithoutCorrectTempFileMin);
+               patternPathTFIn == "" ? nullptr : funPathTFIn, dirTFTemp,
+               patternNameTFTemp == "" ? nullptr : funNameTFTemp, dirTFOut,
+               patternNameTFOut == "" ? nullptr : funNameTFOut, seperatorPath,
+               adjustHistSettingPerLeafTreeExtra, getNameLeafModified,
+               supplyLeafAnalyzer, toRecreateOutFile, debug, allowMissing,
+               nInfileOpenMax, nLeavesToUseCorrectedTempFileMin);
 }
 #endif
