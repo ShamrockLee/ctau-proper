@@ -11,7 +11,7 @@
 #include <vector>
 #include <functional>
 
-#include "mergeToHists.h"
+#include "HistMerger.h"
 
 #ifndef TSTRING_UTILS
 #define TSTRING_UTILS
@@ -162,11 +162,26 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
     }
     if (debug) std::cout << "No additional settings for " << nameLeafModified << " to apply." << std::endl;
   };
-  mergeToHists(vNameTT, vNumberFile, vCrossSection,
-  funPathTFIn,
-  dirCondorPackCurrent, funNameTFTemp,
-  dirCondorPackCurrent, funNameTFOut,
-  seperatorPath,
-  adjustHistSetting, nullptr, nullptr,
-  toRecreateOutFile, debug, allowMissing);
+  // mergeToHists(vNameTT, vNumberFile, vCrossSection,
+  // funPathTFIn,
+  // dirCondorPackCurrent, funNameTFTemp,
+  // dirCondorPackCurrent, funNameTFOut,
+  // seperatorPath,
+  // adjustHistSetting, nullptr, nullptr,
+  // toRecreateOutFile, debug, allowMissing);
+  HistMerger *merger = new HistMerger;
+  merger->vNameTT = vNameTT;
+  merger->vNumberFile = vNumberFile;
+  merger->vCrossSection = vCrossSection;
+  merger->funPathTFIn = funPathTFIn;
+  merger->dirTFTemp = dirCondorPackCurrent;
+  merger->funNameTFTemp = funNameTFTemp;
+  merger->dirTFOut = dirCondorPackCurrent;
+  merger->funNameTFOut = funNameTFOut;
+  merger->seperatorPath = seperatorPath;
+  merger->adjustHistSettingPerLeafTreeExtra = adjustHistSetting;
+  merger->toRecreateOutFile = toRecreateOutFile;
+  merger->debug = debug;
+  merger->allowMissing = allowMissing;
+  merger->Run();
 }
