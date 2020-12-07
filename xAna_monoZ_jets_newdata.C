@@ -31,11 +31,12 @@ size_t countUnique(std::vector<E>& vec) {
   return result;
 }
 
-void xAna_monoH_jets(std::string inputFile,
-                     std::string outputFileHead,  // "jets-newdata"
-                     std::string outputFileVar,   // "Mx2-150_Mx1-1_ctau-1"
-                     std::string outputFileTail,  // "20200730"
-                     bool toRecreateOutFile = true, bool debug = false) {
+void xAna_monoZ_jets(std::string inputFile,
+                     TString outputFile,
+                    //  std::string outputFileHead,  // "jets-newdata"
+                    //  std::string outputFileVar,   // "Mx2-150_Mx1-1_ctau-1"
+                    //  std::string outputFileTail,  // "20200730"
+                     Bool_t toRecreateOutFile = true, Bool_t debug = false) {
   TreeReader data(inputFile.data(), "Events");
   Long64_t nTotal = 0;
   Long64_t nPass[20] = {0};
@@ -165,9 +166,9 @@ void xAna_monoH_jets(std::string inputFile,
   // (TH1F*)hTHINjetPairP4Eta->Clone("hTHINjetPairP4Rapidity");
   // hTHINjetPairP4Rapidity->SetTitle("Rapidity of THINjet Pairs");
 
-  std::ofstream file_mismatched;
-  file_mismatched.open((TString) "mismatch_" + outputFileVar + "_" +
-                       outputFileTail + ".txt");
+  // std::ofstream file_mismatched;
+  // file_mismatched.open((TString) "mismatch_" + outputFileVar + "_" +
+  //                      outputFileTail + ".txt");
 
   for (Long64_t jEntry = 0; jEntry < data.GetEntriesFast(); jEntry++) {
     data.GetEntry(jEntry);
@@ -175,7 +176,7 @@ void xAna_monoH_jets(std::string inputFile,
     Int_t nGenPar = data.GetInt("nGenPart");
     Int_t* genParId = data.GetPtrInt("GenPart_pdgId");
     // Int_t* genParSt = data.GetPtrInt("genParSt");
-    Int_t* genMomParId = data.GetPtrInt("GenPart_genPartIdxMother"); // Seems not correct
+    Int_t* genMomParIndex = data.GetPtrInt("GenPart_genPartIdxMother");
 
     // int genHIndex[2]={-1,-1};
     // It's GOOD to declear variable INSIDE the loop.
@@ -184,7 +185,7 @@ void xAna_monoH_jets(std::string inputFile,
     for (int k = 0; k < 4; k++) boolsDsFoundSignCorrect[k] = false;
     for (int ig = 0; ig < nGenPar; ig++) {
       if (abs(genParId[ig]) != 1) continue;
-      if (abs(genMomParId[ig]) != 18) continue;
+      if (abs(genParId[genMomParIndex[ig]]) != 18) continue;
 
       // if(genHIndex[0]<0)
       //     genHIndex[0]=ig;
@@ -192,7 +193,7 @@ void xAna_monoH_jets(std::string inputFile,
       // else if(genHIndex[1]<0)
       //     genHIndex[1]=ig;
 
-      int k = ((genMomParId[ig] < 0) << 1) + (genParId[ig] < 0);
+      int k = ((genParId[genMomParIndex[ig]] < 0) << 1) + (genParId[ig] < 0);
       vIndexesDWatedOrdered[k] = ig;
       boolsDsFoundSignCorrect[k] = true;
     }
@@ -265,17 +266,17 @@ void xAna_monoH_jets(std::string inputFile,
             ((TH1F*)tcflHTHINjetP4PtMismatched[indexTcfl])->Fill(ptJetCurrent);
           }
         }
-        if (dRThisMin > dRMaxTHIN) {
-          file_mismatched << jEntry << "\t" << ((i >= 2) ? "-" : "+")
-                          << (((i & 1) == 1) ? "-" : "+") << " :\t"
-                          // << "parPt: " << p4DWanted[i]->Pt() << "\t"
-                          << "parPt: " << genParPt[vIndexesDWatedOrdered[i]] << "\t"
-                          << "dRThisMin: " << dRThisMin << std::endl;
-        }
+        // if (dRThisMin > dRMaxTHIN) {
+        //   file_mismatched << jEntry << "\t" << ((i >= 2) ? "-" : "+")
+        //                   << (((i & 1) == 1) ? "-" : "+") << " :\t"
+        //                   // << "parPt: " << p4DWanted[i]->Pt() << "\t"
+        //                   << "parPt: " << genParPt[vIndexesDWatedOrdered[i]] << "\t"
+        //                   << "dRThisMin: " << dRThisMin << std::endl;
+        // }
       }
     }
   }
-  file_mismatched.close();
+  // file_mismatched.close();
 
   TH1F *arrHDeltaRMinTHINjetCumuBack[4];
   for (int k=0; k<4; k++) {
@@ -287,10 +288,9 @@ void xAna_monoH_jets(std::string inputFile,
     arrHDeltaRMinTHINjetCumuBack[k] = hDeltaRMinTHINjetCumuBackCurrent;
   }
 
-  TString outputFile = (TString) "output_" + outputFileHead + "_" +
-                       outputFileVar + "_" + outputFileTail + ".root";
-  TFile* outFile =
-      new TFile(outputFile.Data(), toRecreateOutFile ? "recreate" : "update");
+  // TString outputFile = (TString) "output_" + outputFileHead + "_" +
+  //                      outputFileVar + "_" + outputFileTail + ".root";
+  TFile* outFile = TFile::Open(outputFile.Data(), toRecreateOutFile ? "recreate" : "update");
 
   for (int i = 0; i < 2; i++) {
     arrHDeltaRDPairs[i]->Write();
@@ -306,9 +306,12 @@ void xAna_monoH_jets(std::string inputFile,
       ((TH1F*)tcflHTHINjetP4PtMismatched[indexTcfl])->Write();
     }
   }
-  if (true) {
+  if (false) {
     TCanvas *c1 = new TCanvas;
     gStyle->SetOptStat(111111);
+    TString outputFileHead = "jets";
+    TString outputFileVar = "testvar";
+    TString outputFileTail = "20201209";
     TString outDir = (TString)"../out_images/output_" + outputFileHead + "_" + outputFileTail;
     TString outImageNameHead = (TString)outputFileHead + "_" + outputFileVar;
     TString outImageCommonPath = outDir + "/" + outImageNameHead + "_";
