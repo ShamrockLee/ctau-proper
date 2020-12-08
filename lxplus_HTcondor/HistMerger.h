@@ -43,17 +43,17 @@ class HistMerger {
   void SetNameTFTemp(std::function<TString(TString keyword)> funNameTFTemp) {
     this->funNameTFTemp = funNameTFTemp;
   }
-  void HistMerger::SetNameTFTemp(const char* fmt) {
+  void SetNameTFTemp(TString fmt) {
     funNameTFTemp = [fmt](TString keyword) -> TString {
-      return TString::Format(fmt, keyword);
+      return TString::Format(fmt, keyword.Data());
     };
   }
   void SetNameTFOut(std::function<TString(TString nameTT)> funNameTFOut) {
     this->funNameTFOut = funNameTFOut;
   }
-  void HistMerger::SetNameTFOut(const char* fmt) {
+  void SetNameTFOut(TString fmt) {
     funNameTFOut = [fmt](TString nameTT) -> TString {
-      return TString::Format(fmt, nameTT);
+      return TString::Format(fmt, nameTT.Data());
     };
   }
   template<class LeafAnalyzer>
@@ -61,6 +61,8 @@ class HistMerger {
     supplyLeafAnalyzer = [](){return (LeafAnalyzerAbstract *)(new LeafAnalyzer());};
     getNameLeafModified = [](TString nameLeaf){return (TString) LeafAnalyzer::GetNameLeafModified(nameLeaf);};
   }
+
+  HistMerger();
 
  protected:
   /// The weight of each dataset
@@ -97,39 +99,6 @@ HistMerger::HistMerger() {
   this->nLeavesToUseCorrectedTempFileMin = 100;
 
   InitializeHidden();
-}
-
-void HistMerger::InitializeWhenRun() {
-  if (funPathTFIn == nullptr) {
-    Fatal("HistMerger::InitializeWhenRun", "funPathTFIn is not specified.");
-  }
-  if (dirTFTemp == "" && nLeavesToUseCorrectedTempFileMin) {
-    Warning("HistMerger::InitializeWhenRun", "dirTFTemp is empty. Use \".\"");
-    dirTFTemp = ".";
-  }
-  if (funNameTFTemp == nullptr && nLeavesToUseCorrectedTempFileMin) {
-    Warning("HistMerger::InitializeWhenRun",
-            "funNameTFTemp is not specified. \n"
-            "Assign to default value from mkstemp.");
-    char* charsTemp = "XXXXXX";
-    SetNameTFTemp((TString)"%s" + charsTemp + ".root");
-  }
-  if (dirTFOut == "") {
-    Warning("HistMerger::InitializeWhenRun", "dirTFOut is empty. Use \".\"");
-    dirTFOut = ".";
-  }
-  if (funNameTFTemp == nullptr) {
-    Warning("HistMerger::InitializeWhenRun",
-            "funNameTFOut is not specified.\n"
-            "Set with format \"output_%s.root\"");
-    SetNameTFOut("output_%s.root");
-  }
-  if (supplyLeafAnalyzer == nullptr) {
-    supplyLeafAnalyzer = [](){return (LeafAnalyzerAbstract *) (new LeafAnalyzerDefault());};
-  }
-  if (getNameLeafModified == nullptr) {
-    getNameLeafModified = [](TString nameLeaf)->TString{return LeafAnalyzerDefault::GetNameLeafModified(nameLeaf);};
-  }
 }
 
 class HistMerger::LeafAnalyzerAbstract {
