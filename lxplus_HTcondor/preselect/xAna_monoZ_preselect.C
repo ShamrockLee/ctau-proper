@@ -351,30 +351,39 @@ void xAna_monoZ_preselect(
       // &vRankJetPassedPt)->SetTitle(titleRank);
     }
   }
-  std::vector<UInt_t> arrDIdxJetMatched(4, 0);
-  std::vector<UInt_t> arrDJetMatchedRankJetPassedPt(4, 0);
+  Int_t arrDIdxJetMatched[4];
+  Int_t arrDJetMatchedRankJetPassedPt[4];
+  std::vector<UInt_t> vJetMatchedRankJetPassedPt;
   {
     TString nameIdx = "GenDMatching_idxJet";
     TString titleIdx = "Index of matched jets of each D quarks";
     TString nameRank = "GenDMatching_rankJetPassedPt";
     TString titleRank =
-        "Rank (0-indexed) of pt of the mathced jet of each D quarks among "
+        "Rank (0-indexed) of pt of the mathced jet of each D quark among "
         "passed jets";
+    TString nameRankUnique = "JetMatched_rankJetPassedPt";
+    TString titleRankUnique = "Rank (0-indexed) of pt of each matched jet among passed jets";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
-          ->Branch(nameIdx, &arrDIdxJetMatched)
+          ->Branch(nameIdx, arrDIdxJetMatched)
           ->SetTitle(titleIdx);
       arrTTPreselectedMatching[i]
-          ->Branch(nameRank, &arrDJetMatchedRankJetPassedPt)
+          ->Branch(nameRank, arrDJetMatchedRankJetPassedPt)
           ->SetTitle(titleRank);
+      arrTTPreselectedMatching[i]
+          ->Branch(nameRankUnique, &vJetMatchedRankJetPassedPt)
+          ->SetTitle(titleRankUnique);
     }
     for (Byte_t i = 0; i < 2; i++) {
       arrTTAllMatched[i]
-          ->Branch(nameIdx, &arrDIdxJetMatched)
+          ->Branch(nameIdx, arrDIdxJetMatched)
           ->SetTitle(titleIdx);
       arrTTAllMatched[i]
-          ->Branch(nameRank, &arrDJetMatchedRankJetPassedPt)
+          ->Branch(nameRank, arrDJetMatchedRankJetPassedPt)
           ->SetTitle(titleRank);
+      arrTTAllMatched[i]
+          ->Branch(nameRankUnique, &vJetMatchedRankJetPassedPt)
+          ->SetTitle(titleRankUnique);
     }
   }
   Bool_t areAllJetsMatchedLeading;
@@ -589,10 +598,8 @@ void xAna_monoZ_preselect(
 
     haveAllGenDMaching = true;
     Bool_t arrHasGenD[4];
-    for (Byte_t i = 0; i < 4; i++) {
-      arrHasGenD[i] = false;
-      arrGenDMatchingIdx[i] = 0;
-    }
+    std::fill(std::begin(arrHasGenD), std::end(arrHasGenD), false);
+    std::fill(std::begin(arrGenDMatchingIdx), std::end(arrGenDMatchingIdx), 0);
     for (UInt_t ig = 0; ig < nGenPart; ig++) {
       if (ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]] == pdgZ) {
         Int_t genparIdAbs = TMath::Abs(ptrGenPart_pdgId[ig]);
@@ -835,7 +842,8 @@ void xAna_monoZ_preselect(
     // Float_t *ptrJet_pt = data.GetPtrFloat("Jet_pt");
     // Float_t *ptrJet_eta = data.GetPtrFloat("Jet_eta");
     // Float_t *ptrJet_phi = data.GetPtrFloat("Jet_phi");
-    std::fill(std::begin(arrDIdxJetMatched), std::end(arrDIdxJetMatched), 0);
+    std::fill(std::begin(arrDIdxJetMatched), std::end(arrDIdxJetMatched), -10);
+    std::fill(std::begin(arrDJetMatchedRankJetPassedPt), std::end(arrDJetMatchedRankJetPassedPt), -10);
     std::vector<UInt_t> vDJetMatchedRankJetPassedPtActual(4);
     vDJetMatchedRankJetPassedPtActual.clear();
     TLorentzVector* p4DMatching[4];
@@ -860,6 +868,7 @@ void xAna_monoZ_preselect(
         p4DJetMatched[i] = p4Jet;
         arrDeltaRDJet[i] = deltaRDJet;
         arrDJetMatchedRankJetPassedPt[i] = rankJetPassed;
+        arrDIdxJetMatched[i] = vIdxJetPassed[rankJetPassed];
         vDJetMatchedRankJetPassedPtActual.push_back(rankJetPassed);
         break;
       }
@@ -875,9 +884,13 @@ void xAna_monoZ_preselect(
     nDJetMatched = vDJetMatchedRankJetPassedPtActual.size();
     if (nDJetMatched) {
       std::sort(vDJetMatchedRankJetPassedPtActual.begin(), vDJetMatchedRankJetPassedPtActual.end());
-      UInt_t rankMax = *vDJetMatchedRankJetPassedPtActual.rbegin();
-      nJetMatched = std::distance(vDJetMatchedRankJetPassedPtActual.begin(), std::unique(vDJetMatchedRankJetPassedPtActual.begin(), vDJetMatchedRankJetPassedPtActual.end()));
-      areAllJetsMatchedLeading = rankMax == nJetMatched - 1;
+      // UInt_t rankMax = vDJetMatchedRankJetPassedPtActual.back();
+      typename std::vector<UInt_t>::iterator iterJetMatchedRankJetPassedPtEnd = std::unique(vDJetMatchedRankJetPassedPtActual.begin(), vDJetMatchedRankJetPassedPtActual.end());
+      nJetMatched = std::distance(vDJetMatchedRankJetPassedPtActual.begin(), iterJetMatchedRankJetPassedPtEnd);
+      vJetMatchedRankJetPassedPt.clear();
+      vJetMatchedRankJetPassedPt.assign(vDJetMatchedRankJetPassedPtActual.begin(), iterJetMatchedRankJetPassedPtEnd);
+      // areAllJetsMatchedLeading = rankMax == nJetMatched - 1;
+      areAllJetsMatchedLeading = vJetMatchedRankJetPassedPt.back() == nJetMatched - 1;
     } else {
       nJetMatched = 0;
       areAllJetsMatchedLeading = true;
