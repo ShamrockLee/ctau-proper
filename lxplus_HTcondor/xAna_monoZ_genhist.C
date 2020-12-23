@@ -13,21 +13,6 @@
 
 #include "HistMerger.C"
 
-#ifndef TSTRING_UTILS
-#define TSTRING_UTILS
-Bool_t startsWithOfTString(const TString target, const TString pattern, const Ssiz_t displacement=0) {
-  return target.SubString(pattern).Start() == displacement;
-}
-
-// Bool_t endsWithOfTString(const TString target, const TString pattern, const Ssiz_t displacement=0) {
-//   return target.SubString(pattern).Start() == target.Length() - pattern.Length() - displacement;
-// }
-
-Bool_t containsOfTString(const TString target, const TString pattern) {
-  return target.SubString(pattern).Start() != -1;
-}
-#endif
-
 void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagroup, const TString nameClusterID,
                      TString dirCondorPacks = ".", const Bool_t toRecreateOutFile = true,
                      const Bool_t debug = false, const Bool_t allowMissing = false) {
@@ -44,6 +29,17 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
   for (UShort_t i=0; i<2; i++) {
     TString nameLeptonCurrent = namesLepton[i];
     vNameTT.push_back((TString) "ZMassCutted" + nameLeptonCurrent);
+  }
+  if (nameDatagroup.SubString("signal").Start() == 0) {
+    for (Byte_t i=0; i<2; i++) {
+      vNameTT.push_back("Gen" + namesLepton[i]);
+    }
+    for (Byte_t i=0; i<2; i++) {
+      vNameTT.push_back("PreselectedMatching" + namesLepton[i]);
+    }
+    for (Byte_t i=0; i<2; i++) {
+      vNameTT.push_back("AllMatched" + namesLepton[i]);
+    }
   }
 
   std::vector<UInt_t> vNumberFile;
@@ -122,15 +118,15 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
 
   std::function<void (Int_t&, Double_t&, Double_t&, TString, TString, TString, TString)> adjustHistSetting = [debug](Int_t& nBinCorrect, Double_t& lowerCorrect, Double_t& upperCorrect, TString nameTT, TString nameLeafModified, TString typeNameLeaf, TString titleLeaf) {
 
-    if (containsOfTString(typeNameLeaf, (TString)"loat") || containsOfTString(typeNameLeaf, (TString)"ouble")) {
+    if (typeNameLeaf.Contains("loat") || typeNameLeaf.Contains("ouble")) {
       if (nameLeafModified.EndsWith("_phi")) {
         if (debug) std::cout << "Found _phi" << std::endl;
         lowerCorrect = -TMath::Pi();
         upperCorrect = TMath::Pi();
         return;
       }
-      if (startsWithOfTString(nameLeafModified, (TString)"Jet_btag")) {
-        if (startsWithOfTString(nameLeafModified, (TString)"Jet_btagCMVA")) {
+      if (nameLeafModified.BeginsWith("Jet_btag")) {
+        if (nameLeafModified.BeginsWith("Jet_btagCMVA")) {
           if (debug) std::cout << "Found Jet_btagCMVA" << std::endl;
           lowerCorrect = -1;
           upperCorrect = 1;
@@ -141,13 +137,13 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         }
         return;
       }
-      if (startsWithOfTString(nameLeafModified, (TString)"Jet_ch")) {
+      if (nameLeafModified.BeginsWith("Jet_ch")) {
         if (debug) std::cout << "Found Jet_ch" << std::endl;
         lowerCorrect = 0;
         upperCorrect = 1;
         return;
       }
-      if (startsWithOfTString(nameLeafModified, (TString)"Jet_qgl")) {
+      if (nameLeafModified.BeginsWith("Jet_qgl")) {
         if (debug) std::cout << "Found Jet_qgl" << std::endl;
         lowerCorrect = 0;
         upperCorrect = 1;
@@ -158,6 +154,18 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
         lowerCorrect = 0;
         upperCorrect = 0;
         return;
+      }
+    }
+    if (typeNameLeaf.Contains("Int") || typeNameLeaf.Contains("int")) {
+      if (nameLeafModified.EndsWith("idxJet")) {
+        if (debug) std::cout << "Found idxJet";
+        lowerCorrect = 0;
+        nBinCorrect = upperCorrect - lowerCorrect;
+      }
+      if (nameLeafModified.Contains("_rankJet")) {
+        if (debug) std::cout << "Found rankJet";
+        lowerCorrect = 0;
+        nBinCorrect = upperCorrect - lowerCorrect;
       }
     }
     if (debug) std::cout << "No additional settings for " << nameLeafModified << " to apply." << std::endl;
@@ -185,7 +193,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
   merger->allowMissing = allowMissing;
   merger->nLeavesToUseCorrectedTempFileMin = 0; // Merging error (limit inconsistent when using tfCorrectedHist)
   merger->funIsToVetoLeaf = [](TString nameTT, TString nameLeafModified)->Bool_t{
-    if (containsOfTString(nameLeafModified, "jEntr")) {
+    if (nameLeafModified.Contains("jEntr")) {
       return true;
     }
     return false;
