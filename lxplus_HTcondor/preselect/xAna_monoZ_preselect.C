@@ -9,7 +9,8 @@
 #include <TVectorFfwd.h>
 #include <TVectorT.h>
 
-#include <cstring>  // std::memcpy
+//#include <cstring>  // std::memcpy
+#include <cstdio> //printf
 #include <iostream>
 #include <numeric>
 #include <vector>
@@ -204,28 +205,28 @@ void xAna_monoZ_preselect(
   const UInt_t nDQuarksExpected = 4;
 
   Bool_t arrDJetMatchedId[nDQuarksExpected];
-  for (UShort_t i = 0; i < 2; i++) {
+  for (Byte_t i = 0; i < 2; i++) {
     arrTTPreselectedMatching[i]
         ->Branch("GenDMatching_JetMatchedId", arrDJetMatchedId)
         ->SetTitle("Whether the d-quarks matches a THIN jet");
   }
   UInt_t nDJetMatched;
-  for (UShort_t i = 0; i < 2; i++) {
-    TString name = "nDJetMatched" + namesLepton[i];
+  for (Byte_t i = 0; i < 2; i++) {
+    TString name = "nDJetMatched";
     arrTTPreselectedMatching[i]
         ->Branch(name, &nDJetMatched, name + "/I", __SIZEOF_INT__)
         ->SetTitle("Number of d-quarks matching a THIN jet");
   }
   Bool_t areAllDJetMatched;
-  for (UShort_t i = 0; i < 2; i++) {
+  for (Byte_t i = 0; i < 2; i++) {
     TString name = "areAllDJetMatched";
     arrTTPreselectedMatching[i]
         ->Branch(name, &areAllDJetMatched, name + "/O", __SIZEOF_INT__)
         ->SetTitle("Whether all the d-quarks matches a thin jet");
   }
   UInt_t nJetMatched;
-  for (UShort_t i = 0; i < 2; i++) {
-    TString name = "nJetMatched" + namesLepton[i];
+  for (Byte_t i = 0; i < 2; i++) {
+    TString name = "nJetMatched";
     TString title = "Number of unique THIN jets matching a d-quark";
     arrTTPreselectedMatching[i]
         ->Branch(name, &nJetMatched, name + "/I", __SIZEOF_INT__)
@@ -351,24 +352,24 @@ void xAna_monoZ_preselect(
       // &vRankJetPassedPt)->SetTitle(titleRank);
     }
   }
-  Int_t arrDIdxJetMatched[4];
-  Int_t arrDJetMatchedRankJetPassedPt[4];
+  Int_t arrDIdxJetClosest[4];
+  Int_t arrDJetClosestRankJetPassedPt[4];
   std::vector<UInt_t> vJetMatchedRankJetPassedPt;
   {
     TString nameIdx = "GenDMatching_idxJet";
-    TString titleIdx = "Index of matched jets of each D quarks";
+    TString titleIdx = "Index of closest jets of each D quarks";
     TString nameRank = "GenDMatching_rankJetPassedPt";
     TString titleRank =
-        "Rank (0-indexed) of pt of the mathced jet of each D quark among "
+        "Rank (0-indexed) of pt of the closest jet of each D quark among "
         "passed jets";
     TString nameRankUnique = "JetMatched_rankJetPassedPt";
     TString titleRankUnique = "Rank (0-indexed) of pt of each matched jet among passed jets";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
-          ->Branch(nameIdx, arrDIdxJetMatched)
+          ->Branch(nameIdx, arrDIdxJetClosest)
           ->SetTitle(titleIdx);
       arrTTPreselectedMatching[i]
-          ->Branch(nameRank, arrDJetMatchedRankJetPassedPt)
+          ->Branch(nameRank, arrDJetClosestRankJetPassedPt)
           ->SetTitle(titleRank);
       arrTTPreselectedMatching[i]
           ->Branch(nameRankUnique, &vJetMatchedRankJetPassedPt)
@@ -376,10 +377,10 @@ void xAna_monoZ_preselect(
     }
     for (Byte_t i = 0; i < 2; i++) {
       arrTTAllMatched[i]
-          ->Branch(nameIdx, arrDIdxJetMatched)
+          ->Branch(nameIdx, arrDIdxJetClosest)
           ->SetTitle(titleIdx);
       arrTTAllMatched[i]
-          ->Branch(nameRank, arrDJetMatchedRankJetPassedPt)
+          ->Branch(nameRank, arrDJetClosestRankJetPassedPt)
           ->SetTitle(titleRank);
       arrTTAllMatched[i]
           ->Branch(nameRankUnique, &vJetMatchedRankJetPassedPt)
@@ -408,7 +409,7 @@ void xAna_monoZ_preselect(
   Float_t arrDeltaRBetweenJetPairs[1];
   {
     TString name = "GenDMathcing_deltaRJet";
-    TString title = "DeltaR between each d quark and its matched jet";
+    TString title = "DeltaR between each d quark and its closest jet";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
           ->Branch(name, arrDeltaRDJet)
@@ -417,7 +418,7 @@ void xAna_monoZ_preselect(
   }
   {
     TString name = "GenDMathcingPair_deltaRJet";
-    TString title = "DeltaR of each jet pair matching the d quarks";
+    TString title = "DeltaR of each jet pair most likely to match the d quarks";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
           ->Branch(name, arrDeltaRJetPair)
@@ -426,7 +427,7 @@ void xAna_monoZ_preselect(
   }
   {
     TString name = "GenDMathcingPairPair_deltaRJet";
-    TString title = "DeltaR between jet pairs matching the d quarks";
+    TString title = "DeltaR between jet pairs most likely to match the d quarks";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
           ->Branch(name, arrDeltaRBetweenJetPairs)
@@ -842,44 +843,55 @@ void xAna_monoZ_preselect(
     // Float_t *ptrJet_pt = data.GetPtrFloat("Jet_pt");
     // Float_t *ptrJet_eta = data.GetPtrFloat("Jet_eta");
     // Float_t *ptrJet_phi = data.GetPtrFloat("Jet_phi");
-    std::fill(std::begin(arrDIdxJetMatched), std::end(arrDIdxJetMatched), -10);
-    std::fill(std::begin(arrDJetMatchedRankJetPassedPt), std::end(arrDJetMatchedRankJetPassedPt), -10);
+    std::fill(std::begin(arrDIdxJetClosest), std::end(arrDIdxJetClosest), -10);
+    std::fill(std::begin(arrDJetClosestRankJetPassedPt), std::end(arrDJetClosestRankJetPassedPt), -10);
     std::vector<UInt_t> vDJetMatchedRankJetPassedPtActual(4);
     vDJetMatchedRankJetPassedPtActual.clear();
     TLorentzVector* p4DMatching[4];
-    TLorentzVector* p4DJetMatched[4];
-    for (Byte_t i = 0; i < 4; i++) {
-      p4DMatching[i] = new TLorentzVector;
-      p4DMatching[i]->SetPtEtaPhiM(
-          ptrGenPart_pt[arrGenDMatchingIdx[i]], ptrGenPart_eta[arrGenDMatchingIdx[i]],
-          ptrGenPart_phi[arrGenDMatchingIdx[i]], ptrGenPart_mass[arrGenDMatchingIdx[i]]);
+    TLorentzVector* p4DJetClosest[4];
+    for (Byte_t iDMatching = 0; iDMatching < 4; iDMatching++) {
+      if (debug) std::printf("iDMatching: %d\n", iDMatching);
+      p4DJetClosest[iDMatching] = nullptr;
+      arrDeltaRDJet[iDMatching] = __FLT_MAX__;
+      p4DMatching[iDMatching] = new TLorentzVector;
+      p4DMatching[iDMatching]->SetPtEtaPhiM(
+          ptrGenPart_pt[arrGenDMatchingIdx[iDMatching]], ptrGenPart_eta[arrGenDMatchingIdx[iDMatching]],
+          ptrGenPart_phi[arrGenDMatchingIdx[iDMatching]], ptrGenPart_mass[arrGenDMatchingIdx[iDMatching]]);
       for (Byte_t rankJetPassed = 0; rankJetPassed < nJetPassed;
            rankJetPassed++) {
+        if (debug) std::printf("rankJetPassed: %d\n", rankJetPassed);
         TLorentzVector* p4Jet = new TLorentzVector;
         p4Jet->SetPtEtaPhiM(ptrJet_pt_original[vIdxJetPassed[rankJetPassed]],
                             ptrJet_eta_original[vIdxJetPassed[rankJetPassed]],
                             ptrJet_phi_original[vIdxJetPassed[rankJetPassed]],
                             ptrJet_mass_original[vIdxJetPassed[rankJetPassed]]);
-        Double_t deltaRDJet = p4DMatching[i]->DeltaR(*p4Jet);
-        if (deltaRDJet > 0.4) {
-          delete p4Jet;
-          continue;
+        Double_t deltaRDJet = p4DMatching[iDMatching]->DeltaR(*p4Jet);
+        if (deltaRDJet < arrDeltaRDJet[iDMatching]) {
+          // p4DJetClosest[iDMatching]->Delete();
+          // delete p4DJetClosest[iDMatching];
+          p4DJetClosest[iDMatching] = p4Jet;
+          arrDeltaRDJet[iDMatching] = deltaRDJet;
+          arrDJetClosestRankJetPassedPt[iDMatching] = rankJetPassed;
+          arrDIdxJetClosest[iDMatching] = vIdxJetPassed[rankJetPassed];
+        } else {
+          // p4Jet->Delete();
+          // delete p4Jet;
         }
-        p4DJetMatched[i] = p4Jet;
-        arrDeltaRDJet[i] = deltaRDJet;
-        arrDJetMatchedRankJetPassedPt[i] = rankJetPassed;
-        arrDIdxJetMatched[i] = vIdxJetPassed[rankJetPassed];
-        vDJetMatchedRankJetPassedPtActual.push_back(rankJetPassed);
-        break;
+      }
+      if (arrDeltaRDJet[iDMatching] < 0.4) {
+        arrDJetMatchedId[iDMatching] = true;
+        vDJetMatchedRankJetPassedPtActual.push_back(arrDJetClosestRankJetPassedPt[iDMatching]);
+      } else {
+        arrDJetMatchedId[iDMatching] = false;
       }
     }
     for (Byte_t i = 0; i < 2; i++) {
       arrDeltaRJetPair[i] =
-          p4DJetMatched[i << 1]->DeltaR(*p4DJetMatched[(i << 1) + 1]);
+          p4DJetClosest[i << 1]->DeltaR(*p4DJetClosest[(i << 1) + 1]);
     }
     arrDeltaRBetweenJetPairs[0] =
-        (*p4DJetMatched[0] + *p4DJetMatched[1])
-            .DeltaR(*p4DJetMatched[2] + *p4DJetMatched[3]);
+        (*p4DJetClosest[0] + *p4DJetClosest[1])
+            .DeltaR(*p4DJetClosest[2] + *p4DJetClosest[3]);
     
     nDJetMatched = vDJetMatchedRankJetPassedPtActual.size();
     if (nDJetMatched) {
