@@ -11,7 +11,7 @@
 #include <vector>
 #include <functional>
 
-#include "HistMerger.h"
+#include "HistMerger.C"
 
 #ifndef TSTRING_UTILS
 #define TSTRING_UTILS
@@ -183,5 +183,13 @@ void xAna_monoZ_genhist(const TString nameCondorPack, const TString nameDatagrou
   merger->toRecreateOutFile = toRecreateOutFile;
   merger->debug = debug;
   merger->allowMissing = allowMissing;
+  merger->nLeavesToUseCorrectedTempFileMin = 0; // Merging error (limit inconsistent when using tfCorrectedHist)
+  merger->funIsToVetoLeaf = [](TString nameTT, TString nameLeafModified)->Bool_t{
+    if (containsOfTString(nameLeafModified, "jEntr")) {
+      return true;
+    }
+    return false;
+  };
+  merger->funTitleLeaf = [](TLeaf *leaf)->TString{ return leaf->GetBranch()->GetTitle(); };
   merger->Run();
 }

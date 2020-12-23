@@ -50,12 +50,12 @@ Int_t getNDigitsM1(Double_t x) {
 }
 #endif
 
-#ifndef TSTRING_UTILS
-#define TSTRING_UTILS
-Bool_t startsWithOfTString(const TString target, const TString pattern,
-                           const Ssiz_t displacement = 0) {
-  return target.SubString(pattern).Start() == displacement;
-}
+// #ifndef TSTRING_UTILS
+// #define TSTRING_UTILS
+// Bool_t startsWithOfTString(const TString target, const TString pattern,
+//                            const Ssiz_t displacement = 0) {
+//   return target.SubString(pattern).Start() == displacement;
+// }
 
 // Bool_t endsWithOfTString(const TString target, const TString pattern, const
 // Ssiz_t displacement=0) {
@@ -63,10 +63,10 @@ Bool_t startsWithOfTString(const TString target, const TString pattern,
 //   pattern.Length() - displacement;
 // }
 
-Bool_t containsOfTString(const TString target, const TString pattern) {
-  return target.SubString(pattern).Start() != -1;
-}
-#endif
+// Bool_t containsOfTString(const TString target, const TString pattern) {
+//   return target.SubString(pattern).Start() != -1;
+// }
+// #endif
 
 #ifndef HISTMERGER_C
 #define HISTMERGER_C
@@ -98,7 +98,6 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
  protected:
   Bool_t debug;
   TString nameTT;
-  UInt_t iTree;
   std::function<Bool_t(Int_t &NBinCorrect, Double_t &lowerCorrect,
                        Double_t &upperCorrect, TString nameTT,
                        TString nameLeafModified, TString typeNameLeaf,
@@ -109,14 +108,20 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
                      TString nameLeafModified, TString typeNameLeaf,
                      TString titleLeaf)>
       adjustHistSettingPerLeafTreeExtra;
-  std::function<Bool_t(TTree *tree)> getHasTarget;
   Bool_t dontCheckEmptyness;
   std::vector<TString> vNameLeafFile;
   TString nameLeafModified;
   TString titleLeaf;
   TString typeNameLeaf;
+  std::function<TString(TLeaf *leaf)> funTitleLeaf;
   Bool_t isHistSettingAssignedDirectly;
   TString expressionBeforeSetting;
+  TCut selection;
+  Option_t *optionDraw;
+  Long64_t nEntriesToDrawMax;
+  Long64_t firstEntryToDraw;
+  std::vector<TString> vDeps;
+  std::function<Bool_t(TTree *tree)> funHasTargetExtra;
   Bool_t isEverAnalyzed;
   Bool_t allowNeverAnalyzed;
   std::vector<Bool_t> vIsEmpty;
@@ -145,9 +150,10 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
     this->nameLeafModified = "";
     this->titleLeaf = "";
     this->typeNameLeaf = "";
+    this->funTitleLeaf = nullptr;
     this->isHistSettingAssignedDirectly = false;
     this->isEverAnalyzed = false;
-    this->allowNeverAnalyzed = false;
+    this->allowNeverAnalyzed = true;
     this->vIsEmpty.clear();
     this->areAllEmpty = true;
     this->nBinsCorrect = 0;
@@ -157,9 +163,14 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
     this->nameTT = "";
     this->assignHistSettingPerLeafTreeExtra = nullptr;
     this->adjustHistSettingPerLeafTreeExtra = nullptr;
-    this->getHasTarget = nullptr;
     this->dontCheckEmptyness = false;
     this->expressionBeforeSetting = "";
+    this->selection = "";
+    this->optionDraw = "";
+    this->nEntriesToDrawMax = TTree::kMaxEntries;
+    this->firstEntryToDraw = 0;
+    this->vDeps.clear();
+    this->funHasTargetExtra = nullptr;
     histTypeFlavor = HistTypeFlavor::FloatingPoint;
     // this->isTypeFloatingPoint = false;
     this->isFirstNonEmptyLeaf = true;
@@ -192,26 +203,49 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
           adjustHistSettingPerLeafTreeExtra) {
     this->adjustHistSettingPerLeafTreeExtra = adjustHistSettingPerLeafTreeExtra;
   }
-  virtual void SetExpressionBeforeSetting(
-      TString expressionBeforeSetting, TString name, TString typeName = "",
-      TString title = "", std::function<Bool_t(TTree *)> getHasTarget = nullptr,
-      Int_t nBinsCorrect = -1, Double_t lowerCorrect = 0,
-      Double_t upperCorrect = 0, Bool_t dontCheckEmptiness = false) {
-    this->expressionBeforeSetting = expressionBeforeSetting;
+  virtual void SetExpressionBeforeSetting(TString name, TString typeName,
+                                          TString title,
+                                          TString expressionBeforeSetting,
+                                          TCut selection, Option_t *option,
+                                          Long64_t nentries,
+                                          Long64_t firstentry) {
     this->nameLeafModified = name;
     this->typeNameLeaf = typeName;
     this->titleLeaf = title;
-    this->getHasTarget = getHasTarget;
-    if (nBinsCorrect >= 0) {
-      this->nBinsCorrect = nBinsCorrect;
-      this->lowerCorrect = lowerCorrect;
-      this->upperCorrect = upperCorrect;
-      this->isHistSettingAssignedDirectly = true;
-      SetDontCheckEmptyness(dontCheckEmptyness);
+    this->expressionBeforeSetting = expressionBeforeSetting;
+    this->selection = selection;
+    this->optionDraw = option;
+    this->nEntriesToDrawMax = nentries;
+    this->firstEntryToDraw = firstentry;
+  }
+  TString GetExpressionBeforeSetting() { return expressionBeforeSetting; };
+  virtual void SetHasTarget(
+      std::vector<TString> vDeps,
+      std::function<Bool_t(TTree *tree)> funHasTargetExtra) {
+    this->vDeps = vDeps;
+    this->funHasTargetExtra = funHasTargetExtra;
+  }
+  virtual void SetAllowNeverAnalyzed(Bool_t allowNeverAnalyzed) {
+    this->allowNeverAnalyzed = allowNeverAnalyzed;
+  }
+  virtual Bool_t GetAllowNeverAnalyzed() { return allowNeverAnalyzed; }
+  virtual Bool_t GetIsEverAnalyzed() { return isEverAnalyzed; }
+  virtual void AssignHistSetting(Int_t nBinsCorrect, Double_t lowerCorrect,
+                                 Double_t upperCorrect,
+                                 TString tstrHistSetting = "") {
+    this->nBinsCorrect = nBinsCorrect;
+    this->lowerCorrect = lowerCorrect;
+    this->upperCorrect = upperCorrect;
+    if (tstrHistSetting.Length()) {
+      this->tstrHistSetting = tstrHistSetting;
     }
+    this->isHistSettingAssignedDirectly = true;
   }
   void SetDontCheckEmptyness(Bool_t dontCheckEmptyness) {
     this->dontCheckEmptyness = dontCheckEmptyness;
+  }
+  void SetFunTitleLeaf(std::function<TString(TLeaf *leaf)> funTitleLeaf) {
+    this->funTitleLeaf = funTitleLeaf;
   }
   Bool_t GetDontCheckEmptyness() {
     return this->isHistSettingAssignedDirectly && this->dontCheckEmptyness;
@@ -219,10 +253,44 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
   void AnalyzeLeafBasic(TLeaf *leaf) {
     TString nameLeaf = leaf->GetName();
     this->nameLeafModified = GetNameLeafModified(nameLeaf);
-    this->titleLeaf = GetTitleLeaf(leaf);
+    this->titleLeaf =
+        funTitleLeaf == nullptr ? GetTitleLeaf(leaf) : funTitleLeaf(leaf);
     this->typeNameLeaf = GetTypeNameLeaf(leaf);
     this->AnalyzeLeafBasicExtra();
   }
+
+ protected:
+  virtual inline void AnalyzeLeafBasicExtra() {
+    // isTypeFloatingPoint = containsOfTString(typeNameLeaf, "loat") ||
+    //                containsOfTString(typeNameLeaf, "ouble");
+    if (typeNameLeaf.Contains("Bool") || typeNameLeaf.Contains("bool")) {
+      histTypeFlavor = HistTypeFlavor::Boolean;
+    } else if (typeNameLeaf.Contains("loat") ||
+               typeNameLeaf.Contains("ouble")) {
+      histTypeFlavor = HistTypeFlavor::FloatingPoint;
+    } else {
+      histTypeFlavor = HistTypeFlavor::Integer;
+    }
+    if (histTypeFlavor == HistTypeFlavor::Boolean) {
+      AssignHistSetting(2, 0, 2);
+      // tstrHistSetting = TString::Format("(%d,%d,%d)", nBinsCorrect,
+      // (Int_t)lowerCorrect, (Int_t)upperCorrect);
+    }
+    if (!isHistSettingAssignedDirectly &&
+        assignHistSettingPerLeafTreeExtra != nullptr) {
+      isHistSettingAssignedDirectly = assignHistSettingPerLeafTreeExtra(
+          nBinsCorrect, lowerCorrect, upperCorrect, nameTT, nameLeafModified,
+          typeNameLeaf, titleLeaf);
+    }
+    if (debug && isHistSettingAssignedDirectly)
+      std::cout << "Histogram setting is set directly to"
+                << " nBinsCorrect: " << nBinsCorrect
+                << " lowerCorrect: " << lowerCorrect
+                << " upperCorrect: " << upperCorrect << " " << tstrHistSetting
+                << std::endl;
+  }
+
+ public:
   TString GetNameLeafModified() { return this->nameLeafModified; }
   TString GetTitleLeaf() { return this->titleLeaf; }
   TString GetTypeNameLeaf() { return this->typeNameLeaf; }
@@ -235,7 +303,18 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
     return hist->GetBinCenter(hist->FindLastBinAbove()) +
            hist->GetBinWidth(1) / 2;
   }
-  void AnalyzeLeaf(TLeaf *leaf) {
+  Bool_t GetHasTarget(TTree *tree) {
+    for (UInt_t i = 0; i < vDeps.size(); i++) {
+      if (tree->GetLeaf(vDeps[i]) == nullptr) {
+        return false;
+      }
+    }
+    if (funHasTargetExtra != nullptr) {
+      return funHasTargetExtra(tree);
+    }
+    return true;
+  }
+  virtual void AnalyzeLeaf(TLeaf *leaf) {
     TString nameLeaf = leaf->GetName();
     vNameLeafFile.push_back(nameLeaf);
     if (isHistSettingAssignedDirectly) {
@@ -245,16 +324,26 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
         return;
       }
     }
+    if (debug)
+      std::cout << "Analyzing leaf: " << nameLeaf << " (" << leaf
+                << ")"
+                   " tree: "
+                << nameTT << " (" << leaf->GetBranch()->GetTree() << ")"
+                << std::endl;
     expressionBeforeSetting = nameLeaf;
     EvaluateAndAnalyze(leaf->GetBranch()->GetTree());
   }
   void EvaluateAndAnalyze(TTree *tree) {
-    if (getHasTarget != nullptr && !getHasTarget(tree)) {
-      return;
-    }
+    if (debug)
+      std::cout << "Analyzing expression: " << expressionBeforeSetting
+                << " tree: " << nameTT << " (" << tree << ")"
+                << " selection: " << selection << " option: " << optionDraw
+                << " nEntriesToDrawMax: " << nEntriesToDrawMax
+                << " firstEntryToDraw: " << firstEntryToDraw << std::endl;
     isEverAnalyzed = true;
     TString nameHistAutogen = "h" + this->nameLeafModified + "Autogen" + "Temp";
-    tree->Draw(expressionBeforeSetting + ">>" + nameHistAutogen);
+    tree->Draw(expressionBeforeSetting + ">>" + nameHistAutogen, selection,
+               optionDraw, nEntriesToDrawMax, firstEntryToDraw);
     TH1 *histAutogen = (TH1 *)gDirectory->Get(nameHistAutogen);
     AnalyzeHist(histAutogen);
   }
@@ -264,11 +353,11 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
       Int_t nBinsCorrect, Double_t lowerCorrect, Double_t upperCorrect,
       HistTypeFlavor histTypeFlavor = HistTypeFlavor::FloatingPoint) {
     if (histTypeFlavor == HistTypeFlavor::FloatingPoint) {
-      return TString::Format("(%ld,%F,%F)", nBinsCorrect, lowerCorrect,
+      return TString::Format("(%d,%F,%F)", nBinsCorrect, lowerCorrect,
                              upperCorrect);
     } else {
-      return TString::Format("(%ld,%lld,%lld)", nBinsCorrect, lowerCorrect,
-                             upperCorrect);
+      return TString::Format("(%d,%lld,%lld)", nBinsCorrect,
+                             (Long64_t)lowerCorrect, (Long64_t)upperCorrect);
     }
   }
   void CalculateTStrHistSetting() {
@@ -276,9 +365,25 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
                                                upperCorrect, histTypeFlavor);
   }
   void AnalyzeHist(TH1 *histAutogen) {
+    if (debug) {
+      if (histAutogen == nullptr) {
+        Fatal("HistMerger::LeafAnalyzerDefault::AnalyzeHist",
+              "histAutogen is nullptr!\n"
+              "nameTT: %s, "
+              "expressionBeforeSetting: %s, "
+              "selection: %s, "
+              "optionDraw: %s"
+              "nEntriesToDrawMax: %lld"
+              "firstEntryToDraw: %lld",
+              nameTT.Data(), expressionBeforeSetting.Data(),
+              selection.GetTitle(), optionDraw, nEntriesToDrawMax,
+              firstEntryToDraw);
+      }
+    }
     Int_t nEntries = histAutogen->GetEntries();
     vNEntriesFile.push_back(nEntries);
     if (nEntries == 0) {
+      if (debug) std::cout << "Histogram is empty." << std::endl;
       // Empty histogram
       vIsEmpty.push_back(true);
       if (isFirstNonEmptyLeaf && !isHistSettingAssignedDirectly &&
@@ -314,6 +419,9 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
           if (maximumValueAllFiles < maximumValue)
             maximumValueAllFiles = maximumValue;
         }
+        if (debug)
+          std::cout << ", minimumValue: " << minimumValue
+                    << ", maximumValue: " << maximumValue << std::endl;
         if (histTypeFlavor == HistTypeFlavor::Integer) {
         } else {
           Int_t nBins = histAutogen->GetNbinsX();
@@ -322,6 +430,8 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
                                histAutogen->GetBinWidth(1) / 2);
           vUpperFile.push_back(histAutogen->GetBinCenter(nBins) +
                                histAutogen->GetBinWidth(1) / 2);
+          if (debug)
+            std::cout << "bin number: " << vNBinsFile.back() << std::endl;
         }
       }
     }
@@ -335,7 +445,9 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
   void Summarize() {
     if (!isEverAnalyzed && !allowNeverAnalyzed) {
       Fatal("HistMerger::LeafAnalyzerDefault::Summarize",
-            "Expression %s has never been analyzed!",
+            "Expression %s has never been analyzed!\n"
+            "nameTT: %s, expressionBeforeSetting: %s",
+            expressionBeforeSetting.Data(), GetNameTT().Data(),
             expressionBeforeSetting.Data());
     }
     if (debug && !isHistSettingAssignedDirectly)
@@ -351,6 +463,14 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
       } else {
         tstrHistSetting = "";
         if (histTypeFlavor == HistTypeFlavor::Integer) {
+          minimumValueAllFiles =
+              (TMath::Abs(minimumValueAllFiles) <= __INT32_MAX__)
+                  ? TMath::Nint(minimumValueAllFiles)
+                  : std::round(minimumValueAllFiles);
+          maximumValueAllFiles =
+              (TMath::Abs(maximumValueAllFiles) <= __INT32_MAX__)
+                  ? TMath::Nint(maximumValueAllFiles)
+                  : std::round(maximumValueAllFiles);
           if (minimumValueAllFiles < 0 && maximumValueAllFiles > 0) {
             lowerCorrect = minimumValueAllFiles;
             upperCorrect = maximumValueAllFiles + 1;
@@ -377,7 +497,7 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
             upperCorrect = maximumValueAllFiles + 1;
           }
           if (upperCorrect - lowerCorrect > __INT32_MAX__) {
-            ULong64_t l64NBinsCorrect = upperCorrect - lowerCorrect - 1;
+            ULong64_t l64NBinsCorrect = upperCorrect - lowerCorrect;
             UShort_t nbitsReduced = 0;
             while (l64NBinsCorrect & ~((ULong64_t)__INT32_MAX__)) {
               nbitsReduced++;
@@ -393,6 +513,7 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
           //                     (Long64_t)upperCorrect);
         } else {
           UInt_t nHists = vNBinsFile.size();
+          std::sort(vNBinsFile.begin(), vNBinsFile.end());
           nBinsCorrect = vNBinsFile[nHists >> 1];
           if (minimumValueAllFiles < 0 && maximumValueAllFiles > 0) {
             Int_t nDigitsM1Minimum = getNDigitsM1(minimumValueAllFiles);
@@ -457,58 +578,74 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
       }
       CalculateTStrHistSetting();
     }
+    if (debug && tstrHistSetting.Length() == 0) {
+      Fatal("HistMerger::LeafAnalyzerDefault::Summarize",
+            "tstrHistSetting has not been set when function Summarize reaches "
+            "the end");
+    }
   }
   Bool_t GetAreAllEmpty() { return areAllEmpty; }
   Int_t GetNBinsCorrect() { return nBinsCorrect; }
   Double_t GetLowerCorrect() { return lowerCorrect; }
   Double_t GetUpperCorrect() { return upperCorrect; }
   TString GetHistSetting() { return tstrHistSetting; }
-
- protected:
-  void AnalyzeLeafBasicExtra() {
-    // isTypeFloatingPoint = containsOfTString(typeNameLeaf, "loat") ||
-    //                containsOfTString(typeNameLeaf, "ouble");
-    if (containsOfTString(typeNameLeaf, "Bool") ||
-        containsOfTString(typeNameLeaf, "bool")) {
-      histTypeFlavor = HistTypeFlavor::Boolean;
-    } else if (containsOfTString(typeNameLeaf, "loat") ||
-               containsOfTString(typeNameLeaf, "ouble")) {
-      histTypeFlavor = HistTypeFlavor::FloatingPoint;
-    } else {
-      histTypeFlavor = HistTypeFlavor::Integer;
+  TH1 *DrawHistCorrected(TString nameHist, TTree *tree, Int_t iHist,
+                         Bool_t isToClone) {
+    if (debug && !GetHistSetting().Length()) {
+      Fatal("HistMerger::DrawHistCorrected", "GetHistSetting() returns \"\"");
     }
-    if (histTypeFlavor == HistTypeFlavor::Boolean) {
-      nBinsCorrect = 2;
-      lowerCorrect = 0;
-      upperCorrect = 2;
-      // tstrHistSetting = TString::Format("(%d,%d,%d)", nBinsCorrect,
-      // (Int_t)lowerCorrect, (Int_t)upperCorrect);
-      isHistSettingAssignedDirectly = true;
+    TString expressionFull =
+        ((iHist < 0 || (std::size_t)iHist >= vNameLeafFile.size())
+             ? expressionBeforeSetting
+             : GetVNameLeafFile()[iHist]) +
+        ">>" + nameHist + GetHistSetting();
+    if (debug) std::cout << "Drawing " << expressionFull << " ...";
+    tree->Draw(expressionFull, selection, optionDraw, nEntriesToDrawMax,
+               firstEntryToDraw);
+    TH1 *histNotCloned = (TH1 *)gDirectory->Get(nameHist);
+    if (debug) {
+      if (histNotCloned == nullptr) {
+        Fatal("HistMerger::LeafAnalyzerDefault::DrawHistCorrected",
+              "tree->Draw() returns nullptr!\n"
+              "tree: %s (%p), "
+              "expressionFull: %s, "
+              "selection: %s, "
+              "optionDraw: %s"
+              "nEntriesToDrawMax: %lld"
+              "firstEntryToDraw: %lld",
+              nameTT.Data(), tree, expressionFull.Data(), selection.GetTitle(),
+              optionDraw, nEntriesToDrawMax, firstEntryToDraw);
+      }
     }
-    if (!isHistSettingAssignedDirectly &&
-        assignHistSettingPerLeafTreeExtra != nullptr) {
-      isHistSettingAssignedDirectly = assignHistSettingPerLeafTreeExtra(
-          nBinsCorrect, lowerCorrect, upperCorrect, nameTT, nameLeafModified,
-          typeNameLeaf, titleLeaf);
+    if (isToClone) {
+      TH1 *histCloned = (TH1 *)histNotCloned->Clone(nameHist);
+      histNotCloned->Delete();
+      delete histNotCloned;
+      return histCloned;
     }
-    if (debug && isHistSettingAssignedDirectly)
-      std::cout << "Histogram setting is set directly to"
-                << " nBinsCorrect: " << nBinsCorrect
-                << " lowerCorrect: " << lowerCorrect
-                << " upperCorrect: " << upperCorrect << " " << tstrHistSetting
-                << std::endl;
+    return histNotCloned;
   }
 };
 
 void HistMerger::InitializeHidden() {
+  this->nTT = 0;
   this->vWeightDataset.clear();
   this->vWeightFile.clear();
   this->vvvIsHistFileLeafTree.clear();
   this->vvHistResultLeafTree.clear();
   this->vTFOut.clear();
   this->vNLeavesTree.clear();
+  this->vNAnalyzersTreeCustom.clear();
   this->vvNameModifiedLeafTree.clear();
   this->vvAnalyzerLeafTree.clear();
+}
+
+inline void HistMerger::ProcessAnalyzerNew(LeafAnalyzerAbstract *analyzer,
+                                           TString nameTT) {
+  analyzer->SetDebug(debug);
+  analyzer->SetNameTT(nameTT);
+  analyzer->SetFunAdjustHistSettingExtra(adjustHistSettingPerLeafTreeExtra);
+  analyzer->SetFunTitleLeaf(funTitleLeaf);
 }
 
 void HistMerger::InitializeWhenRun() {
@@ -548,6 +685,34 @@ void HistMerger::InitializeWhenRun() {
       return LeafAnalyzerDefault::GetNameLeafModified(nameLeaf);
     };
   }
+  nTT = vNameTT.size();
+  if (nTT == 0) {
+    Warning("HistMerger::InitializeWhenRun",
+            "No tree name specified. Nothing will be done.");
+  }
+  if (vvAnalyzerLeafTreeCustom.size() < nTT) {
+    Warning(
+        "HistMerger::InitializeWhenRun",
+        "Size of vvAnalizerLeafTreeCustom is smaller than the number of trees\n"
+        "Fill the remaining space with empty vectors");
+    vvAnalyzerLeafTreeCustom.reserve(nTT);
+    for (UInt_t i = vvAnalyzerLeafTreeCustom.size(); i < nTT; i++) {
+      std::vector<LeafAnalyzerAbstract *> vAnalyzerLeafCustom;
+      vAnalyzerLeafCustom.clear();
+      vvAnalyzerLeafTreeCustom.push_back(vAnalyzerLeafCustom);
+    }
+  } else if (vvAnalyzerLeafTreeCustom.size() > nTT) {
+    Warning(
+        "HistMerger::InitializeWhenRun",
+        "Size of vvAnalizerLeafTreeCustom is larger than the number of trees\n"
+        "Truncate to fit the correct number");
+    vvAnalyzerLeafTreeCustom.resize(nTT);
+  }
+  for (UInt_t iTree = 0; iTree < vNameTT.size(); iTree++) {
+    for (LeafAnalyzerAbstract *analyzer : vvAnalyzerLeafTreeCustom[iTree]) {
+      ProcessAnalyzerNew(analyzer, vNameTT[iTree]);
+    }
+  }
 }
 
 void HistMerger::Run() {
@@ -567,12 +732,9 @@ void HistMerger::Run() {
 
   Long64_t nEntryOriginal;
 
-  const UInt_t nTT = vNameTT.size();
-
   TTree *arrTT[nTT];
 
-  auto mountVarsFromTDir = [this, &nEntryOriginal, &arrTT,
-                            nTT](TDirectory *tdir) {
+  auto mountVarsFromTDir = [this, &nEntryOriginal, &arrTT](TDirectory *tdir) {
     nEntryOriginal = (*((TVectorD *)tdir->Get("tvdNEntryOriginal")))[0];
     for (UInt_t i = 0; i < nTT; i++) {
       arrTT[i] = (TTree *)tdir->Get(this->vNameTT[i]);
@@ -680,6 +842,8 @@ void HistMerger::Run() {
     std::vector<std::vector<Bool_t>> vvIsHistFileLeaf;
     vvIsHistFileLeaf.clear();
     vvvIsHistFileLeafTree.push_back(vvIsHistFileLeaf);
+    std::vector<std::vector<Bool_t>> vvIsHistFileLeafCustom;
+    vvvIsHistFileLeafTreeCustom.push_back(vvIsHistFileLeafCustom);
     // std::vector<std::vector<TH1 *>> vvHistFileLeaf;
     // vvHistFileLeaf.clear();
     std::vector<LeafAnalyzerAbstract *> vAnalyzerLeaf;
@@ -768,8 +932,8 @@ void HistMerger::Run() {
           TLeaf *leaf = (TLeaf *)leafRaw;
           TString nameLeaf = leaf->GetName();
           TString nameLeafModified = getNameLeafModified(nameLeaf);
-          if (getIsToVetoLeaf != nullptr &&
-              getIsToVetoLeaf(vNameTT[iTree], nameLeafModified))
+          if (funIsToVetoLeaf != nullptr &&
+              funIsToVetoLeaf(vNameTT[iTree], nameLeafModified))
             continue;
           LeafAnalyzerAbstract *analyzer = nullptr;
           Bool_t isIncluded = false;
@@ -788,7 +952,7 @@ void HistMerger::Run() {
               std::find(vvNameModifiedLeafTree[iTree].begin(),
                         vvNameModifiedLeafTree[iTree].end(), nameLeafModified));
           isIncluded = indexName != vvNameModifiedLeafTree[iTree].size();
-          if (debug) std::cout << std::endl;
+          // if (debug) std::cout << std::endl;
           if (!isIncluded) {
             if (debug) std::cout << "Found new leafname." << std::endl;
             if (debug)
@@ -798,10 +962,8 @@ void HistMerger::Run() {
             vvNameModifiedLeafTree[iTree].push_back(nameLeafModified);
             analyzer = supplyLeafAnalyzer();
             vvAnalyzerLeafTree[iTree].push_back(analyzer);
-            analyzer->SetDebug(debug);
-            analyzer->SetNameTT(vNameTT[iTree]);
-            analyzer->SetFunAdjustHistSettingExtra(
-                adjustHistSettingPerLeafTreeExtra);
+            ProcessAnalyzerNew(analyzer, vNameTT[iTree]);
+            analyzer->SetAllowNeverAnalyzed(false);
             analyzer->AnalyzeLeafBasic(leaf);
             // TString titleLeaf = leaf->GetTitle();
             // if (titleLeaf == "") {
@@ -896,6 +1058,41 @@ void HistMerger::Run() {
             }
           }
         }
+        UInt_t nAnalyzerLeafCustomOld = vvAnalyzerLeafTreeCustom[iTree].size();
+        for (UInt_t indexNameCustomOld = 0;
+             indexNameCustomOld < nAnalyzerLeafCustomOld;
+             indexNameCustomOld++) {
+          vvvIsHistFileLeafTreeCustom[iTree][indexNameCustomOld].push_back(
+              vvAnalyzerLeafTreeCustom[iTree][indexNameCustomOld]->GetHasTarget(
+                  arrTT[iTree]));
+        }
+        if (addCustomAnalyzersWhenRun != nullptr) {
+          if (debug)
+            std::cout << "Adding custom analyzers for tree " << vNameTT[iTree]
+                      << " in file (iFile: " << iFile << " ..." << std::endl;
+
+          addCustomAnalyzersWhenRun(
+              arrTT[iTree], vvAnalyzerLeafTreeCustom[iTree],
+              [this, iTree, iFile, nFileTot,
+               &arrTT](LeafAnalyzerAbstract *analyzerNew) {
+                ProcessAnalyzerNew(analyzerNew, vNameTT[iTree]);
+                vvAnalyzerLeafTreeCustom[iTree].push_back(analyzerNew);
+                std::vector<Bool_t> vIsHistFile(nFileTot);
+                vIsHistFile.clear();
+                vIsHistFile.resize(iFile, false);
+                vIsHistFile.push_back(analyzerNew->GetHasTarget(arrTT[iTree]));
+                vvvIsHistFileLeafTreeCustom[iTree].push_back(vIsHistFile);
+              });
+          if (debug) std::cout << "Done." << std::endl;
+        }
+        for (UInt_t indexNameCustom = 0;
+             indexNameCustom < vvAnalyzerLeafTreeCustom[iTree].size();
+             indexNameCustom++) {
+          if (vvvIsHistFileLeafTreeCustom[iTree][indexNameCustom][iFile]) {
+            vvAnalyzerLeafTreeCustom[iTree][indexNameCustom]
+                ->EvaluateAndAnalyze(arrTT[iTree]);
+          }
+        }
       }
       if (debug) std::cout << "Done getting names." << std::endl;
       if (nInfileOpenMax && nInfileOpen >= nInfileOpenMax) {
@@ -955,6 +1152,11 @@ void HistMerger::Run() {
     vNLeavesTree.push_back(nLeavesCurrent);
     nLeavesAllTrees += nLeavesCurrent;
   }
+  for (auto vAnalyzerLeafCustom : vvAnalyzerLeafTreeCustom) {
+    UInt_t nAnalyzersCurrent = vAnalyzerLeafCustom.size();
+    vNAnalyzersTreeCustom.push_back(nAnalyzersCurrent);
+    nLeavesAllTrees += nAnalyzersCurrent;
+  }
   Bool_t isToUseCorrectedTempFile =
       nLeavesToUseCorrectedTempFileMin &&
       nLeavesAllTrees >= nLeavesToUseCorrectedTempFileMin;
@@ -967,8 +1169,9 @@ void HistMerger::Run() {
   } else {
     vvHistResultLeafTree.clear();
     vvHistResultLeafTree.reserve(nTT);
-    for (UInt_t nLeavesCurrent : vNLeavesTree) {
-      std::vector<TH1 *> vHistResultLeaf(nLeavesCurrent, nullptr);
+    for (UInt_t iTree = 0; iTree < nTT; iTree++) {
+      std::vector<TH1 *> vHistResultLeaf(
+          vNLeavesTree[iTree] + vNAnalyzersTreeCustom[iTree], nullptr);
       vvHistResultLeafTree.push_back(vHistResultLeaf);
     }
     vTFOut.clear();
@@ -1000,7 +1203,8 @@ void HistMerger::Run() {
   if (debug) std::cout << "vNLeavesTree: ";
   for (UInt_t iTree = 0; iTree < nTT; iTree++) {
     if (debug) std::cout << vNLeavesTree[iTree] << " ";
-    std::vector<UInt_t> vIHistLeaf(vNLeavesTree[iTree], 0);
+    std::vector<UInt_t> vIHistLeaf(
+        vNLeavesTree[iTree] + vNAnalyzersTreeCustom[iTree], 0);
     vvIHistLeafTree.push_back(vIHistLeaf);
   }
   if (debug) std::cout << std::endl;
@@ -1033,46 +1237,83 @@ void HistMerger::Run() {
     if (debug) std::cout << " Done." << std::endl;
     for (UInt_t iTree = 0; iTree < nTT; iTree++) {
       UInt_t nNameModifiedCurrentTree = vNLeavesTree[iTree];
-      for (UInt_t indexName = 0; indexName < nNameModifiedCurrentTree;
-           indexName++) {
+      UInt_t nAnalyzersCurrentCustom = vNAnalyzersTreeCustom[iTree];
+      for (UInt_t indexName = 0, indexNameCustom = 0, indexNameBoth = 0;
+           indexName < nNameModifiedCurrentTree ||
+           indexNameCustom < nAnalyzersCurrentCustom;
+           (indexName < nNameModifiedCurrentTree ? indexName++
+                                                 : indexNameCustom++),
+                  indexNameBoth++) {
+        Bool_t isCustom = indexName == nNameModifiedCurrentTree;
         // TList *tlHistCorrected = new TList;
         // std::vector<TString> vNameHistCorrected;
         // vNameHistCorrected.clear();
         // UInt_t iFile=0;
-        if (!vvvIsHistFileLeafTree[iTree][indexName][iFile]) {
+        if (!(isCustom
+                  ? vvvIsHistFileLeafTreeCustom[iTree][indexNameCustom][iFile]
+                  : vvvIsHistFileLeafTree[iTree][indexName][iFile])) {
           std::cerr << "(Tree index, Leaf index) (" << iTree << ", "
-                    << indexName << ") not found in file index " << iFile
-                    << " (" << vvNameModifiedLeafTree[iTree][indexName] << ")"
-                    << std::endl;
+                    << indexNameBoth << ") not found in file index " << iFile
+                    << " ("
+                    << (isCustom
+                            ? vvAnalyzerLeafTreeCustom[iTree][indexNameCustom]
+                            : vvAnalyzerLeafTree[iTree][indexName])
+                           ->GetNameLeafModified()
+                    << ")" << std::endl;
           continue;
         }
         if (debug)
-          std::cout << "vvIHistLeafTree[" << iTree << "][" << indexName
-                    << "]: " << vvIHistLeafTree[iTree][indexName];
+          std::cout << "vvIHistLeafTree[" << iTree << "][" << indexNameBoth
+                    << "]: " << vvIHistLeafTree[iTree][indexNameBoth];
         TH1 *histCorrected = nullptr;
         if (debug) std::cout << "Getting analyzer ...";
-        LeafAnalyzerAbstract *&analyzer = vvAnalyzerLeafTree[iTree][indexName];
+        LeafAnalyzerAbstract *&analyzer =
+            (isCustom ? vvAnalyzerLeafTreeCustom
+                      : vvAnalyzerLeafTree)[iTree][indexNameBoth];
         if (debug) std::cout << " (" << analyzer << ") Done." << std::endl;
 
-        TString nameLeaf =
-            analyzer->GetVNameLeafFile()[vvIHistLeafTree[iTree][indexName]];
+        // TString nameLeaf =
+        //     analyzer->GetVNameLeafFile()[vvIHistLeafTree[iTree][indexNameBoth]];
         TString tstrHistSetting = analyzer->GetHistSetting();
-        if (!analyzer->GetDontCheckEmptyness() &&
-            analyzer->GetVIsEmpty()[vvIHistLeafTree[iTree][indexName]]) {
-          if (vvIHistLeafTree[iTree][indexName] == 0 &&
+        if (!analyzer->GetIsEverAnalyzed()) {
+          TString tstrWarningCommon = TString::Format(
+              "%s (%d), %s (%d) (%s) has never been analyzed",
+              analyzer->GetNameTT().Data(), iTree,
+              analyzer->GetNameLeafModified().Data(), indexNameBoth,
+              analyzer->GetExpressionBeforeSetting().Data());
+          if (analyzer->GetAllowNeverAnalyzed()) {
+            std::cerr << tstrWarningCommon
+                      << "!\n"
+                         "It will not be saved."
+                      << std::endl;
+          } else {
+            Fatal("HistMerger::Run", "%s", (tstrWarningCommon + "!").Data());
+          }
+        } else if (!analyzer->GetDontCheckEmptyness() &&
+                   analyzer
+                       ->GetVIsEmpty()[vvIHistLeafTree[iTree][indexNameBoth]]) {
+          if (vvIHistLeafTree[iTree][indexNameBoth] == 0 &&
               analyzer->GetAreAllEmpty()) {
             if (debug)
-              std::cout << "Got " << nameLeaf << " (all-empty leaf)."
-                        << std::endl;
+              std::cout << "Got " << analyzer->GetNameLeafModified()
+                        << " (all-empty leaf)." << std::endl;
             histCorrected = analyzer->GetHistEmptyPreferred();
             TString nameHistCorrected =
-                getNameHistOfFile(iTree, indexName, 0, "CorrectedAllEmpty");
+                (isToUseCorrectedTempFile
+                     ? getNameHistOfFile(iTree, indexNameBoth, 0,
+                                         "CorrectedAllEmpty")
+                     : getNameHistResultFromNames(
+                           analyzer->GetNameTT(),
+                           analyzer->GetNameLeafModified()));
             if (histCorrected == nullptr) {
-              arrTT[iTree]->Draw(nameHistCorrected +
-                                 (tstrHistSetting.Length() == 0
-                                      ? ""
-                                      : ">>" + tstrHistSetting));
-              histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
+              // arrTT[iTree]->Draw(nameHistCorrected +
+              //                     (tstrHistSetting.Length() == 0
+              //                         ? ""
+              //                         : ">>" + tstrHistSetting));
+              // histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
+              histCorrected = analyzer->DrawHistCorrected(
+                  nameHistCorrected, arrTT[iTree],
+                  vvIHistLeafTree[iTree][indexNameBoth]);
               histCorrected->Scale(vWeightFile[iFile]);
             }
             if (isToUseCorrectedTempFile) {
@@ -1086,27 +1327,29 @@ void HistMerger::Run() {
               if (debug) std::cout << " Done." << std::endl;
             } else {
               processHistResult(histCorrected, analyzer, vTFOut[iTree]);
-              vvHistResultLeafTree[iTree][indexName] = histCorrected;
+              vvHistResultLeafTree[iTree][indexNameBoth] = histCorrected;
             }
+            break;
           }
           if (debug && !analyzer->GetAreAllEmpty())
             std::cerr << "Empty histogram found for (" << vNameTT[iTree] << ", "
-                      << vvNameModifiedLeafTree[iTree][indexName] << ") ("
-                      << iTree << ", " << indexName << ")" << std::endl;
+                      << analyzer->GetNameLeafModified() << ") (" << iTree
+                      << ", " << indexNameBoth << ")" << std::endl;
         } else {
           TString nameHistCorrected =
-              getNameHistOfFile(iTree, indexName, iFile, "Corrected");
+              getNameHistOfFile(iTree, indexNameBoth, iFile, "Corrected");
           // arrTT[iTree]->Draw(vvvNameFileLeafTree[iTree][indexName][iFile] +
           // ">>" +
           //                    nameHistCorrected +
           //                    vvHistsettingLeafTree[iTree][indexName]);
 
-          if (debug)
-            std::cout << "Drawing " << nameLeaf << tstrHistSetting << " ...";
-          arrTT[iTree]->Draw(nameLeaf + ">>" + nameHistCorrected +
-                             tstrHistSetting);
-          if (debug) std::cout << " Getting ...";
-          histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
+          // arrTT[iTree]->Draw(nameLeaf + ">>" + nameHistCorrected +
+          //                    tstrHistSetting);
+          // if (debug) std::cout << " Getting ...";
+          // histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
+          histCorrected = analyzer->DrawHistCorrected(
+              nameHistCorrected, arrTT[iTree],
+              vvIHistLeafTree[iTree][indexNameBoth]);
           if (debug) std::cout << " (" << histCorrected << ") ";
           if (debug) std::cout << " Scaling ...";
           histCorrected->Scale(vWeightFile[iFile]);
@@ -1120,33 +1363,33 @@ void HistMerger::Run() {
             histCorrected->Write(nameHistCorrected);
             if (debug) std::cout << " Done." << std::endl;
           } else {
-            if (vvHistResultLeafTree[iTree][indexName] == nullptr) {
+            if (vvHistResultLeafTree[iTree][indexNameBoth] == nullptr) {
               if (debug)
                 std::cout << "Storing to vvHistResultLeafTree[" << iTree << "]["
-                          << indexName << "]";
+                          << indexNameBoth << "]";
               ;
-              TString nameHistResult = getNameHistResult(iTree, indexName);
-              vvHistResultLeafTree[iTree][indexName] =
+              TString nameHistResult = getNameHistResult(iTree, indexNameBoth);
+              vvHistResultLeafTree[iTree][indexNameBoth] =
                   (TH1 *)histCorrected->Clone(nameHistResult);
-              processHistResult(vvHistResultLeafTree[iTree][indexName],
+              processHistResult(vvHistResultLeafTree[iTree][indexNameBoth],
                                 analyzer, vTFOut[iTree]);
               if (debug)
-                std::cout << " (" << vvHistResultLeafTree[iTree][indexName]
+                std::cout << " (" << vvHistResultLeafTree[iTree][indexNameBoth]
                           << ")" << std::endl;
               if (debug) std::cout << " Done." << std::endl;
             } else {
               if (debug)
                 std::cout << "Adding to vvHistResultLeafTree[" << iTree << "]["
-                          << indexName << "]";
+                          << indexNameBoth << "]";
               histCorrected->SetName(nameHistCorrected);
               vTFOut[iTree]->cd();
-              vvHistResultLeafTree[iTree][indexName]->Add(
+              vvHistResultLeafTree[iTree][indexNameBoth]->Add(
                   (TH1 *)histCorrected->Clone(nameHistCorrected + "ToAdd"));
               if (debug) std::cout << " Done." << std::endl;
             }
           }
         }
-        vvIHistLeafTree[iTree][indexName]++;
+        vvIHistLeafTree[iTree][indexNameBoth]++;
       }
     }
     if (areSomeInfilesClosed && nInfileOpen >= nInfileOpenMax) {
@@ -1207,6 +1450,10 @@ void HistMerger::Run() {
       TString nameHistResult = getNameHistResult(iTree, indexName);
       if (debug)
         std::cout << "Generating " << nameHistResult << " ..." << std::endl;
+      if (!analyzer->GetIsEverAnalyzed()) {
+        std::cerr << analyzer->GetNameLeafModified()
+                  << " is never analyzed and will not be saved." << std::endl;
+      }
       if (!isToUseCorrectedTempFile) {
         vvHistResultLeafTree[iTree][indexName]->Write();
         // histResult = vvHistResultLeafTree[iTree][indexName];
@@ -1234,11 +1481,16 @@ void HistMerger::Run() {
           std::cout << " (name: " << histResult->GetName() << ")" << std::endl;
         histResult->Write(nameHistResult);
       } else {
-        Bool_t isErrorUnexpected = false;
+        // Bool_t isErrorUnexpected = false;
         TList *tlHistCorrectedToMerge = new TList;
         UInt_t nHist = 0;
         for (UInt_t iFile = 0; iFile < nFileTot; iFile++) {
           if (!vvvIsHistFileLeafTree[iTree][indexName][iFile]) {
+            continue;
+          }
+          if (!analyzer->GetDontCheckEmptyness() &&
+              analyzer->GetVIsEmpty()[nHist]) {
+            nHist++;
             continue;
           }
           if (debug) std::cout << "iFile: " << iFile << " ";
@@ -1248,26 +1500,30 @@ void HistMerger::Run() {
           if (histCorrected == nullptr) {
             std::cerr << "Fatal: Histogram not found: " << nameHistCorrected
                       << std::endl;
-            isErrorUnexpected = true;
+            // isErrorUnexpected = true;
             break;
           }
           tlHistCorrectedToMerge->Add(histCorrected->Clone(nameHistCorrected));
           nHist++;
         }
         if (!nHist) {
-          std::cerr << "Fatal: "
-                    << "No histograms found for (" << iTree << ", " << indexName
-                    << ") (" << vvNameModifiedLeafTree[iTree][indexName] << ")"
-                    << std::endl;
+          // std::cerr << "Fatal: "
+          //           << "No histograms found for (" << iTree << ", " <<
+          //           indexName
+          //           << ") (" << vvNameModifiedLeafTree[iTree][indexName] <<
+          //           ")"
+          //           << std::endl;
           histResult = nullptr;
-          isErrorUnexpected = true;
+          // isErrorUnexpected = true;
         } else {
           if (debug) std::cout << "Merging ...";
           histResult =
               (TH1 *)tlHistCorrectedToMerge->First()->Clone(nameHistResult);
-          histResult->SetName(nameHistResult);
+          processHistResult(histResult, analyzer, tfOutHistMerge);
           histResult->Clear();
           histResult->Merge(tlHistCorrectedToMerge);
+          processHistResult(histResult, analyzer, tfOutHistMerge);
+          histResult->Write(nameHistResult);
         }
         // if (isErrorUnexpected) continue;
         std::cout << " Done." << std::endl;
