@@ -41,11 +41,12 @@ class HistMerger {
   UInt_t nInfileOpenMax;
   UInt_t nLeavesToUseCorrectedTempFileMin;
   std::vector<std::vector<LeafAnalyzerAbstract*>> vvAnalyzerLeafTreeCustom;
+  std::vector<LeafAnalyzerAbstract*> vAnalyzerCustomByName;
   std::function<void(
-      const TTree* tree,
+      TTree* tree,
       const std::vector<LeafAnalyzerAbstract*> vAnalyzerLeafCustom,
       const std::function<void(LeafAnalyzerAbstract* analyzerNew)> pushbackNewAnalyzer)>
-      addCustomAnalyzersWhenRun;
+      pushCustomAnalyzersWhenRun;
   std::function<TString(TLeaf* leaf)> funTitleLeaf;
 
   void SetNameTFTemp(std::function<TString(TString keyword)> funNameTFTemp) {
@@ -118,7 +119,8 @@ HistMerger::HistMerger() {
   this->nInfileOpenMax = 30;
   this->nLeavesToUseCorrectedTempFileMin = 100;
   this->vvAnalyzerLeafTreeCustom.clear();
-  this->addCustomAnalyzersWhenRun = nullptr;
+  this->vAnalyzerCustomByName.clear();
+  this->pushCustomAnalyzersWhenRun = nullptr;
   this->funTitleLeaf = nullptr;
   InitializeHidden();
 }
@@ -127,19 +129,24 @@ class HistMerger::LeafAnalyzerAbstract {
  public:
   virtual void SetDebug(Bool_t debug){};
   virtual void SetNameTT(TString nameTT){};
-  virtual TString GetNameTT() { return ""; };
-  virtual void SetExpressionBeforeSetting(
+  virtual TString GetNameTT() const { return ""; };
+  virtual void SetExpressionCustom(
       TString name, TString typeName, TString title,
       TString expressionBeforeSetting, TCut selection = "",
       Option_t* option = "", Long64_t nentries = TTree::kMaxEntries,
       Long64_t firstentry = 0) {}
-  virtual TString GetExpressionBeforeSetting() {return "";};
+  void SetExpressionBeforeSetting(TString expressionBeforeSetting) {};
+  virtual void SetSelection(TCut selection) {};
+  virtual void SetOptionDraw(Option_t *option) {};
+  virtual void SetNEntriesToDrawMax(Long64_t nentries) {};
+  virtual void SetFirstEntryToDraw(Long64_t firstentry) {};
+  virtual TString GetExpressionBeforeSetting() const {return "";};
   virtual void SetHasTarget(
       std::vector<TString> vDeps = {},
       std::function<Bool_t(TTree* tree)> funHasTargetExtra = nullptr) {}
   virtual void SetAllowNeverAnalyzed(Bool_t allowNeverAnalyzed) {}
-  virtual Bool_t GetAllowNeverAnalyzed() { return false; }
-  virtual Bool_t GetIsEverAnalyzed() { return true; }
+  virtual Bool_t GetAllowNeverAnalyzed() const { return false; }
+  virtual Bool_t GetIsEverAnalyzed() const { return true; }
   virtual void AssignHistSetting(Int_t nBinsCorrect, Double_t lowerCorrect,
                                  Double_t upperCorrect,
                                  TString tstrHistSetting = "") {}
@@ -150,7 +157,7 @@ class HistMerger::LeafAnalyzerAbstract {
                            TString titleLeaf)>
           assignHistSettingPerLeafTreeExtra) {}
   virtual void SetDontCheckEmptyness(Bool_t dontCheckEmptyness) {}
-  virtual Bool_t GetDontCheckEmptyness() { return false; }
+  virtual Bool_t GetDontCheckEmptyness() const { return false; }
   virtual void SetFunAdjustHistSettingExtra(
       std::function<void(Int_t& NBinCorrect, Double_t& lowerCorrect,
                          Double_t& upperCorrect, TString nameTT,
@@ -159,22 +166,22 @@ class HistMerger::LeafAnalyzerAbstract {
           adjustHistSettingPerLeafTreeExtra) {}
   virtual void AnalyzeLeafBasic(TLeaf* leaf) = 0;
   // const std::function<TString(TString nameLeaf)> getNameLeafModified;
-  virtual TString GetNameLeafModified() = 0;
+  virtual TString GetNameLeafModified() const = 0;
   virtual void SetFunTitleLeaf(std::function<TString(TLeaf* leaf)> funTitleLeaf) {};
-  virtual TString GetTitleLeaf() = 0;
-  virtual TString GetTypeNameLeaf() = 0;
-  virtual Bool_t GetHasTarget(TTree* tree) { return true; }
+  virtual TString GetTitleLeaf() const = 0;
+  virtual TString GetTypeNameLeaf() const = 0;
+  virtual Bool_t GetHasTarget(TTree* tree) const { return true; }
   virtual void AnalyzeLeaf(TLeaf* leaf) = 0;
   virtual void EvaluateAndAnalyze(TTree *tree) {};
   virtual std::vector<TString>& GetVNameLeafFile() = 0;
   virtual std::vector<Bool_t>& GetVIsEmpty() = 0;
   virtual void Summarize() = 0;
-  virtual Bool_t GetAreAllEmpty() = 0;
-  virtual Int_t GetNBinsCorrect() = 0;
-  virtual Double_t GetLowerCorrect() = 0;
-  virtual Double_t GetUpperCorrect() = 0;
-  virtual TString GetHistSetting() = 0;
-  virtual TH1* GetHistEmptyPreferred() { return nullptr; };
+  virtual Bool_t GetAreAllEmpty() const = 0;
+  virtual Int_t GetNBinsCorrect() const = 0;
+  virtual Double_t GetLowerCorrect() const = 0;
+  virtual Double_t GetUpperCorrect() const = 0;
+  virtual TString GetHistSetting() const = 0;
+  virtual TH1* GetHistEmptyPreferred() const { return nullptr; };
   virtual TH1* DrawHistCorrected(TString nameHist, TTree* tree,
                                  Int_t iHist = -1,
                                  Bool_t isToClone = false) = 0;
