@@ -8,6 +8,12 @@
 #include<TH1.h>
 #include<TLegend.h>
 
+void plotAll(TString pathFileIn, TString dirOut);
+
+void plotAll(const char* pathFileIn, const char* dirout) {
+  plotAll((TString) pathFileIn, (TString) dirout);
+}
+
 void plotAll(TString pathFileIn, TString dirOut) {
   TString seperatorPath = "/";
   TFile *fileIn = TFile::Open(pathFileIn);
@@ -31,6 +37,3 @@ void plotAll(TString pathFileIn, TString dirOut) {
   fileIn->Close();
 }
 
-void plotAll(const char* pathFileIn, const char* dirout) {
-  plotAll((TString) pathFileIn, (TString) dirout);
-}
