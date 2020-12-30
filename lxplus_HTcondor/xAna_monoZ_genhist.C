@@ -66,35 +66,35 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
                                   "crossSections_" + nameDatagroup + ".txt";
 
   {
-    std::ifstream infileText;
-    infileText.open(pathTextFileNumbers);
-    UInt_t valNumberFileCurrent;
-    if (!infileText) {
-      std::cerr << "Unable to open file " << pathTextFileNumbers << std::endl;
-    }
-    while (!infileText) {
-      infileText >> valNumberFileCurrent;
-      // if (infileText >> valNumberFileCurrent) {
-      vNumberFile.push_back(valNumberFileCurrent);
-      // } else {
-      //   std::cerr << "One line failed to parse." << std::endl;
-      // }
-    }
-    infileText.close();
-    infileText.open(pathTextCrossSections);
-    Double_t valCrossSectionCurrent;
-    if (!infileText) {
-      std::cerr << "Unable to open file " << pathTextCrossSections << std::endl;
-    }
-    while (!infileText) {
-      infileText >> valCrossSectionCurrent;
-      // if (infileText >> valCrossSectionCurrentt) {
-      vCrossSection.push_back(valNumberFileCurrent);
-      // } else {
-      //   std::cerr << "One line failed to parse." << std::endl;
-      // }
-    }
-    infileText.close();
+    // std::ifstream infileText;
+    // infileText.open(pathTextFileNumbers);
+    // UInt_t valNumberFileCurrent;
+    // if (!infileText) {
+    //   std::cerr << "Unable to open file " << pathTextFileNumbers << std::endl;
+    // }
+    // while (!infileText) {
+    //   infileText >> valNumberFileCurrent;
+    //   // if (infileText >> valNumberFileCurrent) {
+    //   vNumberFile.push_back(valNumberFileCurrent);
+    //   // } else {
+    //   //   std::cerr << "One line failed to parse." << std::endl;
+    //   // }
+    // }
+    // infileText.close();
+    // infileText.open(pathTextCrossSections);
+    // Double_t valCrossSectionCurrent;
+    // if (!infileText) {
+    //   std::cerr << "Unable to open file " << pathTextCrossSections << std::endl;
+    // }
+    // while (!infileText) {
+    //   infileText >> valCrossSectionCurrent;
+    //   // if (infileText >> valCrossSectionCurrentt) {
+    //   vCrossSection.push_back(valNumberFileCurrent);
+    //   // } else {
+    //   //   std::cerr << "One line failed to parse." << std::endl;
+    //   // }
+    // }
+    // infileText.close();
     // TODO
     if (nameCondorPack == "preselect") {
       if (nameDatagroup == "TT") {
@@ -218,7 +218,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   merger->adjustHistSettingPerLeafTreeExtra = adjustHistSetting;
   merger->toRecreateOutFile = toRecreateOutFile;
   merger->debug = debug;
-  merger->allowMissing = allowMissing;
+  merger->allowMissingInputFiles = allowMissing;
   // merger->nLeavesToUseCorrectedTempFileMin = 0;
   merger->funIsToVetoLeaf = [](TString nameTT,
                                TString nameLeafModified) -> Bool_t {

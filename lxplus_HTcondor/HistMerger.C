@@ -74,16 +74,17 @@ Int_t getNDigitsM1(Double_t x) {
 class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
  public:
   static inline TString GetNameLeafModified(TString nameLeaf) {
-    TString nameLeafNew = TString(nameLeaf);
+    // TString nameLeafNew = TString(nameLeaf);
     Ssiz_t indexLeftSquareBracket = nameLeaf.First('[');
-    if (indexLeftSquareBracket != -1) {
-      nameLeafNew.Resize(indexLeftSquareBracket);
-    }
-    return nameLeafNew;
+    // if (indexLeftSquareBracket != -1) {
+    //   nameLeafNew.Resize(indexLeftSquareBracket);
+    // }
+    // return nameLeafNew;
+    return indexLeftSquareBracket == -1 ? nameLeaf : nameLeaf(0, indexLeftSquareBracket);
   }
-  static inline TString GetNameLeafModified(TLeaf *leaf) {
-    return GetNameLeafModified((TString)leaf->GetName());
-  }
+  // static inline TString GetNameLeafModified(TLeaf *leaf) {
+  //   return GetNameLeafModified((TString)leaf->GetName());
+  // }
   static inline TString GetTitleLeaf(TLeaf *leaf) {
     TString titleLeaf = leaf->GetTitle();
     if (titleLeaf == "") {
@@ -161,6 +162,7 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
     this->upperCorrect = 0.;
     this->debug = false;
     this->nameTT = "";
+    this->assignHistSettingPerLeafTreeExtra = nullptr;
     this->assignHistSettingPerLeafTreeExtra = nullptr;
     this->adjustHistSettingPerLeafTreeExtra = nullptr;
     this->dontCheckEmptyness = false;
@@ -260,7 +262,8 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
   }
   void AnalyzeLeafBasic(TLeaf *leaf) {
     TString nameLeaf = leaf->GetName();
-    this->nameLeafModified = GetNameLeafModified(nameLeaf);
+    this->nameLeafModified = this->GetNameLeafModified(nameLeaf);
+    if (debug) std::cout << "bla" << std::endl;
     this->titleLeaf =
         funTitleLeaf == nullptr ? GetTitleLeaf(leaf) : funTitleLeaf(leaf);
     this->typeNameLeaf = GetTypeNameLeaf(leaf);
@@ -452,8 +455,8 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
   }
 
  public:
-  std::vector<TString> &GetVNameLeafFile() { return this->vNameLeafFile; }
-  std::vector<Bool_t> &GetVIsEmpty() { return this->vIsEmpty; }
+  std::vector<TString> GetVNameLeafFile() const { return this->vNameLeafFile; }
+  std::vector<Bool_t> GetVIsEmpty() const { return this->vIsEmpty; }
   void Summarize() {
     if (!isEverAnalyzed && !allowNeverAnalyzed) {
       Fatal("HistMerger::LeafAnalyzerDefault::Summarize",
@@ -655,6 +658,8 @@ class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
 };
 
 void HistMerger::InitializeHidden() {
+  this->funNameLeafModified = nullptr;
+  this->supplyLeafAnalyzer = nullptr;
   this->nTT = 0;
   this->vWeightDataset.clear();
   this->vWeightFile.clear();
@@ -672,6 +677,7 @@ inline void HistMerger::ProcessAnalyzerNew(LeafAnalyzerAbstract *analyzer,
                                            TString nameTT) {
   analyzer->SetDebug(debug);
   analyzer->SetNameTT(nameTT);
+  analyzer->SetFunAssignHistSettingExtra(assignHistSettingPerLeafTreeExtra);
   analyzer->SetFunAdjustHistSettingExtra(adjustHistSettingPerLeafTreeExtra);
   analyzer->SetFunTitleLeaf(funTitleLeaf);
 }
@@ -681,8 +687,8 @@ void HistMerger::InitializeWhenRun() {
     Fatal("HistMerger::InitializeWhenRun", "funPathTFIn is not specified.");
   }
   if (dirTFTemp == "" && nLeavesToUseCorrectedTempFileMin) {
-    Warning("HistMerger::InitializeWhenRun", "dirTFTemp is empty. Use \".\"");
-    dirTFTemp = ".";
+    Warning("HistMerger::InitializeWhenRun", "dirTFTemp is empty. Use \"temp\"");
+    dirTFTemp = "temp";
   }
   if (funNameTFTemp == nullptr && nLeavesToUseCorrectedTempFileMin) {
     Warning("HistMerger::InitializeWhenRun",
@@ -703,16 +709,20 @@ void HistMerger::InitializeWhenRun() {
             "Set with format \"output_%%s.root\"");
     SetNameTFOut("output_%s.root");
   }
-  if (supplyLeafAnalyzer == nullptr) {
-    supplyLeafAnalyzer = []() -> LeafAnalyzerAbstract * {
-      return (LeafAnalyzerAbstract *)(new LeafAnalyzerDefault());
-    };
+  if (supplyLeafAnalyzer == nullptr || funNameLeafModified == nullptr) {
+    SetLeafAnalyzer<LeafAnalyzerDefault>();
   }
-  if (getNameLeafModified == nullptr) {
-    getNameLeafModified = [](TString nameLeaf) -> TString {
-      return LeafAnalyzerDefault::GetNameLeafModified(nameLeaf);
-    };
-  }
+  // if (supplyLeafAnalyzer == nullptr) {
+  //   supplyLeafAnalyzer = []() -> LeafAnalyzerAbstract * {
+  //     return (LeafAnalyzerAbstract *)(new LeafAnalyzerDefault());
+  //   };
+  // }
+  // if (funNameLeafModified == nullptr) {
+  //   funNameLeafModified = [](TString nameLeaf) -> TString {
+  //     return LeafAnalyzerDefault::GetNameLeafModified(nameLeaf);
+  //   };
+  //   // funNameLeafModified = static_cast<TString(*)(TString)>(LeafAnalyzerDefault::GetNameLeafModified);
+  // }
   nTT = vNameTT.size();
   if (nTT == 0) {
     Warning("HistMerger::InitializeWhenRun",
@@ -894,27 +904,30 @@ void HistMerger::Run() {
   if (dirTFOut.Length() > 1 && dirTFOut.EndsWith(seperatorPath)) {
     dirTFOut.Resize(dirTFOut.Length() - 1);
   }
+  if (!gSystem->AccessPathName(dirTFOut, kFileExists)) {
+    gSystem->mkdir(dirTFOut);
+  }
   const std::function<TString(UInt_t)> funPathTFOutHist =
       [this](UInt_t iTree) -> TString {
     return dirTFOut + seperatorPath + funNameTFOut(vNameTT[iTree]);
   };
-  const std::function<void(Int_t &, Double_t &, Double_t &, UInt_t, UInt_t)>
-      adjustHistSettingPerLeafTreeExtraIndex = [this](Int_t &nBinCorrect,
-                                                      Double_t &lowerCorrect,
-                                                      Double_t &upperCorrect,
-                                                      UInt_t iTree,
-                                                      UInt_t indexName) {
-        TString nameTT = vNameTT[iTree];
-        TString &nameLeafModified = vvNameModifiedLeafTree[iTree][indexName];
-        // TString typeName = vvTypeNameLeafTree[iTree][indexName];
-        // TString title = vvTitleLeafTree[iTree][indexName];
-        LeafAnalyzerAbstract *&analyzer = vvAnalyzerLeafTree[iTree][indexName];
-        TString typeName = analyzer->GetTypeNameLeaf();
-        TString title = analyzer->GetTitleLeaf();
-        return adjustHistSettingPerLeafTreeExtra(
-            nBinCorrect, lowerCorrect, upperCorrect, nameTT, nameLeafModified,
-            typeName, title);
-      };
+  // const std::function<void(Int_t &, Double_t &, Double_t &, UInt_t, UInt_t)>
+  //     adjustHistSettingPerLeafTreeExtraIndex = [this](Int_t &nBinCorrect,
+  //                                                     Double_t &lowerCorrect,
+  //                                                     Double_t &upperCorrect,
+  //                                                     UInt_t iTree,
+  //                                                     UInt_t indexName) {
+  //       TString nameTT = vNameTT[iTree];
+  //       TString &nameLeafModified = vvNameModifiedLeafTree[iTree][indexName];
+  //       // TString typeName = vvTypeNameLeafTree[iTree][indexName];
+  //       // TString title = vvTitleLeafTree[iTree][indexName];
+  //       LeafAnalyzerAbstract *&analyzer = vvAnalyzerLeafTree[iTree][indexName];
+  //       TString typeName = analyzer->GetTypeNameLeaf();
+  //       TString title = analyzer->GetTitleLeaf();
+  //       return adjustHistSettingPerLeafTreeExtra(
+  //           nBinCorrect, lowerCorrect, upperCorrect, nameTT, nameLeafModified,
+  //           typeName, title);
+  //     };
   // UInt_t iFile = 0;
   // TFile *tfAutogenHist, *tfCorrectedHist;
   TFile *tfCorrectedHist;
@@ -953,7 +966,7 @@ void HistMerger::Run() {
       if (!isFileOpenable) {
         std::cerr << "File not openable: " << pathFileIn << " (" << tfCurrent
                   << ")" << std::endl;
-        if (allowMissing) {
+        if (allowMissingInputFiles) {
           vNumberFile[iDataset]--;
           nFileTot--;
           continue;
@@ -985,7 +998,7 @@ void HistMerger::Run() {
         for (TObject *leafRaw : *(arrTT[iTree]->GetListOfLeaves())) {
           TLeaf *leaf = (TLeaf *)leafRaw;
           TString nameLeaf = leaf->GetName();
-          TString nameLeafModified = getNameLeafModified(nameLeaf);
+          TString nameLeafModified = funNameLeafModified(nameLeaf);
           if (funIsToVetoLeaf != nullptr &&
               funIsToVetoLeaf(vNameTT[iTree], nameLeafModified))
             continue;
@@ -1011,10 +1024,10 @@ void HistMerger::Run() {
             if (debug) std::cout << "Found new leafname." << std::endl;
             if (debug)
               std::cout << "nameLeaf: " << nameLeaf
-                        << ", nameLeafModified: " << nameLeafModified
-                        << std::endl;
+                        << ", nameLeafModified: " << nameLeafModified;
             vvNameModifiedLeafTree[iTree].push_back(nameLeafModified);
             analyzer = supplyLeafAnalyzer();
+            std::cout << ", analyzer: " << analyzer << std::endl;
             vvAnalyzerLeafTree[iTree].push_back(analyzer);
             ProcessAnalyzerNew(analyzer, vNameTT[iTree]);
             analyzer->SetAllowNeverAnalyzed(false);
@@ -1669,6 +1682,16 @@ void HistMerger::Run() {
     tfCorrectedHist->Close();
   }
   // tfAutogenHist->Close();
+  for (auto analyzerLeaf: vvAnalyzerLeafTree) {
+    for (auto analyzer: analyzerLeaf) {
+      analyzer->Finalize();
+    }
+  }
+  for (auto analyzerLeaf: vvAnalyzerLeafTreeCustom) {
+    for (auto analyzer: analyzerLeaf) {
+      analyzer->Finalize();
+    }
+  }
 }
 
 #endif
