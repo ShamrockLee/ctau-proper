@@ -352,8 +352,8 @@ void xAna_monoZ_preselect(
       // &vRankJetPassedPt)->SetTitle(titleRank);
     }
   }
-  Int_t arrDIdxJetClosest[4];
-  Int_t arrDJetClosestRankJetPassedPt[4];
+  std::vector<Int_t> vDIdxJetClosest(4, -1);
+  std::vector<Int_t> vDJetClosestRankJetPassedPt(4, -10);
   std::vector<UInt_t> vJetMatchedRankJetPassedPt;
   {
     TString nameIdx = "GenDMatching_idxJet";
@@ -366,10 +366,10 @@ void xAna_monoZ_preselect(
     TString titleRankUnique = "Rank (0-indexed) of pt of each matched jet among passed jets";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
-          ->Branch(nameIdx, arrDIdxJetClosest)
+          ->Branch(nameIdx, &vDIdxJetClosest)
           ->SetTitle(titleIdx);
       arrTTPreselectedMatching[i]
-          ->Branch(nameRank, arrDJetClosestRankJetPassedPt)
+          ->Branch(nameRank, &vDJetClosestRankJetPassedPt)
           ->SetTitle(titleRank);
       arrTTPreselectedMatching[i]
           ->Branch(nameRankUnique, &vJetMatchedRankJetPassedPt)
@@ -377,10 +377,10 @@ void xAna_monoZ_preselect(
     }
     for (Byte_t i = 0; i < 2; i++) {
       arrTTAllMatched[i]
-          ->Branch(nameIdx, arrDIdxJetClosest)
+          ->Branch(nameIdx, &vDIdxJetClosest)
           ->SetTitle(titleIdx);
       arrTTAllMatched[i]
-          ->Branch(nameRank, arrDJetClosestRankJetPassedPt)
+          ->Branch(nameRank, &vDJetClosestRankJetPassedPt)
           ->SetTitle(titleRank);
       arrTTAllMatched[i]
           ->Branch(nameRankUnique, &vJetMatchedRankJetPassedPt)
@@ -404,15 +404,15 @@ void xAna_monoZ_preselect(
           ->SetTitle(title);
     }
   }
-  Float_t arrDeltaRDJet[4];
-  Float_t arrDeltaRJetPair[2];
-  Float_t arrDeltaRBetweenJetPairs[1];
+  std::vector<Float_t> vDeltaRDJet(4, -1);
+  std::vector<Float_t> vDeltaRJetPair(2, -1);
+  std::vector<Float_t> vDeltaRBetweenJetPairs(1, -1);
   {
     TString name = "GenDMathcing_deltaRJet";
     TString title = "DeltaR between each d quark and its closest jet";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
-          ->Branch(name, arrDeltaRDJet)
+          ->Branch(name, &vDeltaRDJet)
           ->SetTitle(title);
     }
   }
@@ -421,7 +421,7 @@ void xAna_monoZ_preselect(
     TString title = "DeltaR of each jet pair most likely to match the d quarks";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
-          ->Branch(name, arrDeltaRJetPair)
+          ->Branch(name, &vDeltaRJetPair)
           ->SetTitle(title);
     }
   }
@@ -430,7 +430,7 @@ void xAna_monoZ_preselect(
     TString title = "DeltaR between jet pairs most likely to match the d quarks";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatching[i]
-          ->Branch(name, arrDeltaRBetweenJetPairs)
+          ->Branch(name, &vDeltaRBetweenJetPairs)
           ->SetTitle(title);
     }
   }
@@ -445,7 +445,7 @@ void xAna_monoZ_preselect(
 
     nLeafOriginal = tarrLeafOriginal->GetSize();
 
-    std::vector<Bool_t> arrVIdxLeafLeptonID[2];
+    // std::vector<Bool_t> arrVIdxLeafLeptonID[2];
     std::vector<Int_t> vIdxLeafJet;
     vIdxLeafJet.clear();
     for (UInt_t i = 0; i < nLeafOriginal; i++) {
@@ -843,8 +843,8 @@ void xAna_monoZ_preselect(
     // Float_t *ptrJet_pt = data.GetPtrFloat("Jet_pt");
     // Float_t *ptrJet_eta = data.GetPtrFloat("Jet_eta");
     // Float_t *ptrJet_phi = data.GetPtrFloat("Jet_phi");
-    std::fill(std::begin(arrDIdxJetClosest), std::end(arrDIdxJetClosest), -10);
-    std::fill(std::begin(arrDJetClosestRankJetPassedPt), std::end(arrDJetClosestRankJetPassedPt), -10);
+    std::fill(std::begin(vDIdxJetClosest), std::end(vDIdxJetClosest), -10);
+    std::fill(std::begin(vDJetClosestRankJetPassedPt), std::end(vDJetClosestRankJetPassedPt), -10);
     std::vector<UInt_t> vDJetMatchedRankJetPassedPtActual(4);
     vDJetMatchedRankJetPassedPtActual.clear();
     TLorentzVector* p4DMatching[4];
@@ -852,7 +852,7 @@ void xAna_monoZ_preselect(
     for (Byte_t iDMatching = 0; iDMatching < 4; iDMatching++) {
       if (debug) std::printf("iDMatching: %d\n", iDMatching);
       p4DJetClosest[iDMatching] = nullptr;
-      arrDeltaRDJet[iDMatching] = __FLT_MAX__;
+      vDeltaRDJet[iDMatching] = __FLT_MAX__;
       p4DMatching[iDMatching] = new TLorentzVector;
       p4DMatching[iDMatching]->SetPtEtaPhiM(
           ptrGenPart_pt[arrGenDMatchingIdx[iDMatching]], ptrGenPart_eta[arrGenDMatchingIdx[iDMatching]],
@@ -866,30 +866,30 @@ void xAna_monoZ_preselect(
                             ptrJet_phi_original[vIdxJetPassed[rankJetPassed]],
                             ptrJet_mass_original[vIdxJetPassed[rankJetPassed]]);
         Double_t deltaRDJet = p4DMatching[iDMatching]->DeltaR(*p4Jet);
-        if (deltaRDJet < arrDeltaRDJet[iDMatching]) {
+        if (deltaRDJet < vDeltaRDJet[iDMatching]) {
           // p4DJetClosest[iDMatching]->Delete();
           // delete p4DJetClosest[iDMatching];
           p4DJetClosest[iDMatching] = p4Jet;
-          arrDeltaRDJet[iDMatching] = deltaRDJet;
-          arrDJetClosestRankJetPassedPt[iDMatching] = rankJetPassed;
-          arrDIdxJetClosest[iDMatching] = vIdxJetPassed[rankJetPassed];
+          vDeltaRDJet[iDMatching] = deltaRDJet;
+          vDJetClosestRankJetPassedPt[iDMatching] = rankJetPassed;
+          vDIdxJetClosest[iDMatching] = vIdxJetPassed[rankJetPassed];
         } else {
           // p4Jet->Delete();
           // delete p4Jet;
         }
       }
-      if (arrDeltaRDJet[iDMatching] < 0.4) {
+      if (vDeltaRDJet[iDMatching] < 0.4) {
         arrDJetMatchedId[iDMatching] = true;
-        vDJetMatchedRankJetPassedPtActual.push_back(arrDJetClosestRankJetPassedPt[iDMatching]);
+        vDJetMatchedRankJetPassedPtActual.push_back(vDJetClosestRankJetPassedPt[iDMatching]);
       } else {
         arrDJetMatchedId[iDMatching] = false;
       }
     }
     for (Byte_t i = 0; i < 2; i++) {
-      arrDeltaRJetPair[i] =
+      vDeltaRJetPair[i] =
           p4DJetClosest[i << 1]->DeltaR(*p4DJetClosest[(i << 1) + 1]);
     }
-    arrDeltaRBetweenJetPairs[0] =
+    vDeltaRBetweenJetPairs[0] =
         (*p4DJetClosest[0] + *p4DJetClosest[1])
             .DeltaR(*p4DJetClosest[2] + *p4DJetClosest[3]);
     
