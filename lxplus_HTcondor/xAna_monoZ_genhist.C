@@ -235,9 +235,20 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   };
   for (TString nameTT : vNameTT) {
     if (nameTT.Contains("Match")) {
-      TString tstrMatchedId = "GenDMatching_JetMatchedId";
-      const TString tstrRankPt = "GenDMatching_rankJetPassedPt";
+      const TString tstrDJetDeltaR = "GenDMathcing_deltaRJet";
+      const TString tstrMatchedId = "GenDMatching_JetMatchedId";
+      const TString tstrDJetRankPt = "GenDMatching_rankJetPassedPt";
+      const TString tstrJetRankPt = "JetMatched_rankJetPassedPt";
       for (UInt_t iD = 0; iD < 4; iD++) {
+        auto ptrAnalyzerDJetDeltaR = new HistMerger::LeafAnalyzerDefault;
+        ptrAnalyzerDJetDeltaR->SetNameTT(nameTT);
+        ptrAnalyzerDJetDeltaR->SetExpressionCustom(
+            TString::Format("%s%d", tstrDJetDeltaR.Data(), iD), "Float_t",
+            TString::Format("DeltaR between each d quark no. %d and its closest jet", iD),
+            TString::Format("%s[%d]", tstrDJetDeltaR.Data(), iD)
+        );
+        ptrAnalyzerDJetDeltaR->SetHasTarget({tstrDJetDeltaR});
+        merger->vAnalyzerCustomByName.push_back((HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetDeltaR);
         auto ptrAnalyzerMatchedId = new HistMerger::LeafAnalyzerDefault;
         ptrAnalyzerMatchedId->SetNameTT(nameTT);
         ptrAnalyzerMatchedId->SetExpressionCustom(
@@ -247,23 +258,23 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
         ptrAnalyzerMatchedId->SetHasTarget({tstrMatchedId});
         merger->vAnalyzerCustomByName.push_back(
             (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerMatchedId);
-        auto ptrAnalyzerRankPt = new HistMerger::LeafAnalyzerDefault;
-        ptrAnalyzerRankPt->SetNameTT(nameTT);
-        ptrAnalyzerRankPt->SetExpressionCustom(
-            TString::Format("%s%d", tstrRankPt.Data(), iD), "Int_t",
+        auto ptrAnalyzerDJetRankPt = new HistMerger::LeafAnalyzerDefault;
+        ptrAnalyzerDJetRankPt->SetNameTT(nameTT);
+        ptrAnalyzerDJetRankPt->SetExpressionCustom(
+            TString::Format("%s%d", tstrDJetRankPt.Data(), iD), "Int_t",
             TString::Format("Rank (0-indexed) of pt among  passed jet matching "
                             "quark no. %d",
                             iD),
-            TString::Format("%s[%d]", tstrRankPt.Data(), iD),
+            TString::Format("%s[%d]", tstrDJetRankPt.Data(), iD),
             TString::Format("%s[%d]>0", tstrMatchedId.Data(), iD).Data());
-        ptrAnalyzerRankPt->SetHasTarget({tstrRankPt, tstrMatchedId});
+        ptrAnalyzerDJetRankPt->SetHasTarget({tstrDJetRankPt, tstrMatchedId});
         merger->vAnalyzerCustomByName.push_back(
-            (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerRankPt);
+            (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetRankPt);
         auto ptrAnalyzerRankPtAllMatched =
-            new HistMerger::LeafAnalyzerDefault(*ptrAnalyzerRankPt);
+            new HistMerger::LeafAnalyzerDefault(*ptrAnalyzerDJetRankPt);
         ptrAnalyzerRankPtAllMatched->SetSelection("");
         ptrAnalyzerRankPtAllMatched->SetHasTarget(
-            {tstrRankPt}, [tstrMatchedId](TTree* tree) -> Bool_t {
+            {tstrDJetRankPt}, [tstrMatchedId](TTree* tree) -> Bool_t {
               return tree->GetLeaf(tstrMatchedId) == nullptr;
             });
         merger->vAnalyzerCustomByName.push_back(
