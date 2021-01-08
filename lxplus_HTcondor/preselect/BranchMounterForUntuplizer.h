@@ -1,322 +1,208 @@
-#ifndef BRANCHMOUNTERFORUNTUPLIZER
-#define BRANCHMOUNTERFORUNTUPLIZER
-
-#include "untuplizer.h"
+#ifndef BRANCH_MOUNTER_FOR_UNTUPLIZER_H
+#define BRANCH_MOUNTER_FOR_UNTUPLIZER_H
+#include <vector>
 
 #include "BranchMounter.h"
 
-class BranchMounterIterableForUntuplizer: public VirtualBranchMounterIterable<size_t> {
-  typedef size_t TypeSize;
- public:
-  virtual Bool_t BranchFor(BranchDescription description) {
-    return
-    mounterLongDouble->BranchFor(description) ||
-    mounterDouble->BranchFor(description) ||
-    mounterFloat->BranchFor(description) ||
-    mounterFloat16->BranchFor(description) ||
-    mounterLong64->BranchFor(description) ||
-    mounterLong->BranchFor(description) ||
-    mounterUInt->BranchFor(description) ||
-    mounterInt->BranchFor(description) ||
-    mounterShort->BranchFor(description) ||
-    mounterChar->BranchFor(description) ||
-    mounterBool->BranchFor(description);
-  }
-  virtual void PrepareForBranching() {
-    mounterLongDouble->PrepareForBranching();
-    mounterDouble->PrepareForBranching();
-    mounterFloat->PrepareForBranching();
-    mounterFloat16->PrepareForBranching();
-    mounterLong64->PrepareForBranching();
-    mounterLong->PrepareForBranching();
-    mounterUInt->PrepareForBranching();
-    mounterInt->PrepareForBranching();
-    mounterShort->PrepareForBranching();
-    mounterChar->PrepareForBranching();
-    mounterBool->PrepareForBranching();
-  }
-  virtual void BranchOn(TTree *treeOut) {
-    mounterLongDouble->BranchOn(treeOut);
-    mounterDouble->BranchOn(treeOut);
-    mounterFloat->BranchOn(treeOut);
-    mounterFloat16->BranchOn(treeOut);
-    mounterLong64->BranchOn(treeOut);
-    mounterLong->BranchOn(treeOut);
-    mounterUInt->BranchOn(treeOut);
-    mounterInt->BranchOn(treeOut);
-    mounterShort->BranchOn(treeOut);
-    mounterChar->BranchOn(treeOut);
-    mounterBool->BranchOn(treeOut);
-  }
-  virtual void SetTreeReader(TreeReader &data) {
-    mounterLongDouble->SetFunIterEIn([&data](BranchDescription description)->LongDouble_t*{
-      return static_cast<LongDouble_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterDouble->SetFunIterEIn([&data](BranchDescription description)->Double_t*{
-      return static_cast<Double_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterFloat->SetFunIterEIn([this, &data](BranchDescription description)->Float_t*{
-      return data.GetPtrFloat(description.name.Data());
-    });
-    mounterFloat16->SetFunIterEIn([&data](BranchDescription description)->Float16_t*{
-      return static_cast<Float16_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterLong64->SetFunIterEIn([&data](BranchDescription description)->Long64_t*{
-      return data.GetPtrLong64(description.name.Data());
-    });
-    mounterLong->SetFunIterEIn([&data](BranchDescription description)->Long_t*{
-      return static_cast<Long_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterUInt->SetFunIterEIn([&data](BranchDescription description)->UInt_t*{
-      return static_cast<UInt_t*>(data.GetPtr(description.name, TreeReader::kArrInt));
-    });
-    mounterInt->SetFunIterEIn([&data](BranchDescription description)->Int_t*{
-      return data.GetPtrInt(description.name);
-    });
-    mounterShort->SetFunIterEIn([&data](BranchDescription description)->Short_t*{
-      return data.GetPtrShort(description.name);
-    });
-    mounterChar->SetFunIterEIn([&data](BranchDescription description)->Char_t*{
-      return data.GetPtrChar(description.name);
-    });
-    mounterBool->SetFunIterEIn([&data](BranchDescription description)->Bool_t*{
-      return data.GetPtrBool(description.name);
-    });
-  }
-  virtual void PrepareForPushing(size_t n) {
-    mounterLongDouble->PrepareForPushing(n);
-    mounterDouble->PrepareForPushing(n);
-    mounterFloat->PrepareForPushing(n);
-    mounterFloat16->PrepareForPushing(n);
-    mounterLong64->PrepareForPushing(n);
-    mounterLong->PrepareForPushing(n);
-    mounterUInt->PrepareForPushing(n);
-    mounterInt->PrepareForPushing(n);
-    mounterShort->PrepareForPushing(n);
-    mounterChar->PrepareForPushing(n);
-    mounterBool->PrepareForPushing(n);
-  }
-  virtual void PushOrSkip(Bool_t isAcceptable) {
-    mounterLongDouble->PushOrSkip(isAcceptable);
-    mounterDouble->PushOrSkip(isAcceptable);
-    mounterFloat->PushOrSkip(isAcceptable);
-    mounterFloat16->PushOrSkip(isAcceptable);
-    mounterLong64->PushOrSkip(isAcceptable);
-    mounterLong->PushOrSkip(isAcceptable);
-    mounterUInt->PushOrSkip(isAcceptable);
-    mounterInt->PushOrSkip(isAcceptable);
-    mounterShort->PushOrSkip(isAcceptable);
-    mounterChar->PushOrSkip(isAcceptable);
-    mounterBool->PushOrSkip(isAcceptable);
-  }
-  // struct RefVecs {
-  //   std::vector<std::vector<LongDouble_t>> refVVLongDouble;
-  //   std::vector<std::vector<Double_t>> refVVDouble;
-  //   std::vector<std::vector<Float_t>> refVVFloat;
-  //   std::vector<std::vector<Float16_t>> refVVFloat16;
-  //   std::vector<std::vector<Long64_t>> refVVLong64;
-  //   std::vector<std::vector<Long_t>> refVVLong;
-  //   std::vector<std::vector<UInt_t>> refVVUInt;
-  //   std::vector<std::vector<Int_t>> refVVInt;
-  //   std::vector<std::vector<Short_t>> refVVShort;
-  //   std::vector<std::vector<Char_t>> refVVChar;
-  //   std::vector<std::vector<Bool_t>> refVVBool;
-  //   // RefVecs(refVVLongDouble, refVVDouble, refVVFloat, refVVFloat16, refVVLong64, refVVLong, refVVUInt, refVVInt, refVVShort, refVVChar, refVVBool) {
-  //   //   this->refVVLongDoule = refVVLongDouble;
-  //   //   this->refVVDouble = refVVDouble;
-  //   //   this->refVVFloat = refVVFloat;
-  //   //   this->refVVFloat16 = refVVFloat16;
-  //   //   this->refVVLong64 = refVVLong64;
-  //   //   this->refVVLong = refVVLong;
-  //   //   this->refVVUInt = refVVUInt;
-  //   //   this->refVVShort = refVVShort;
-  //   //   this->refVVChar = refVVChar;
-  //   //   this->refVVBool = refVVBool;
-  //   // }
-  // };
+#include "untuplizer.h"
 
-//   BranchMounterIterableForUntuplizer(
-//     std::vector<std::vector<LongDouble_t>> &refVVLongDouble,
-//     std::vector<std::vector<Double_t>> &refVVDouble,
-//     std::vector<std::vector<Float_t>> &refVVFloat,
-//     std::vector<std::vector<Float16_t>> &refVVFloat16,
-//     std::vector<std::vector<Long64_t>> &refVVLong64,
-//     std::vector<std::vector<Long_t>> &refVVLong,
-//     std::vector<std::vector<UInt_t>> &refVVUInt,
-//     std::vector<std::vector<Int_t>> &refVVInt,
-//     std::vector<std::vector<Short_t>> &refVVShort,
-//     std::vector<std::vector<Char_t>> &refVVChar,
-//     std::vector<std::vector<Bool_t>> &refVVBool) {
-//     mounterLongDouble = new BranchMounterLongDouble<LongDouble_t *>(refVVLongDouble);
-//     mounterDouble = new BranchMounterDouble<Double_t *>(refVVDouble);
-//     mounterFloat = new BranchMounterFloat<Float_t *>(refVVFloat);
-//     mounterFloat16 = new BranchMounterFloat16<Float16_t *>(refVVFloat16);
-//     mounterLong64 = new BranchMounterLong64<Long64_t *>(refVVLong64);
-//     mounterLong = new BranchMounterLong<Long_t *>(refVVLong);
-//     mounterUInt = new BranchMounterUInt<UInt_t *>(refVVUInt);
-//     mounterInt = new BranchMounterInt<Int_t *>(refVVInt);
-//     mounterShort = new BranchMounterShort<Short_t *>(refVVShort);
-//     mounterChar = new BranchMounterChar<Char_t *>(refVVChar);
-//     mounterBool = new BranchMounterBool<Bool_t *>(refVVBool);
-//   }
-//  protected:
-//   BranchMounterLongDouble<LongDouble_t *> *mounterLongDouble;
-//   BranchMounterDouble<Double_t *> *mounterDouble;
-//   BranchMounterFloat<Float_t *> *mounterFloat;
-//   BranchMounterFloat16<Float16_t *> *mounterFloat16;
-//   BranchMounterLong64<Long64_t *> *mounterLong64;
-//   BranchMounterLong<Long_t *> *mounterLong;
-//   BranchMounterUInt<UInt_t *> *mounterUInt;
-//   BranchMounterInt<Int_t *> *mounterInt;
-//   BranchMounterShort<Short_t *> *mounterShort;
-//   BranchMounterChar<Char_t *> *mounterChar;
-//   BranchMounterBool<Bool_t *> *mounterBool;
+namespace MounterForUntuplizerMeta {
+size_t NTypes = 11;
+enum class Order {
+  kLongDouble,
+  kDouble,
+  kFloat,
+  kFloat16,
+  kLong64,
+  kLong,
+  kUInt,
+  kInt,
+  kShort,
+  kChar,
+  kBool
+};
+} // namespace MounterForUntuplizerMeta
+
+class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<VirtualDescriptionCollectorSingle> {
+ public:
+  using DescriptionCollectorChained<VirtualDescriptionCollectorSingle>::vCollectors;
+  DescriptionCollectorForUntuplizer(): DescriptionCollectorChained<VirtualDescriptionCollectorSingle>({
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableLongDouble),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableDouble    ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableFloat     ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableFloat16   ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableLong64    ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableLong      ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableUInt      ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableInt       ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableShort     ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableChar      ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableBool      ),
+  }) {}
 };
 
-class BranchMounterScalarForUntuplizer: public VirtualBranchMounterScalarBase<size_t> {
+class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<VirtualBranchMounterScalar> {
  public:
-  Bool_t BranchFor(BranchDescription description) {
-    return
-    mounterLongDoubleScalar->BranchFor(description) ||
-    mounterDoubleScalar->BranchFor(description) ||
-    mounterFloatScalar->BranchFor(description) ||
-    mounterFloat16Scalar->BranchFor(description) ||
-    mounterLong64Scalar->BranchFor(description) ||
-    mounterLongScalar->BranchFor(description) ||
-    mounterUIntScalar->BranchFor(description) ||
-    mounterIntScalar->BranchFor(description) ||
-    mounterShortScalar->BranchFor(description) ||
-    mounterCharScalar->BranchFor(description) ||
-    mounterBoolScalar->BranchFor(description);
+  typedef struct {
+    BranchMounterScalarSingle<LongDouble_t>::Binding vLongDouble;
+    BranchMounterScalarSingle<Double_t>::Binding vDouble;
+    BranchMounterScalarSingle<Float_t>::Binding vFloat;
+    BranchMounterScalarSingle<Float16_t>::Binding vFloat16;
+    BranchMounterScalarSingle<Long64_t>::Binding vLong64;
+    BranchMounterScalarSingle<Long_t>::Binding vLong;
+    BranchMounterScalarSingle<UInt_t>::Binding vUInt;
+    BranchMounterScalarSingle<Int_t>::Binding vInt;
+    BranchMounterScalarSingle<Short_t>::Binding vShort;
+    BranchMounterScalarSingle<Char_t>::Binding vChar;
+    BranchMounterScalarSingle<Bool_t>::Binding vBool;
+  } Binding;
+  BranchMounterScalarSingle<LongDouble_t> *const mounterLongDouble;
+  BranchMounterScalarSingle<Double_t    > *const mounterDouble;
+  BranchMounterScalarSingle<Float_t     > *const mounterFloat;
+  BranchMounterScalarSingle<Float16_t   > *const mounterFloat16;
+  BranchMounterScalarSingle<Long64_t    > *const mounterLong64;
+  BranchMounterScalarSingle<Long_t      > *const mounterLong;
+  BranchMounterScalarSingle<UInt_t      > *const mounterUInt;
+  BranchMounterScalarSingle<Int_t       > *const mounterInt;
+  BranchMounterScalarSingle<Short_t     > *const mounterShort;
+  BranchMounterScalarSingle<Char_t      > *const mounterChar;
+  BranchMounterScalarSingle<Bool_t      > *const mounterBool;
+  BranchMounterScalarForUntuplizer(Binding &binding, DescriptionCollectorForUntuplizer *setting, TreeReader &data)
+      : 
+        mounterLongDouble(new BranchMounterScalarSingle<LongDouble_t>(binding.vLongDouble, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
+          [&data](BranchDescription description)->LongDouble_t{
+            return *static_cast<LongDouble_t*>(data.GetPtr(description.name));
+        })),
+        mounterDouble(    new BranchMounterScalarSingle<Double_t    >(binding.vDouble,     setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kDouble    ],
+          [&data](BranchDescription description)->Double_t    {
+            return *static_cast<Double_t*>(data.GetPtr(description.name));
+        })),
+        mounterFloat(     new BranchMounterScalarSingle<Float_t     >(binding.vFloat,      setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat     ],
+          [&data](BranchDescription description)->Float_t     {
+            return data.GetFloat(description.name);
+        })),
+        mounterFloat16(   new BranchMounterScalarSingle<Float16_t   >(binding.vFloat16,    setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat16   ],
+          [&data](BranchDescription description)->Float16_t   {
+            return *static_cast<Float16_t*>(data.GetPtr(description.name));
+        })),
+        mounterLong64(    new BranchMounterScalarSingle<Long64_t    >(binding.vLong64,     setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong64    ],
+          [&data](BranchDescription description)->Long64_t    {
+            return data.GetLong64(description.name);
+        })),
+        mounterLong(      new BranchMounterScalarSingle<Long_t      >(binding.vLong,       setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong      ],
+          [&data](BranchDescription description)->Long_t      {
+            return *static_cast<Long_t*>(data.GetPtr(description.name));
+        })),
+        mounterUInt(      new BranchMounterScalarSingle<UInt_t      >(binding.vUInt,       setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUInt      ],
+          [&data](BranchDescription description)->UInt_t      {
+            return *static_cast<UInt_t*>(data.GetPtr(description.name, TreeReader::kInt));
+        })),
+        mounterInt(       new BranchMounterScalarSingle<Int_t       >(binding.vInt, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kInt              ],
+          [&data](BranchDescription description)->Int_t       {
+            return data.GetInt(description.name);
+        })),
+        mounterShort(     new BranchMounterScalarSingle<Short_t     >(binding.vShort, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kShort          ],
+          [&data](BranchDescription description)->Short_t     {
+            return data.GetShort(description.name);
+        })),
+        mounterChar(      new BranchMounterScalarSingle<Char_t      >(binding.vChar, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kChar            ],
+          [&data](BranchDescription description)->Char_t      {
+            return data.GetChar(description.name);
+        })),
+        mounterBool(      new BranchMounterScalarSingle<Bool_t      >(binding.vBool, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kBool            ],
+          [&data](BranchDescription description)->Bool_t      {
+            return data.GetBool(description.name);
+        })),
+        BranchMounterScalarChained<VirtualBranchMounterScalar>({
+          mounterLongDouble,
+          mounterDouble,
+          mounterFloat,
+          mounterFloat16,
+          mounterLong64,
+          mounterLong,
+          mounterUInt,
+          mounterInt,
+          mounterShort,
+          mounterChar,
+          mounterBool
+      }) {}
+  void BranchOn(TTree *treeOut, Binding &binding) {
+        mounterLongDouble->BranchOn(treeOut, binding.vLongDouble);
+        mounterDouble    ->BranchOn(treeOut, binding.vDouble    );
+        mounterFloat     ->BranchOn(treeOut, binding.vFloat     );
+        mounterFloat16   ->BranchOn(treeOut, binding.vFloat16   );
+        mounterLong64    ->BranchOn(treeOut, binding.vLong64    );
+        mounterLong      ->BranchOn(treeOut, binding.vLong      );
+        mounterUInt      ->BranchOn(treeOut, binding.vUInt      );
+        mounterInt       ->BranchOn(treeOut, binding.vInt       );
+        mounterShort     ->BranchOn(treeOut, binding.vShort     );
+        mounterChar      ->BranchOn(treeOut, binding.vChar      );
+        mounterBool      ->BranchOn(treeOut, binding.vBool      );
   }
-  void PrepareForBranching() {
-    mounterLongDoubleScalar->PrepareForBranching();
-    mounterDoubleScalar->PrepareForBranching();
-    mounterFloatScalar->PrepareForBranching();
-    mounterFloat16Scalar->PrepareForBranching();
-    mounterLong64Scalar->PrepareForBranching();
-    mounterLongScalar->PrepareForBranching();
-    mounterUIntScalar->PrepareForBranching();
-    mounterIntScalar->PrepareForBranching();
-    mounterShortScalar->PrepareForBranching();
-    mounterCharScalar->PrepareForBranching();
-    mounterBoolScalar->PrepareForBranching();
-  }
-  void BranchOn(TTree *treeOut) {
-    mounterLongDoubleScalar->BranchOn(treeOut);
-    mounterDoubleScalar->BranchOn(treeOut);
-    mounterFloatScalar->BranchOn(treeOut);
-    mounterFloat16Scalar->BranchOn(treeOut);
-    mounterLong64Scalar->BranchOn(treeOut);
-    mounterLongScalar->BranchOn(treeOut);
-    mounterUIntScalar->BranchOn(treeOut);
-    mounterIntScalar->BranchOn(treeOut);
-    mounterShortScalar->BranchOn(treeOut);
-    mounterCharScalar->BranchOn(treeOut);
-    mounterBoolScalar->BranchOn(treeOut);
-  }
-  void SetTreeReader(TreeReader &data) {
-    mounterLongDoubleScalar->SetFunPush([&data](BranchDescription description)->LongDouble_t{
-      return *static_cast<LongDouble_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterDoubleScalar->SetFunPush([&data](BranchDescription description)->Double_t{
-      return *static_cast<Double_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterFloatScalar->SetFunPush([this, &data](BranchDescription description)->Float_t{
-      return data.GetFloat(description.name.Data());
-    });
-    mounterFloat16Scalar->SetFunPush([&data](BranchDescription description)->Float16_t{
-      return *static_cast<Float16_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterLong64Scalar->SetFunPush([&data](BranchDescription description)->Long64_t{
-      return data.GetLong64(description.name.Data());
-    });
-    mounterLongScalar->SetFunPush([&data](BranchDescription description)->Long_t{
-      return *static_cast<Long_t*>(data.GetPtr(description.name.Data()));
-    });
-    mounterUIntScalar->SetFunPush([&data](BranchDescription description)->UInt_t{
-      return *static_cast<UInt_t*>(data.GetPtr(description.name, TreeReader::kInt));
-    });
-    mounterIntScalar->SetFunPush([&data](BranchDescription description)->Int_t{
-      return data.GetInt(description.name);
-    });
-    mounterShortScalar->SetFunPush([&data](BranchDescription description)->Short_t{
-      return data.GetShort(description.name);
-    });
-    mounterCharScalar->SetFunPush([&data](BranchDescription description)->Char_t{
-      return data.GetChar(description.name);
-    });
-    mounterBoolScalar->SetFunPush([&data](BranchDescription description)->Bool_t{
-      return data.GetBool(description.name);
-    });
-  }
-  void Push() {
-    mounterLongDoubleScalar->Push();
-    mounterDoubleScalar->Push();
-    mounterFloatScalar->Push();
-    mounterFloat16Scalar->Push();
-    mounterLong64Scalar->Push();
-    mounterLongScalar->Push();
-    mounterUIntScalar->Push();
-    mounterIntScalar->Push();
-    mounterShortScalar->Push();
-    mounterCharScalar->Push();
-    mounterBoolScalar->Push();
-  }
-  // struct RefVecs {
-  //   std::vector<LongDouble_t>& refVLongDouble;
-  //   std::vector<Double_t>& refVDouble;
-  //   std::vector<Float_t>& refVFloat;
-  //   std::vector<Float16_t>& refVFloat16;
-  //   std::vector<Long64_t>& refVLong64;
-  //   std::vector<Long_t>& refVLong;
-  //   std::vector<UInt_t>& refVUInt;
-  //   std::vector<Int_t>& refVInt;
-  //   std::vector<Short_t>& refVShort;
-  //   std::vector<Char_t>& refVChar;
-  //   std::vector<Bool_t>& refVBool;
-  // };
-
-  // BranchMounterScalarForUntuplizer(
-  //   std::vector<LongDouble_t>& refVLongDouble,
-  //   std::vector<Double_t>& refVDouble,
-  //   std::vector<Float_t>& refVFloat,
-  //   std::vector<Float16_t>& refVFloat16,
-  //   std::vector<Long64_t>& refVLong64,
-  //   std::vector<Long_t>& refVLong,
-  //   std::vector<UInt_t>& refVUInt,
-  //   std::vector<Int_t>& refVInt,
-  //   std::vector<Short_t>& refVShort,
-  //   std::vector<Char_t>& refVChar,
-  //   std::vector<Bool_t>& refVBool) {
-  //   mounterLongDoubleScalar = new BranchMounterLongDoubleScalar(refVLongDouble);
-  //   mounterDoubleScalar = new BranchMounterDoubleScalar(refVDouble);
-  //   mounterFloatScalar = new BranchMounterFloatScalar(refVFloat);
-  //   mounterFloat16Scalar = new BranchMounterFloat16Scalar(refVFloat16);
-  //   mounterLong64Scalar = new BranchMounterLong64Scalar(refVLong64);
-  //   mounterLongScalar = new BranchMounterLongScalar(refVLong);
-  //   mounterUIntScalar = new BranchMounterUIntScalar(refVUInt);
-  //   mounterIntScalar = new BranchMounterIntScalar(refVInt);
-  //   mounterShortScalar = new BranchMounterShortScalar(refVShort);
-  //   mounterCharScalar = new BranchMounterCharScalar(refVChar);
-  //   mounterBoolScalar = new BranchMounterBoolScalar(refVBool);
-  // }
-
-  BranchMounterScalarForUntuplizer(TreeReader *data) {
-    SetTreeReader(data);
-  }
-
-  BranchMounterLongDoubleScalar *mounterLongDoubleScalar;
-  BranchMounterDoubleScalar *mounterDoubleScalar;
-  BranchMounterFloatScalar *mounterFloatScalar;
-  BranchMounterFloat16Scalar *mounterFloat16Scalar;
-  BranchMounterLong64Scalar *mounterLong64Scalar;
-  BranchMounterLongScalar *mounterLongScalar;
-  BranchMounterUIntScalar *mounterUIntScalar;
-  BranchMounterIntScalar *mounterIntScalar;
-  BranchMounterShortScalar *mounterShortScalar;
-  BranchMounterCharScalar *mounterCharScalar;
-  BranchMounterBoolScalar *mounterBoolScalar;
-
 };
+
+class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t> {
+ public:
+  typedef struct {
+    BranchMounterVectorSingle<LongDouble_t, LongDouble_t*>::Binding vvLongDouble;
+    BranchMounterVectorSingle<Double_t, Double_t*>::Binding vvDouble;
+    BranchMounterVectorSingle<Float_t, Float_t*>::Binding vvFloat;
+    BranchMounterVectorSingle<Float16_t, Float16_t*>::Binding vvFloat16;
+    BranchMounterVectorSingle<Long64_t, Long64_t*>::Binding vvLong64;
+    BranchMounterVectorSingle<Long_t, Long_t*>::Binding vvLong;
+    BranchMounterVectorSingle<UInt_t, UInt_t*>::Binding vvUInt;
+    BranchMounterVectorSingle<Int_t, Int_t*>::Binding vvInt;
+    BranchMounterVectorSingle<Short_t, Short_t*>::Binding vvShort;
+    BranchMounterVectorSingle<Char_t, Char_t*>::Binding vvChar;
+    BranchMounterVectorSingle<Bool_t, Bool_t*>::Binding vvBool;
+  } Binding;
+  BranchMounterIterableForUntuplizer(Binding &binding, DescriptionCollectorForUntuplizer *setting, TreeReader &data)
+    : BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t>({
+      new BranchMounterVectorSingle<LongDouble_t, LongDouble_t*>(binding.vvLongDouble, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
+        [&data](BranchDescription description)->LongDouble_t*{
+          return static_cast<LongDouble_t*>(data.GetPtr(description.name));
+      }),
+      new BranchMounterVectorSingle<Double_t, Double_t*>(binding.vvDouble, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kDouble],
+        [&data](BranchDescription description)->Double_t*{
+          return static_cast<Double_t*>(data.GetPtr(description.name));
+      }),
+      new BranchMounterVectorSingle<Float_t, Float_t*>(binding.vvFloat, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat],
+        [&data](BranchDescription description)->Float_t*{
+          return data.GetPtrFloat(description.name);
+      }),
+      new BranchMounterVectorSingle<Float16_t, Float16_t*>(binding.vvFloat16, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat16],
+        [&data](BranchDescription description)->Float16_t*{
+          return static_cast<Float16_t*>(data.GetPtr(description.name));
+      }),
+      new BranchMounterVectorSingle<Long64_t, Long64_t*>(binding.vvLong64, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong64],
+        [&data](BranchDescription description)->Long64_t*{
+          return data.GetPtrLong64(description.name);
+      }),
+      new BranchMounterVectorSingle<Long_t, Long_t*>(binding.vvLong, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong],
+        [&data](BranchDescription description)->Long_t*{
+          return static_cast<Long_t*>(data.GetPtr(description.name));
+      }),
+      new BranchMounterVectorSingle<UInt_t, UInt_t*>(binding.vvUInt, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUInt],
+        [&data](BranchDescription description)->UInt_t*{
+          return static_cast<UInt_t*>(data.GetPtr(description.name, TreeReader::kArrInt));
+      }),
+      new BranchMounterVectorSingle<Int_t, Int_t*>(binding.vvInt, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kInt],
+        [&data](BranchDescription description)->Int_t*{
+          return data.GetPtrInt(description.name);
+      }),
+      new BranchMounterVectorSingle<Short_t, Short_t*>(binding.vvShort, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kShort],
+        [&data](BranchDescription description)->Short_t*{
+          return data.GetPtrShort(description.name);
+      }),
+      new BranchMounterVectorSingle<Char_t, Char_t*>(binding.vvChar, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kChar],
+        [&data](BranchDescription description)->Char_t*{
+          return data.GetPtrChar(description.name);
+      }),
+      new BranchMounterVectorSingle<Bool_t, Bool_t*>(binding.vvBool, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kBool],
+        [&data](BranchDescription description)->Bool_t*{
+          return data.GetPtrBool(description.name);
+      })
+    }) {}
+};
+
 #endif
