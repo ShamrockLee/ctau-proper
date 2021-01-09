@@ -17,6 +17,7 @@
 
 #include "untuplizer.h"
 
+#include "BranchMounter.h"
 #include "BranchMounterForUntuplizer.h"
 
 // template <typename TypeData>
@@ -452,7 +453,8 @@ void xAna_monoZ_preselect(
   //   vvLong64Jets, vvLongJets, vvUIntJets, vvIntJets, vvShortJets, vvCharJets, vvBoolJets
   // );
   
-  // BranchMounterScalarForUntuplizer mounterHT(data);
+  DescriptionCollectorForUntuplizer collectorHT;
+  DescriptionCollectorForUntuplizer collectorJet;
   UInt_t nLeafOriginal;
   // std::vector<ObjectDescription> vLeafDescriptionJetBool,
   //     vLeafDescriptionJetUInt, vLeafDescriptionJetInt,
@@ -492,7 +494,7 @@ void xAna_monoZ_preselect(
         //                      descriptionCurrent.title
         //               << std::endl;
         //   }
-        mounterJet.BranchFor(descriptionCurrent);
+        collectorJet.BranchFor(descriptionCurrent);
       }
       if (descriptionCurrent.name.BeginsWith("SoftActivityJetHT")) {
         // if (typeNameCurrent == "Float_t") {
@@ -503,7 +505,7 @@ void xAna_monoZ_preselect(
                       // << typeNameCurrent << std::endl;
                       << descriptionCurrent.typeName << std::endl;
           // vLeafDescriptionHTFloat.push_back(descriptionCurrent);
-          // mounterHT.BranchFor(descriptionCurrent);
+          collectorHT.BranchFor(descriptionCurrent);
         }
       }
     }
@@ -598,12 +600,15 @@ void xAna_monoZ_preselect(
   //     arrTTZMassCutted[j]->Branch(name, &(arrHTFloat[i]), __SIZEOF_FLOAT__);
   //   }
   // }
+    collectorHT.Prepare();
+    collectorJet.Prepare();
+    BranchMounterScalarForUntuplizer mounterHT(&collectorHT, data);
+    BranchMounterIterableForUntuplizer mounterJet(&collectorJet, data);
     {
-      mounterJet.PrepareForBranching();
-      //mounterHT.PrepareForBranching();
-      auto funDo = [&mounterJet](TTree *tree){
+      
+      auto funDo = [&mounterHT, &mounterJet](TTree *tree){
         mounterJet.BranchOn(tree);
-        //mounterHT.BranchOn(tree);
+        mounterHT.BranchOn(tree);
       };
       std::for_each(std::begin(arrTTGen), std::end(arrTTGen), funDo);
       // std::for_each(std::begin(arrTTZMassCutted), std::end(arrTTZMassCutted),
@@ -851,7 +856,7 @@ void xAna_monoZ_preselect(
       }
     }
     nJetPassed = vIdxJetPassed.size();
-    //mounterHT.Push();
+    mounterHT.Push();
     // vRankJetPassedPt.clear();
     // vRankJetPassedPt.resize(nJetPassed);
     // std::iota(vRankJetPassedPt.begin(), vRankJetPassedPt.end(), 0);
