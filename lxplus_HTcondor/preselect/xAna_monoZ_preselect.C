@@ -602,8 +602,8 @@ void xAna_monoZ_preselect(
   // }
     collectorHT.Prepare();
     collectorJet.Prepare();
-    BranchMounterScalarForUntuplizer mounterHT(&collectorHT, data);
-    BranchMounterIterableForUntuplizer mounterJet(&collectorJet, data);
+    BranchMounterScalarForUntuplizer mounterHT(collectorHT, data);
+    BranchMounterIterableForUntuplizer mounterJet(collectorJet, data);
     {
       
       auto funDo = [&mounterHT, &mounterJet](TTree *tree){

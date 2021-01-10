@@ -129,16 +129,16 @@ class BranchMounterScalarSingle
   : vDescriptions(vDescriptions), nDescriptions(vDescriptions.size()) {
     vE.resize(nDescriptions);
   }
-  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle *const setting)
-  : BranchMounterScalarSingle(setting->vDescriptions) {}
+  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle &setting)
+  : BranchMounterScalarSingle(setting.vDescriptions) {}
   BranchMounterScalarSingle(const std::vector<BranchDescription> vDescriptions,
   std::function<E(BranchDescription)> funPush)
   : BranchMounterScalarSingle(vDescriptions) {
     SetFunPush(funPush);
   }
-  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle *const setting,
+  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle &setting,
   std::function<E(BranchDescription)> funPush)
-  : BranchMounterScalarSingle(setting->vDescriptions, funPush) {}
+  : BranchMounterScalarSingle(setting.vDescriptions, funPush) {}
 };
 
 template<>
@@ -162,16 +162,16 @@ class BranchMounterScalarSingle<Bool_t>: public BranchMounterScalarSingle<Char_t
   }
   BranchMounterScalarSingle(const std::vector<BranchDescription> vDescriptions)
   : BranchMounterScalarSingle<Char_t>(vDescriptions) {}
-  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle *const setting)
+  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle &setting)
   : BranchMounterScalarSingle<Char_t>(setting) {}
   BranchMounterScalarSingle(const std::vector<BranchDescription> vDescriptions,
   std::function<Bool_t(BranchDescription)> funPush)
   : BranchMounterScalarSingle(vDescriptions) {
     SetFunPush(funPush);
   }
-  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle *const setting,
+  BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle &setting,
   std::function<Bool_t(BranchDescription)> funPush)
-  : BranchMounterScalarSingle(setting->vDescriptions, funPush) {}
+  : BranchMounterScalarSingle(setting.vDescriptions, funPush) {}
 };
 
 template <typename E, typename TypeIterEIn>
@@ -224,16 +224,16 @@ class BranchMounterVectorSingle: public VirtualBranchMounterIterableSingle<E, Ty
     vvE.resize(nDescriptions);
     vIterEIn.reserve(nDescriptions);
   }
-  BranchMounterVectorSingle(const VirtualDescriptionCollectorSingle *const setting)
-  : BranchMounterVectorSingle(setting->vDescriptions) {}
+  BranchMounterVectorSingle(const VirtualDescriptionCollectorSingle &setting)
+  : BranchMounterVectorSingle(setting.vDescriptions) {}
   BranchMounterVectorSingle(const std::vector<BranchDescription> vDescriptions,
   std::function<TypeIterEIn(BranchDescription)> funIterEIn)
   : BranchMounterVectorSingle(vDescriptions) {
     SetFunIterEIn(funIterEIn);
   }
-  BranchMounterVectorSingle(const VirtualDescriptionCollectorSingle *const setting,
+  BranchMounterVectorSingle(const VirtualDescriptionCollectorSingle &setting,
   std::function<TypeIterEIn(BranchDescription)> funIterEIn)
-  : BranchMounterVectorSingle(setting->vDescriptions, funIterEIn) {}
+  : BranchMounterVectorSingle(setting.vDescriptions, funIterEIn) {}
 };
 
 class DescriptionCollectorFromFun: public VirtualDescriptionCollectorSingle {
