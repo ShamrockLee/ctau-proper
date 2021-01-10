@@ -42,19 +42,6 @@ class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<Virt
 
 class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<VirtualBranchMounterScalar> {
  public:
-  // typedef struct {
-  //   // BranchMounterScalarSingle<LongDouble_t>::Binding vLongDouble;
-  //   BranchMounterScalarSingle<Double_t>::Binding vDouble;
-  //   BranchMounterScalarSingle<Float_t>::Binding vFloat;
-  //   BranchMounterScalarSingle<Float16_t>::Binding vFloat16;
-  //   BranchMounterScalarSingle<Long64_t>::Binding vLong64;
-  //   BranchMounterScalarSingle<Long_t>::Binding vLong;
-  //   BranchMounterScalarSingle<UInt_t>::Binding vUInt;
-  //   BranchMounterScalarSingle<Int_t>::Binding vInt;
-  //   BranchMounterScalarSingle<Short_t>::Binding vShort;
-  //   BranchMounterScalarSingle<Char_t>::Binding vChar;
-  //   BranchMounterScalarSingle<Bool_t>::Binding vBool;
-  // } Binding;
   BranchMounterScalarForUntuplizer(DescriptionCollectorForUntuplizer *setting, TreeReader &data)
     : BranchMounterScalarChained<VirtualBranchMounterScalar>({
         // new BranchMounterScalarSingle<LongDouble_t>(setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
@@ -106,20 +93,6 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
 
 class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t> {
  public:
-  // typedef struct {
-  //   // BranchMounterVectorSingle<LongDouble_t, LongDouble_t*>::Binding vvLongDouble;
-  //   BranchMounterVectorSingle<Double_t, Double_t*>::Binding vvDouble;
-  //   BranchMounterVectorSingle<Float_t, Float_t*>::Binding vvFloat;
-  //   BranchMounterVectorSingle<Float16_t, Float16_t*>::Binding vvFloat16;
-  //   BranchMounterVectorSingle<Long64_t, Long64_t*>::Binding vvLong64;
-  //   BranchMounterVectorSingle<Long_t, Long_t*>::Binding vvLong;
-  //   BranchMounterVectorSingle<UInt_t, UInt_t*>::Binding vvUInt;
-  //   BranchMounterVectorSingle<Int_t, Int_t*>::Binding vvInt;
-  //   BranchMounterVectorSingle<Short_t, Short_t*>::Binding vvShort;
-  //   BranchMounterVectorSingle<Char_t, Char_t*>::Binding vvChar;
-  //   BranchMounterVectorSingle<Bool_t, Bool_t*>::Binding vvBool;
-  // } Binding;
-
   BranchMounterIterableForUntuplizer(DescriptionCollectorForUntuplizer *setting, TreeReader &data)
     : BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t>({
         // new BranchMounterVectorSingle<LongDouble_t, LongDouble_t*>(binding.vvLongDouble, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],

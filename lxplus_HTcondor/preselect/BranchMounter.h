@@ -139,20 +139,6 @@ class BranchMounterScalarSingle
   BranchMounterScalarSingle(const VirtualDescriptionCollectorSingle *const setting,
   std::function<E(BranchDescription)> funPush)
   : BranchMounterScalarSingle(setting->vDescriptions, funPush) {}
-  // BranchMounterScalarSingle(Binding &binding, const std::vector<BranchDescription> vDescriptions):
-  //   vE(binding), vDescriptions(vDescriptions), nDescriptions(vDescriptions.size()) {
-  //   vE.resize(nDescriptions);
-  // }
-  // BranchMounterScalarSingle(Binding &binding, const VirtualDescriptionCollectorSingle *const setting):
-  //   BranchMounterScalarSingle(binding, setting->vDescriptions) {}
-  // BranchMounterScalarSingle(Binding &binding, const std::vector<BranchDescription> vDescriptions,
-  // std::function<E(BranchDescription)> funPush):
-  //   BranchMounterScalarSingle(binding, vDescriptions) {
-  //   SetFunPush(funPush);
-  // }
-  // BranchMounterScalarSingle(Binding &binding, const VirtualDescriptionCollectorSingle *const setting,
-  // std::function<E(BranchDescription)> funPush):
-  //   BranchMounterScalarSingle(binding, setting->vDescriptions, funPush) {}
 };
 
 template<>
@@ -248,21 +234,6 @@ class BranchMounterVectorSingle: public VirtualBranchMounterIterableSingle<E, Ty
   BranchMounterVectorSingle(const VirtualDescriptionCollectorSingle *const setting,
   std::function<TypeIterEIn(BranchDescription)> funIterEIn)
   : BranchMounterVectorSingle(setting->vDescriptions, funIterEIn) {}
-  // BranchMounterVectorSingle(Binding &binding, const std::vector<BranchDescription> vDescriptions):
-  //   vvE(binding), vDescriptions(vDescriptions), nDescriptions(vDescriptions.size()) {
-  //   vvE.resize(nDescriptions);
-  //   vIterEIn.reserve(nDescriptions);
-  // }
-  // BranchMounterVectorSingle(Binding &binding, const VirtualDescriptionCollectorSingle *const setting):
-  //   BranchMounterVectorSingle(binding, setting->vDescriptions) {}
-  // BranchMounterVectorSingle(Binding &binding, const std::vector<BranchDescription> vDescriptions,
-  // std::function<TypeIterEIn(BranchDescription)> funIterEIn):
-  //   BranchMounterVectorSingle(binding, vDescriptions) {
-  //   SetFunIterEIn(funIterEIn);
-  // }
-  // BranchMounterVectorSingle(Binding &binding, const VirtualDescriptionCollectorSingle *const setting,
-  // std::function<TypeIterEIn(BranchDescription)> funIterEIn):
-  //   BranchMounterVectorSingle(binding, setting->vDescriptions, funIterEIn) {}
 };
 
 class DescriptionCollectorFromFun: public VirtualDescriptionCollectorSingle {
