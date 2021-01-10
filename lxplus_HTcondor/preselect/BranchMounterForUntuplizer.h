@@ -12,11 +12,15 @@ enum class Order {
   kDouble,
   kFloat,
   kFloat16,
+  kULong64,
   kLong64,
+  kULong,
   kLong,
   kUInt,
   kInt,
+  kUShort,
   kShort,
+  kUChar,
   kChar,
   kBool
 };
@@ -30,13 +34,17 @@ class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<Virt
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableDouble    ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableFloat     ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableFloat16   ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableULong64   ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableLong64    ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableULong     ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableLong      ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableUInt      ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableInt       ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableUShort    ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableShort     ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableUChar     ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableChar      ),
-    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableBool      ),
+    (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableBool      )
   }) {}
   ~DescriptionCollectorForUntuplizer() {
     for (auto collector: vCollectors) {
@@ -66,9 +74,17 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
           [&data](BranchDescription description)->Float16_t   {
             return *static_cast<Float16_t*>(data.GetPtr(description.name));
         }),
+        new BranchMounterScalarSingle<ULong64_t    >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong64  ],
+          [&data](BranchDescription description)->ULong64_t      {
+            return *static_cast<ULong64_t*>(data.GetPtr(description.name, TreeReader::kLong64));
+        }),
         new BranchMounterScalarSingle<Long64_t    >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong64    ],
           [&data](BranchDescription description)->Long64_t    {
             return data.GetLong64(description.name);
+        }),
+        new BranchMounterScalarSingle<ULong_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong    ],
+          [&data](BranchDescription description)->ULong_t      {
+            return *static_cast<ULong_t*>(data.GetPtr(description.name));
         }),
         new BranchMounterScalarSingle<Long_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong      ],
           [&data](BranchDescription description)->Long_t      {
@@ -82,9 +98,17 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
           [&data](BranchDescription description)->Int_t       {
             return data.GetInt(description.name);
         }),
+        new BranchMounterScalarSingle<UShort_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUShort   ],
+          [&data](BranchDescription description)->UShort_t      {
+            return *static_cast<UShort_t*>(data.GetPtr(description.name, TreeReader::kShort));
+        }),
         new BranchMounterScalarSingle<Short_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kShort     ],
           [&data](BranchDescription description)->Short_t     {
             return data.GetShort(description.name);
+        }),
+        new BranchMounterScalarSingle<UChar_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUChar      ],
+          [&data](BranchDescription description)->UChar_t      {
+            return *static_cast<UChar_t*>(data.GetPtr(description.name, TreeReader::kChar));
         }),
         new BranchMounterScalarSingle<Char_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kChar      ],
           [&data](BranchDescription description)->Char_t      {
@@ -123,9 +147,17 @@ class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<Vi
           [&data](BranchDescription description)->Float16_t*{
             return static_cast<Float16_t*>(data.GetPtr(description.name));
         }),
+        new BranchMounterVectorSingle<ULong64_t, ULong64_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong64],
+          [&data](BranchDescription description)->ULong64_t*{
+            return static_cast<ULong64_t*>(data.GetPtr(description.name, TreeReader::kArrLong64));
+        }),
         new BranchMounterVectorSingle<Long64_t, Long64_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong64],
           [&data](BranchDescription description)->Long64_t*{
             return data.GetPtrLong64(description.name);
+        }),
+        new BranchMounterVectorSingle<ULong_t, ULong_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong],
+          [&data](BranchDescription description)->ULong_t*{
+            return static_cast<ULong_t*>(data.GetPtr(description.name));
         }),
         new BranchMounterVectorSingle<Long_t, Long_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong],
           [&data](BranchDescription description)->Long_t*{
@@ -139,9 +171,17 @@ class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<Vi
           [&data](BranchDescription description)->Int_t*{
             return data.GetPtrInt(description.name);
         }),
+        new BranchMounterVectorSingle<UShort_t, UShort_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUShort],
+          [&data](BranchDescription description)->UShort_t*{
+            return static_cast<UShort_t *>(data.GetPtr(description.name, TreeReader::kArrShort));
+        }),
         new BranchMounterVectorSingle<Short_t, Short_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kShort],
           [&data](BranchDescription description)->Short_t*{
             return data.GetPtrShort(description.name);
+        }),
+        new BranchMounterVectorSingle<UChar_t, UChar_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUChar],
+          [&data](BranchDescription description)->UChar_t*{
+            return static_cast<UChar_t *>(data.GetPtr(description.name, TreeReader::kArrChar));
         }),
         new BranchMounterVectorSingle<Char_t, Char_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kChar],
           [&data](BranchDescription description)->Char_t*{

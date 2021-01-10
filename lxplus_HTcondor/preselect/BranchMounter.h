@@ -383,35 +383,59 @@ Bool_t GetIsAcceptableFloat(BranchDescription description) {
          !GetIsAcceptableDouble(description) &&
          !GetIsAcceptableFloat16(description);
 }
-Bool_t GetIsAcceptableUInt(BranchDescription description) {
-  return description.typeName.Contains("UInt") ||
-         description.typeName.Contains("unsigned int");
+Bool_t GetIsAcceptableULong64(BranchDescription description) {
+  return description.typeName.Contains("ULong64") ||
+         description.typeName.Contains("unsigned long long");
 }
 Bool_t GetIsAcceptableLong64(BranchDescription description) {
-  return description.typeName.Contains("Long64") ||
-         description.typeName.Contains("long long") ||
-         description.typeName.Contains("Int64");
+  return (description.typeName.Contains("Long64") ||
+         description.typeName.Contains("long long")) &&
+         !GetIsAcceptableULong64(description);
+}
+Bool_t GetIsAcceptableULong(BranchDescription description) {
+  return (description.typeName.Contains("ULong") ||
+         description.typeName.Contains("unsigned long") ||
+         description.typeName.Contains("ulong")) &&
+         !GetIsAcceptableULong64(description) &&
+         !description.typeName.Contains("double");
 }
 Bool_t GetIsAcceptableLong(BranchDescription description) {
   return (description.typeName.Contains("Long") ||
           description.typeName.Contains("long")) &&
-         !GetIsAcceptableLong64(description);
+         !GetIsAcceptableULong64(description) &&
+         !GetIsAcceptableLong64(description) &&
+         !GetIsAcceptableULong(description) &&
+         !description.typeName.Contains("double");
 }
-Bool_t GetIsAcceptableShort(BranchDescription description) {
-  return description.typeName.Contains("Short") ||
-         description.typeName.Contains("short") ||
-         description.typeName.Contains("Int16");
-}
-Bool_t GetIsAcceptableChar(BranchDescription description) {
-  return description.typeName.Contains("Char") ||
-         description.typeName.Contains("char");
+Bool_t GetIsAcceptableUInt(BranchDescription description) {
+  return description.typeName.Contains("UInt") ||
+         description.typeName.Contains("unsigned int") ||
+         description.typeName.Contains("uint");
 }
 Bool_t GetIsAcceptableInt(BranchDescription description) {
   return (description.typeName.Contains("Int") ||
           description.typeName.Contains("int")) &&
-         !GetIsAcceptableUInt(description) &&
-         !GetIsAcceptableLong64(description) &&
-         !GetIsAcceptableLong(description);
+         !GetIsAcceptableUInt(description);
+}
+Bool_t GetIsAcceptableUShort(BranchDescription description) {
+  return description.typeName.Contains("UShort") ||
+         description.typeName.Contains("unsigned short") ||
+         description.typeName.Contains("ushort");
+}
+Bool_t GetIsAcceptableShort(BranchDescription description) {
+  return (description.typeName.Contains("Short") ||
+         description.typeName.Contains("short")) &&
+         !GetIsAcceptableUShort(description);
+}
+Bool_t GetIsAcceptableUChar(BranchDescription description) {
+  return description.typeName.Contains("UChar") ||
+         description.typeName.Contains("Byte") ||
+         description.typeName.Contains("unsigned char");
+}
+Bool_t GetIsAcceptableChar(BranchDescription description) {
+  return (description.typeName.Contains("Char") ||
+         description.typeName.Contains("char")) &&
+         !GetIsAcceptableUChar(description);
 }
 Bool_t GetIsAcceptableBool(BranchDescription description) {
   return description.typeName.Contains("Bool") ||
