@@ -26,10 +26,10 @@ enum class Order {
 };
 } // namespace MounterForUntuplizerMeta
 
-class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<VirtualDescriptionCollectorSingle> {
+class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<VirtualDescriptionCollectorSingle, true> {
  public:
-  using DescriptionCollectorChained<VirtualDescriptionCollectorSingle>::vCollectors;
-  DescriptionCollectorForUntuplizer(): DescriptionCollectorChained<VirtualDescriptionCollectorSingle>({
+  using DescriptionCollectorChained<VirtualDescriptionCollectorSingle, true>::vCollectors;
+  DescriptionCollectorForUntuplizer(): DescriptionCollectorChained<VirtualDescriptionCollectorSingle, true>({
     // (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableLongDouble),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableDouble    ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableFloat     ),
@@ -46,18 +46,12 @@ class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<Virt
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableChar      ),
     (VirtualDescriptionCollectorSingle *) new DescriptionCollectorFromFun(CommonAcceptability::GetIsAcceptableBool      )
   }) {}
-  ~DescriptionCollectorForUntuplizer() {
-    for (auto collector: vCollectors) {
-      delete collector;
-    }
-    DescriptionCollectorChained::~DescriptionCollectorChained();
-  }
 };
 
-class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<VirtualBranchMounterScalar> {
+class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<VirtualBranchMounterScalar, true> {
  public:
   BranchMounterScalarForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data)
-    : BranchMounterScalarChained<VirtualBranchMounterScalar>({
+    : BranchMounterScalarChained<VirtualBranchMounterScalar, true>({
         // new BranchMounterScalarSingle<LongDouble_t>(setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
         //   [&data](BranchDescription description)->LongDouble_t{
         //     return *static_cast<LongDouble_t*>(data.GetPtr(description.name));
@@ -119,18 +113,12 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
             return data.GetBool(description.name);
         })
   }) {}
-  ~BranchMounterScalarForUntuplizer() {
-    for (auto mounter: vMounters) {
-      delete mounter;
-    }
-    BranchMounterScalarChained::~BranchMounterScalarChained();
-  }
 };
 
-class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t> {
+class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t, true> {
  public:
   BranchMounterIterableForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data)
-    : BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t>({
+    : BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t, true>({
         // new BranchMounterVectorSingle<LongDouble_t, LongDouble_t*>(binding.vvLongDouble, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
         //   [&data](BranchDescription description)->LongDouble_t*{
         //     return static_cast<LongDouble_t*>(data.GetPtr(description.name));
@@ -192,12 +180,6 @@ class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<Vi
             return data.GetPtrBool(description.name);
         })
       }) {}
-  ~BranchMounterIterableForUntuplizer() {
-    for (auto mounter: vMounters) {
-      delete mounter;
-    }
-    BranchMounterIterableChained::~BranchMounterIterableChained();
-  }
 };
 
 #endif

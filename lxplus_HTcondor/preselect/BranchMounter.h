@@ -33,6 +33,7 @@ class BranchDescription {
 class VirtualBranchMounterBase {
  public:
   virtual void BranchOn(TTree *treeOut) {};
+  virtual ~VirtualBranchMounterBase() {};
 };
 class VirtualBranchMounterScalar : public VirtualBranchMounterBase {
  public:
@@ -49,6 +50,7 @@ class VirtualDescriptionCollector {
  public:
   virtual Bool_t BranchFor(BranchDescription description) = 0;
   virtual void Prepare() {};
+  virtual ~VirtualDescriptionCollector() {};
 };
 
 template<typename E>
@@ -57,6 +59,7 @@ class VirtualBranchMounterScalarSingle: public VirtualBranchMounterScalar {
   void SetFunPush(std::function<E(BranchDescription description)> funPush) {
     this->funPush = funPush;
   }
+  // ~VirtualBranchMounterScalarSingle() {};
  protected:
   std::function<E(BranchDescription description)> funPush;
 };
@@ -248,12 +251,12 @@ class DescriptionCollectorFromFun: public VirtualDescriptionCollectorSingle {
   }
 };
 
-template<class ClassMounter=VirtualDescriptionCollector>
+template<class ClassCollector=VirtualDescriptionCollector, Bool_t deletePointers=false>
 class DescriptionCollectorChained: public VirtualDescriptionCollector {
  public:
-  std::vector<ClassMounter *> vCollectors;
+  std::vector<ClassCollector *> vCollectors;
   virtual Bool_t BranchFor(BranchDescription description) {
-    for (auto collector: vCollectors) {
+    for (ClassCollector *collector: vCollectors) {
       if (collector->BranchFor(description)) {
         return true;
       }
@@ -261,17 +264,24 @@ class DescriptionCollectorChained: public VirtualDescriptionCollector {
     return false;
   }
   virtual void Prepare() {
-    for (auto collector: vCollectors) {
+    for (ClassCollector *collector: vCollectors) {
       collector->Prepare();
     }
   }
-  DescriptionCollectorChained(const std::vector<ClassMounter *> vCollectors):
+  DescriptionCollectorChained(const std::vector<ClassCollector *> vCollectors):
     vCollectors(vCollectors) {
     \
   }
+  virtual ~DescriptionCollectorChained() {
+    if (deletePointers) {
+      for (ClassCollector *collector: vCollectors) {
+        delete collector;
+      }
+    }
+  }
 };
 
-template<class ClassMounter=VirtualBranchMounterBase>
+template<class ClassMounter=VirtualBranchMounterBase, Bool_t deletePointers=false>
 class BranchMounterBaseChained: public VirtualBranchMounterBase {
  public:
   std::vector<ClassMounter *> vMounters;
@@ -284,33 +294,40 @@ class BranchMounterBaseChained: public VirtualBranchMounterBase {
     vMounters(vMounters) {
     \
   }
+  virtual ~BranchMounterBaseChained() {
+    if (deletePointers) {
+      for (ClassMounter *mounter: vMounters) {
+        delete mounter;
+      }
+    }
+  }
 };
 
-template<class ClassMounter=VirtualBranchMounterScalar>
+template<class ClassMounter=VirtualBranchMounterScalar, Bool_t deletePointers=false>
 class BranchMounterScalarChained:
-  public BranchMounterBaseChained<ClassMounter>, public VirtualBranchMounterScalar {
+  public BranchMounterBaseChained<ClassMounter, deletePointers>, public VirtualBranchMounterScalar {
  public:
   // std::vector<ClassMounter *> vMounters;
-  using BranchMounterBaseChained<ClassMounter>::vMounters;
+  using BranchMounterBaseChained<ClassMounter, deletePointers>::vMounters;
   virtual void BranchOn(TTree *treeOut) {
-    BranchMounterBaseChained<ClassMounter>::BranchOn(treeOut);
+    BranchMounterBaseChained<ClassMounter, deletePointers>::BranchOn(treeOut);
   }
   virtual void Push() {
     for (ClassMounter *mounter: vMounters) {
       mounter->Push();
     }
   }
-  using BranchMounterBaseChained<ClassMounter>::BranchMounterBaseChained;
+  using BranchMounterBaseChained<ClassMounter, deletePointers>::BranchMounterBaseChained;
 };
 
-template<class ClassMounter=VirtualBranchMounterIterable<size_t>, typename TypeSize=size_t>
+template<class ClassMounter=VirtualBranchMounterIterable<size_t>, typename TypeSize=size_t, Bool_t deletePointers=false>
 class BranchMounterIterableChained:
-  public BranchMounterBaseChained<ClassMounter>, public VirtualBranchMounterIterable<TypeSize> {
+  public BranchMounterBaseChained<ClassMounter, deletePointers>, public VirtualBranchMounterIterable<TypeSize> {
  public:
   // std::vector<ClassMounter *> vMounters;
-  using BranchMounterBaseChained<ClassMounter>::vMounters;
+  using BranchMounterBaseChained<ClassMounter, deletePointers>::vMounters;
   virtual void BranchOn(TTree *treeOut) {
-    BranchMounterBaseChained<ClassMounter>::BranchOn(treeOut);
+    BranchMounterBaseChained<ClassMounter, deletePointers>::BranchOn(treeOut);
   }
   virtual void PrepareForPushing(TypeSize n) {
     for (ClassMounter *mounter: vMounters) {
@@ -322,7 +339,7 @@ class BranchMounterIterableChained:
       mounter->PushOrSkip(isAccptable);
     }
   }
-  using BranchMounterBaseChained<ClassMounter>::BranchMounterBaseChained;
+  using BranchMounterBaseChained<ClassMounter, deletePointers>::BranchMounterBaseChained;
 };
 
 namespace BranchMounterHelper {
