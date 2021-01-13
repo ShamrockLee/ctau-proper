@@ -247,7 +247,7 @@ class HistMerger {
   
 
   HistMerger();
-  virtual ~HistMerger();
+  virtual ~HistMerger(){};
 
 protected:
   /// std::function that opts out certain leaf according to the tree name and the leaf name.
@@ -385,7 +385,7 @@ class HistMerger::LeafAnalyzerAbstract {
                                  Int_t iHist = -1,
                                  Bool_t isToClone = false) = 0;
   virtual void Finalize(){};
-  virtual ~LeafAnalyzerAbstract();
+  virtual ~LeafAnalyzerAbstract(){};
 };
 
 #endif

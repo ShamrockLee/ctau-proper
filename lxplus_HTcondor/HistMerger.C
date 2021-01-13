@@ -71,7 +71,7 @@ Int_t getNDigitsM1(Double_t x) {
 #ifndef HISTMERGER_C
 #define HISTMERGER_C
 
-class HistMerger::LeafAnalyzerDefault : LeafAnalyzerAbstract {
+class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
  public:
   static inline TString GetNameLeafModified(TString nameLeaf) {
     // TString nameLeafNew = TString(nameLeaf);
