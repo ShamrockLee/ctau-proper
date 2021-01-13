@@ -50,7 +50,8 @@ class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<Virt
 
 class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<VirtualBranchMounterScalar, true> {
  public:
-  BranchMounterScalarForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data)
+  BranchMounterScalarForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data,
+    const std::function<BranchDescription(BranchDescription)> funDescriptionModified = nullptr)
     : BranchMounterScalarChained<VirtualBranchMounterScalar, true>({
         // new BranchMounterScalarSingle<LongDouble_t>(setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
         //   [&data](BranchDescription description)->LongDouble_t{
@@ -59,65 +60,66 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
         new BranchMounterScalarSingle<Double_t    >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kDouble    ],
           [&data](BranchDescription description)->Double_t    {
             return *static_cast<Double_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Float_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat     ],
           [&data](BranchDescription description)->Float_t     {
             return data.GetFloat(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Float16_t   >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat16   ],
           [&data](BranchDescription description)->Float16_t   {
             return *static_cast<Float16_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<ULong64_t    >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong64  ],
           [&data](BranchDescription description)->ULong64_t      {
             return *static_cast<ULong64_t*>(data.GetPtr(description.name, TreeReader::kLong64));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Long64_t    >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong64    ],
           [&data](BranchDescription description)->Long64_t    {
             return data.GetLong64(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<ULong_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong    ],
           [&data](BranchDescription description)->ULong_t      {
             return *static_cast<ULong_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Long_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong      ],
           [&data](BranchDescription description)->Long_t      {
             return *static_cast<Long_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<UInt_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUInt      ],
           [&data](BranchDescription description)->UInt_t      {
             return *static_cast<UInt_t*>(data.GetPtr(description.name, TreeReader::kInt));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Int_t       >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kInt       ],
           [&data](BranchDescription description)->Int_t       {
             return data.GetInt(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<UShort_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUShort   ],
           [&data](BranchDescription description)->UShort_t      {
             return *static_cast<UShort_t*>(data.GetPtr(description.name, TreeReader::kShort));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Short_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kShort     ],
           [&data](BranchDescription description)->Short_t     {
             return data.GetShort(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<UChar_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUChar      ],
           [&data](BranchDescription description)->UChar_t      {
             return *static_cast<UChar_t*>(data.GetPtr(description.name, TreeReader::kChar));
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Char_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kChar      ],
           [&data](BranchDescription description)->Char_t      {
             return data.GetChar(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterScalarSingle<Bool_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kBool      ],
           [&data](BranchDescription description)->Bool_t      {
             return data.GetBool(description.name);
-        })
+        }, funDescriptionModified)
   }) {}
 };
 
 class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t, true> {
  public:
-  BranchMounterIterableForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data)
+  BranchMounterIterableForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data,
+    const std::function<BranchDescription(BranchDescription)> funDescriptionModified = nullptr)
     : BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t, true>({
         // new BranchMounterVectorSingle<LongDouble_t, LongDouble_t*>(binding.vvLongDouble, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
         //   [&data](BranchDescription description)->LongDouble_t*{
@@ -126,59 +128,59 @@ class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<Vi
         new BranchMounterVectorSingle<Double_t, Double_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kDouble],
           [&data](BranchDescription description)->Double_t*{
             return static_cast<Double_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Float_t, Float_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat],
           [&data](BranchDescription description)->Float_t*{
             return data.GetPtrFloat(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Float16_t, Float16_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kFloat16],
           [&data](BranchDescription description)->Float16_t*{
             return static_cast<Float16_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<ULong64_t, ULong64_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong64],
           [&data](BranchDescription description)->ULong64_t*{
             return static_cast<ULong64_t*>(data.GetPtr(description.name, TreeReader::kArrLong64));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Long64_t, Long64_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong64],
           [&data](BranchDescription description)->Long64_t*{
             return data.GetPtrLong64(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<ULong_t, ULong_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong],
           [&data](BranchDescription description)->ULong_t*{
             return static_cast<ULong_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Long_t, Long_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLong],
           [&data](BranchDescription description)->Long_t*{
             return static_cast<Long_t*>(data.GetPtr(description.name));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<UInt_t, UInt_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUInt],
           [&data](BranchDescription description)->UInt_t*{
             return static_cast<UInt_t*>(data.GetPtr(description.name, TreeReader::kArrInt));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Int_t, Int_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kInt],
           [&data](BranchDescription description)->Int_t*{
             return data.GetPtrInt(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<UShort_t, UShort_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUShort],
           [&data](BranchDescription description)->UShort_t*{
             return static_cast<UShort_t *>(data.GetPtr(description.name, TreeReader::kArrShort));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Short_t, Short_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kShort],
           [&data](BranchDescription description)->Short_t*{
             return data.GetPtrShort(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<UChar_t, UChar_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUChar],
           [&data](BranchDescription description)->UChar_t*{
             return static_cast<UChar_t *>(data.GetPtr(description.name, TreeReader::kArrChar));
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Char_t, Char_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kChar],
           [&data](BranchDescription description)->Char_t*{
             return data.GetPtrChar(description.name);
-        }),
+        }, funDescriptionModified),
         new BranchMounterVectorSingle<Bool_t, Bool_t*>(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kBool],
           [&data](BranchDescription description)->Bool_t*{
             return data.GetPtrBool(description.name);
-        })
+        }, funDescriptionModified)
       }) {}
 };
 

@@ -15,10 +15,9 @@
 #include <numeric>
 #include <vector>
 
-#include "untuplizer.h"
-
 #include "BranchMounter.h"
 #include "BranchMounterForUntuplizer.h"
+#include "untuplizer.h"
 
 // template <typename TypeData>
 // TBranch* branchAdder(TTree* tree, const char* name, TypeData* address, const
@@ -49,6 +48,7 @@ void xAna_monoZ_preselect(
   const Double_t massZ = 91.1876;  //< static mass of Z (constant)
   const Double_t massElectron =
       0.0005109989461;          //< static mass of electron (constant)
+  const Double_t massDown = 0.0048;
   const Int_t pdgZ = 23;        //< pdgid of Z
   const Int_t pdgZp = 55;       //< pdgid of Z'
   const Int_t pdgX2 = 18;       //< pdgid of x2
@@ -156,11 +156,57 @@ void xAna_monoZ_preselect(
         ->Branch(name, &haveAllGenDMaching, name + "/O", 1)
         ->SetTitle(title);
   }
-  UInt_t arrGenDMatchingIdx[4];
+  std::vector<Int_t> vGenDMatchingIdx(4, 0);
   for (Byte_t i = 0; i < 2; i++) {
-    TString name = "GenDMatching_idx";
-    TString title = "Indexes of the d quarks";
-    arrTTGen[i]->Branch(name, arrGenDMatchingIdx)->SetTitle(title);
+    const TString name = "GenDMatching_idx";
+    const TString title = "Indexes of the d quarks";
+    arrTTGen[i]->Branch(name, &vGenDMatchingIdx)->SetTitle(title);
+  }
+  std::vector<Float_t> vGenDMatchingPt(4, 0);
+  std::vector<Float_t> vGenDMatchingEta(4, 0);
+  std::vector<Float_t> vGenDMatchingPhi(4, 0);
+  std::vector<Float_t> vGenDPairMatchingPt(2, 0);
+  std::vector<Float_t> vGenDPairMatchingEta(2, 0);
+  std::vector<Float_t> vGenDPairMatchingPhi(2, 0);
+  for (Byte_t i = 0; i < 2; i++) {
+    const char* nameTemplate = "GenD%sMatching_%s";
+    const char* titleTemplate = "%s of each %s";
+    arrTTGen[i]->Branch(TString::Format(nameTemplate, "", "pt"), &vGenDMatchingPt)->SetTitle(TString::Format(titleTemplate, "Pt", "d quark"));
+    arrTTPreselectedMatching[i]->Branch(TString::Format(nameTemplate, "", "eta"), &vGenDMatchingPt)->SetTitle(TString::Format(titleTemplate, "Eta", "d quark"));
+    arrTTAllMatched[i]->Branch(TString::Format(nameTemplate, "", "phi"), &vGenDMatchingPt)->SetTitle(TString::Format(titleTemplate, "Phi", "d quark"));
+    arrTTGen[i]->Branch(TString::Format(nameTemplate, "Pair", "pt"), &vGenDMatchingPt)->SetTitle(TString::Format(titleTemplate, "Pt", "d-pair"));
+    arrTTPreselectedMatching[i]->Branch(TString::Format(nameTemplate, "Pair", "eta"), &vGenDMatchingPt)->SetTitle(TString::Format(titleTemplate, "Eta", "d-pair"));
+    arrTTAllMatched[i]->Branch(TString::Format(nameTemplate, "Pair", "phi"), &vGenDMatchingPt)->SetTitle(TString::Format(titleTemplate, "Phi", "d-pair"));
+  }
+  std::vector<Bool_t> vGenDMatchingIdPassed(4, false);
+  UInt_t nGenDMatchingPassed = 0;
+  Bool_t areAllGenDMatchingPassed = false;
+  std::vector<Bool_t> vGenDPairMatchingIdPassed(2, false);
+  UInt_t nGenDPairMatchingPassed = 0;
+  Bool_t areAllGenDPairMatchingPassed;
+  for (Byte_t i = 0; i < 2; i++) {
+    const char* nameIdTemplate = "GenD%sMatching_idPassed";
+    const char* titleIdTemplate =
+        "Whether each of the %s pass the preselections";
+    const char* nameNTemplate = "nGenD%sMatchingPassed";
+    const char* titleNTemplate = "Number of %ss passing the preselections";
+    const char* nameAreAllTemplate = "areAllGenD%sMatchingPassed";
+    const char* titleAreAllTemplate =
+        "Whether all the %ss have passed the preselections";
+    arrTTGen[i]->Branch(TString::Format(nameIdTemplate, ""), &vGenDMatchingIdPassed)->SetTitle(TString::Format(titleIdTemplate, "d quark"));
+    arrTTGen[i]
+        ->Branch(TString::Format(nameNTemplate, ""), &nGenDMatchingPassed, TString::Format(nameNTemplate, "") + "/I", __SIZEOF_INT__)
+        ->SetTitle(TString::Format(titleNTemplate, "d quark"));
+    arrTTGen[i]
+        ->Branch(TString::Format(nameAreAllTemplate, ""), &areAllGenDMatchingPassed, TString::Format(nameAreAllTemplate, "") + "/O", 1)
+        ->SetTitle(TString::Format(titleAreAllTemplate, "d quark"));
+    arrTTGen[i]->Branch(TString::Format(nameIdTemplate, "Pair"), &vGenDPairMatchingIdPassed)->SetTitle(TString::Format(titleIdTemplate, "d-pair"));
+    arrTTGen[i]
+        ->Branch(TString::Format(nameNTemplate, "Pair"), &nGenDPairMatchingPassed, TString::Format(nameNTemplate, "") + "/I", __SIZEOF_INT__)
+        ->SetTitle(TString::Format(titleNTemplate, "d-pair"));
+    arrTTGen[i]
+        ->Branch(TString::Format(nameAreAllTemplate, "Pair"), &areAllGenDPairMatchingPassed, TString::Format(nameAreAllTemplate, "") + "/O", 1)
+        ->SetTitle(TString::Format(titleAreAllTemplate, "d-pair"));
   }
   Bool_t arrHasGenLepton[3];
   for (Byte_t i = 0; i < 2; i++) {
@@ -209,18 +255,18 @@ void xAna_monoZ_preselect(
 
   const UInt_t nDQuarksExpected = 4;
 
-  Bool_t arrDJetMatchedId[nDQuarksExpected];
+  std::vector<Bool_t> vDJetMatchedId(nDQuarksExpected, false);
   for (Byte_t i = 0; i < 2; i++) {
     arrTTPreselectedMatching[i]
-        ->Branch("GenDMatching_JetMatchedId", arrDJetMatchedId)
-        ->SetTitle("Whether the d-quarks matches a THIN jet");
+        ->Branch("GenDMatching_JetMatchedId", &vDJetMatchedId)
+        ->SetTitle("Whether the d-quarks matches a thin jet");
   }
   UInt_t nDJetMatched;
   for (Byte_t i = 0; i < 2; i++) {
     TString name = "nDJetMatched";
     arrTTPreselectedMatching[i]
         ->Branch(name, &nDJetMatched, name + "/I", __SIZEOF_INT__)
-        ->SetTitle("Number of d-quarks matching a THIN jet");
+        ->SetTitle("Number of d-quarks matching a thin jet");
   }
   Bool_t areAllDJetMatched;
   for (Byte_t i = 0; i < 2; i++) {
@@ -232,7 +278,7 @@ void xAna_monoZ_preselect(
   UInt_t nJetMatched;
   for (Byte_t i = 0; i < 2; i++) {
     TString name = "nJetMatched";
-    TString title = "Number of unique THIN jets matching a d-quark";
+    TString title = "Number of unique thin jets matching a d-quark";
     arrTTPreselectedMatching[i]
         ->Branch(name, &nJetMatched, name + "/I", __SIZEOF_INT__)
         ->SetTitle(title);
@@ -240,14 +286,6 @@ void xAna_monoZ_preselect(
         ->Branch(name, &nJetMatched, name + "/I", __SIZEOF_INT__)
         ->SetTitle(title);
   }
-  // std::vector<Float_t> avTHINMachedPt[2];
-  // for (UShort_t i=0; i<2; i++) {
-  //   arrTTPreselectedMatching[i]->Branch("JetMatched_pt");
-  // }
-  // for (UShort_t i=0; i<2; i++) {
-  //   arrTTAllMatched[i]->Branch("JetMatched_pt", &(avTHINMachedPt[i]))
-  //   ->SetTitle("Pt of matched jets");
-  // }
   auto lambdaFillTheTrees = [&]() -> void {
     const Bool_t toCollectGen = true;
     const Bool_t toCollectNumCorrect = false;
@@ -267,37 +305,56 @@ void xAna_monoZ_preselect(
       if (toCollectZMassCutted && arrIsPassingZMassCut[i]) {
         arrTTZMassCutted[i]->Fill();
       }
-      if (toCollectJetMatching && arrIsPassingZMassCut[i]) {
+      if (areAllGenDMatchingPassed && toCollectJetMatching &&
+          arrIsPassingZMassCut[i]) {
         arrTTPreselectedMatching[i]->Fill();
       }
-      if (toCollectAllMatched && areAllDJetMatched && arrIsPassingZMassCut[i]) {
+      if (areAllGenDMatchingPassed && toCollectAllMatched &&
+          areAllDJetMatched && arrIsPassingZMassCut[i]) {
         arrTTAllMatched[i]->Fill();
       }
     }
   };
 
   UInt_t nJet, nJetPassed;
-  for (Byte_t i = 0; i < 3; i++) {
-    TString name = "nJet";
-    TString title = "Number of jets";
+  UInt_t nFatJet, nFatJetPassed;
+  for (Byte_t i = 0; i < 2; i++) { // Originally [0, 3)
+    TString nameJetPrefix = "nJet";
+    TString titleJetPrefix = "Number of jets";
+    TString nameFatJetPrefix = "nFatJet";
+    TString titleFatJetPrefix = "Number of fat jets";
+    TString namePassSuffix = "Passed";
+    TString titlePassSuffix = " passing preselections";
     arrTTGen[i]
-        ->Branch(name, &nJet, name + "/I", __SIZEOF_INT__)
-        ->SetTitle(title);
+        ->Branch(nameJetPrefix, &nJet, nameJetPrefix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix);
     arrTTGen[i]
-        ->Branch(name + "Passed", &nJetPassed, name + "Passed" + "/I",
+        ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed, nameJetPrefix + namePassSuffix + "/I",
                  __SIZEOF_INT__)
-        ->SetTitle(title + " passing preselections");
-  }
-  for (Byte_t i = 0; i < 2; i++) {
-    TString name = "nJet";
-    TString title = "Number of jets";
-    arrTTZMassCutted[i]
-        ->Branch(name, &nJet, name + "/I", __SIZEOF_INT__)
-        ->SetTitle(title);
-    arrTTZMassCutted[i]
-        ->Branch(name + "Passed", &nJetPassed, name + "Passed" + "/I",
+        ->SetTitle(titleJetPrefix + titlePassSuffix);
+    arrTTPreselectedMatching[i]
+        ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed, nameJetPrefix + namePassSuffix + "/I",
                  __SIZEOF_INT__)
-        ->SetTitle(title + " passing preselections");
+        ->SetTitle(titleJetPrefix + titlePassSuffix);
+    arrTTAllMatched[i]
+        ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed, nameJetPrefix + namePassSuffix + "/I",
+                 __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix + titlePassSuffix);
+    arrTTGen[i]
+        ->Branch(nameFatJetPrefix, &nFatJet, nameFatJetPrefix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix);
+    arrTTGen[i]
+        ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed, nameFatJetPrefix + namePassSuffix + "/I",
+                 __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix + titlePassSuffix);
+    arrTTPreselectedMatching[i]
+        ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed, nameFatJetPrefix + namePassSuffix + "/I",
+                 __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix + titlePassSuffix);
+    arrTTAllMatched[i]
+        ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed, nameFatJetPrefix + namePassSuffix + "/I",
+                 __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix + titlePassSuffix);
   }
 
   std::vector<UInt_t> vIdxJetPassed;
@@ -402,9 +459,11 @@ void xAna_monoZ_preselect(
           ->SetTitle(title);
     }
   }
-  
+
+  DescriptionCollectorForUntuplizer collectorGenDMatching;
   DescriptionCollectorForUntuplizer collectorHT;
   DescriptionCollectorForUntuplizer collectorJet;
+  DescriptionCollectorForUntuplizer collectorFatJet;
   UInt_t nLeafOriginal;
   {
     TFile* tfIn = TFile::Open(inputFile.data(), "READ");
@@ -427,6 +486,9 @@ void xAna_monoZ_preselect(
       if (descriptionCurrent.name.BeginsWith("Jet_")) {
         collectorJet.BranchFor(descriptionCurrent);
       }
+      if (descriptionCurrent.name.BeginsWith("FatJet_")) {
+        collectorFatJet.BranchFor(descriptionCurrent);
+      }
       if (descriptionCurrent.name.BeginsWith("SoftActivityJetHT")) {
         // if (typeNameCurrent == "Float_t") {
         if (descriptionCurrent.typeName.EqualTo("Float_t")) {
@@ -439,33 +501,56 @@ void xAna_monoZ_preselect(
           collectorHT.BranchFor(descriptionCurrent);
         }
       }
+      if (descriptionCurrent.name.BeginsWith("GenPart_") &&
+          !descriptionCurrent.name.EndsWith("_idx") &&
+          !descriptionCurrent.name.EndsWith("_pt") &&
+          !descriptionCurrent.name.EndsWith("_eta") &&
+          !descriptionCurrent.name.EndsWith("_phi") &&
+          !descriptionCurrent.name.EndsWith("_mass")) {
+        collectorGenDMatching.BranchFor(descriptionCurrent);
+      }
     }
   }
 
-    collectorHT.Prepare();
-    collectorJet.Prepare();
-    BranchMounterScalarForUntuplizer mounterHT(collectorHT, data);
-    BranchMounterIterableForUntuplizer mounterJet(collectorJet, data);
-    {
-      
-      auto funDo = [&mounterHT, &mounterJet](TTree *tree){
-        mounterJet.BranchOn(tree);
-        mounterHT.BranchOn(tree);
-      };
-      std::for_each(std::begin(arrTTGen), std::end(arrTTGen), funDo);
-      // std::for_each(std::begin(arrTTZMassCutted), std::end(arrTTZMassCutted),
-      // mounter.BranchOn);
-      std::for_each(std::begin(arrTTPreselectedMatching),
-                    std::end(arrTTPreselectedMatching), funDo);
-      std::for_each(std::begin(arrTTAllMatched), std::end(arrTTAllMatched),
-                    funDo);
-    }
-
+  collectorGenDMatching.Prepare();
+  collectorHT.Prepare();
+  collectorJet.Prepare();
+  collectorFatJet.Prepare();
+  BranchMounterIterableForUntuplizer
+  mounterGenDMatching(collectorGenDMatching, data, [](BranchDescription
+  descriptionCurrent){
+    Ssiz_t lenName = descriptionCurrent.name.Length();
+    const Ssiz_t lenPrefOriginal = 8;
+    return BranchDescription(
+        "GenDMatching_" +
+            descriptionCurrent.name(lenPrefOriginal, lenName - 1),
+        descriptionCurrent.title, descriptionCurrent.typeName);
+  });
+  // BranchMounterIterableForUntuplizer mounterGenDMatching(collectorGenDMatching, data);
+  BranchMounterScalarForUntuplizer mounterHT(collectorHT, data);
+  BranchMounterIterableForUntuplizer mounterJet(collectorJet, data);
+  BranchMounterIterableForUntuplizer mounterFatJet(collectorFatJet, data);
+  {
+    auto funDo = [&mounterGenDMatching, &mounterHT, &mounterJet, &mounterFatJet](TTree* tree) {
+      mounterGenDMatching.BranchOn(tree);
+      mounterJet.BranchOn(tree);
+      mounterHT.BranchOn(tree);
+      mounterFatJet.BranchOn(tree);
+    };
+    std::for_each(std::begin(arrTTGen), std::end(arrTTGen), funDo);
+    // std::for_each(std::begin(arrTTZMassCutted), std::end(arrTTZMassCutted),
+    // mounter.BranchOn);
+    std::for_each(std::begin(arrTTPreselectedMatching),
+                  std::end(arrTTPreselectedMatching), funDo);
+    std::for_each(std::begin(arrTTAllMatched), std::end(arrTTAllMatched),
+                  funDo);
+  }
 
   for (jEntry = 0; jEntry < nEntry; jEntry++) {
     data.GetEntry(jEntry);
 
     nJet = data.GetInt("nJet");
+    nFatJet =  data.GetInt("nFatJet");
     // if (debug) std::cout << "nJet: " << nJet << std::endl;
 
     Bool_t hasGenLepton = false;
@@ -478,7 +563,7 @@ void xAna_monoZ_preselect(
     haveAllGenDMaching = true;
     Bool_t arrHasGenD[4];
     std::fill(std::begin(arrHasGenD), std::end(arrHasGenD), false);
-    std::fill(std::begin(arrGenDMatchingIdx), std::end(arrGenDMatchingIdx), 0);
+    std::fill(std::begin(vGenDMatchingIdx), std::end(vGenDMatchingIdx), 0);
     for (UInt_t ig = 0; ig < nGenPart; ig++) {
       if (ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]] == pdgZ) {
         Int_t genparIdAbs = TMath::Abs(ptrGenPart_pdgId[ig]);
@@ -503,7 +588,7 @@ void xAna_monoZ_preselect(
             (signbit(ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]]) << 1) +
             signbit(ptrGenPart_pdgId[ig]);
         arrHasGenD[iD] = true;
-        arrGenDMatchingIdx[iD] = ig;
+        vGenDMatchingIdx[iD] = ig;
       }
       for (Byte_t i = 0; i < 4; i++) {
         if (!arrHasGenD[i]) {
@@ -513,6 +598,14 @@ void xAna_monoZ_preselect(
       }
     }
     Bool_t isGenRightEvent = hasGenLepton && haveAllGenDMaching;
+
+    if (BranchMounterHelper::RunForEachNIdxSorted<
+            BranchMounterIterableForUntuplizer, std::vector<Int_t>::iterator,
+            Int_t>(mounterGenDMatching, vGenDMatchingIdx.begin(), 4) < 4 &&
+        debug) {
+      Error("BranchMounterHelper::RunForEachIdxSorted",
+            "Not all d indices found!");
+    };
 
     Int_t nElectron = data.GetInt("nElectron");
     Bool_t* ptrElectron_mvaFall17V2Iso_WPL =
@@ -667,7 +760,7 @@ void xAna_monoZ_preselect(
       auto ptrJet_eta_original_cloned = ptrJet_eta_original;
       // auto ptrJet_phi_original_cloned = ptrJet_phi_original;
       // auto ptrJet_mass_original_cloned = ptrJet_mass_original;
-      for (UInt_t idxJet=0; idxJet<nJet; idxJet++) {
+      for (UInt_t idxJet = 0; idxJet < nJet; idxJet++) {
         Bool_t result = *ptrJet_pt_original_cloned > 30 &&
                         TMath::Abs(*ptrJet_eta_original_cloned) < 3;
         if (result) {
@@ -681,6 +774,12 @@ void xAna_monoZ_preselect(
       }
     }
     nJetPassed = vIdxJetPassed.size();
+    mounterFatJet.PrepareForPushing(nFatJet);
+    {
+      for (UInt_t idxFatJet = 0; idxFatJet < nFatJet; idxFatJet++) {
+        mounterFatJet.PushOrSkip(true);
+      }
+    }
     mounterHT.Push();
 
     Byte_t iLeptonFound =
@@ -689,7 +788,6 @@ void xAna_monoZ_preselect(
     Float_t* ptrGenPart_pt = data.GetPtrFloat("GenPart_pt");
     Float_t* ptrGenPart_eta = data.GetPtrFloat("GenPart_eta");
     Float_t* ptrGenPart_phi = data.GetPtrFloat("GenPart_phi");
-    Float_t* ptrGenPart_mass = data.GetPtrFloat("GenPart_mass");
     std::fill(std::begin(vDIdxJetClosest), std::end(vDIdxJetClosest), -10);
     std::fill(std::begin(vDJetClosestRankJetPassedPt),
               std::end(vDJetClosestRankJetPassedPt), -10);
@@ -697,16 +795,27 @@ void xAna_monoZ_preselect(
     vDJetMatchedRankJetPassedPtActual.clear();
     TLorentzVector* p4DMatching[4];
     TLorentzVector* p4DJetClosest[4];
+    TLorentzVector* p4DPairMatching[2];
+    nGenDMatchingPassed = 0;
     for (Byte_t iDMatching = 0; iDMatching < 4; iDMatching++) {
       if (debug) std::printf("iDMatching: %d\n", iDMatching);
       p4DJetClosest[iDMatching] = nullptr;
       vDeltaRDJet[iDMatching] = __FLT_MAX__;
       p4DMatching[iDMatching] = new TLorentzVector;
+      vGenDMatchingPt[iDMatching] =
+          ptrGenPart_pt[vGenDMatchingIdx[iDMatching]];
+      vGenDMatchingEta[iDMatching] =
+          ptrGenPart_eta[vGenDMatchingIdx[iDMatching]];
+      vGenDMatchingPhi[iDMatching] =
+          ptrGenPart_phi[vGenDMatchingIdx[iDMatching]];
+      vGenDMatchingIdPassed[iDMatching] =
+          vGenDMatchingPt[iDMatching] > 30 && TMath::Abs(vGenDMatchingEta[iDMatching]) < 3;
+      if (vGenDMatchingIdPassed[iDMatching]) {
+        nGenDMatchingPassed++;
+      }
       p4DMatching[iDMatching]->SetPtEtaPhiM(
-          ptrGenPart_pt[arrGenDMatchingIdx[iDMatching]],
-          ptrGenPart_eta[arrGenDMatchingIdx[iDMatching]],
-          ptrGenPart_phi[arrGenDMatchingIdx[iDMatching]],
-          ptrGenPart_mass[arrGenDMatchingIdx[iDMatching]]);
+          vGenDMatchingPt[iDMatching], vGenDMatchingEta[iDMatching], vGenDMatchingPhi[iDMatching],
+          massDown);
       for (Byte_t rankJetPassed = 0; rankJetPassed < nJetPassed;
            rankJetPassed++) {
         if (debug) std::printf("rankJetPassed: %d\n", rankJetPassed);
@@ -729,12 +838,24 @@ void xAna_monoZ_preselect(
         }
       }
       if (vDeltaRDJet[iDMatching] < 0.4) {
-        arrDJetMatchedId[iDMatching] = true;
+        vDJetMatchedId[iDMatching] = true;
         vDJetMatchedRankJetPassedPtActual.push_back(
             vDJetClosestRankJetPassedPt[iDMatching]);
       } else {
-        arrDJetMatchedId[iDMatching] = false;
+        vDJetMatchedId[iDMatching] = false;
       }
+    }
+    // std::cout << "testtag" << std::endl;
+    // for (UInt_t iDPairMatching=0; iDPairMatching<2; iDPairMatching++) {
+    //   *(p4DPairMatching[iDPairMatching]) = *(p4DMatching[iDPairMatching*2]) + *(p4DMatching[(iDPairMatching*2)+1]);
+    //   vGenDPairMatchingPt[iDPairMatching] = p4DPairMatching[iDPairMatching]->Pt();
+    //   vGenDPairMatchingEta[iDPairMatching] = p4DPairMatching[iDPairMatching]->Eta();
+    //   vGenDPairMatchingPhi[iDPairMatching] = p4DPairMatching[iDPairMatching]->Phi();
+    // }
+    areAllGenDMatchingPassed = nGenDMatchingPassed == 4;
+    if (!areAllGenDMatchingPassed) {
+      lambdaFillTheTrees();
+      continue;
     }
     for (Byte_t i = 0; i < 2; i++) {
       vDeltaRJetPair[i] =
