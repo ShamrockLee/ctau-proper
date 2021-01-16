@@ -45,11 +45,15 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
       vNameTT.push_back("Gen" + namesLepton[i]);
     }
     iTreePreselectedMatchingElectron = vNameTT.size();
-    for (Byte_t i = 0; i < 2; i++) {
-      vNameTT.push_back("PreselectedMatching" + namesLepton[i]);
-    }
-    for (Byte_t i = 0; i < 2; i++) {
-      vNameTT.push_back("AllMatched" + namesLepton[i]);
+    for (const char* nameJetCamel : {"Jet", "FatJet"}) {
+      for (Byte_t i = 0; i < 2; i++) {
+        vNameTT.push_back((TString) "PreselectedMatching" + nameJetCamel +
+                          namesLepton[i]);
+      }
+      for (Byte_t i = 0; i < 2; i++) {
+        vNameTT.push_back((TString) "AllMatched" + nameJetCamel +
+                          namesLepton[i]);
+      }
     }
   }
 
@@ -70,7 +74,8 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
     // infileText.open(pathTextFileNumbers);
     // UInt_t valNumberFileCurrent;
     // if (!infileText) {
-    //   std::cerr << "Unable to open file " << pathTextFileNumbers << std::endl;
+    //   std::cerr << "Unable to open file " << pathTextFileNumbers <<
+    //   std::endl;
     // }
     // while (!infileText) {
     //   infileText >> valNumberFileCurrent;
@@ -84,7 +89,8 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
     // infileText.open(pathTextCrossSections);
     // Double_t valCrossSectionCurrent;
     // if (!infileText) {
-    //   std::cerr << "Unable to open file " << pathTextCrossSections << std::endl;
+    //   std::cerr << "Unable to open file " << pathTextCrossSections <<
+    //   std::endl;
     // }
     // while (!infileText) {
     //   infileText >> valCrossSectionCurrent;
@@ -149,8 +155,9 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             upperCorrect = TMath::Pi();
             return;
           }
-          if (nameLeafModified.BeginsWith("Jet_btag")) {
-            if (nameLeafModified.BeginsWith("Jet_btagCMVA")) {
+          if (nameLeafModified.Contains("Jet_btag")) {
+            if (nameLeafModified.Contains("Jet_btagCMVA") ||
+                nameLeafModified.Contains("Jet_btagHbb")) {
               if (debug) std::cout << "Found Jet_btagCMVA" << std::endl;
               lowerCorrect = -1;
               upperCorrect = 1;
@@ -161,23 +168,29 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             }
             return;
           }
-          if (nameLeafModified.BeginsWith("Jet_ch")) {
+          if (nameLeafModified.Contains("Jet_ch")) {
             if (debug) std::cout << "Found Jet_ch" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
             return;
           }
-          if (nameLeafModified.BeginsWith("Jet_qgl")) {
+          if (nameLeafModified.Contains("Jet_qgl")) {
             if (debug) std::cout << "Found Jet_qgl" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
             return;
           }
+          if (nameLeafModified.EndsWith("_puIdDisc")) {
+            // Pileup ID discriminant
+            if (debug) std::cout << "Found puIdDisc" << std::endl;
+            lowerCorrect = -1;
+            upperCorrect = 1;
+          }
           if (titleLeaf.EndsWith("Energy Fraction") ||
               titleLeaf.EndsWith("energy fraction")) {
             if (debug) std::cout << "Found Energy Fraction" << std::endl;
             lowerCorrect = 0;
-            upperCorrect = 0;
+            upperCorrect = 1;
             return;
           }
         }
@@ -188,8 +201,8 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             nBinCorrect = upperCorrect - lowerCorrect;
             return;
           }
-          if (nameLeafModified.Contains("_rankJet")) {
-            if (debug) std::cout << "Found rankJet" << std::endl;
+          if (nameLeafModified.Contains("_rank")) {
+            if (debug) std::cout << "Found rank" << std::endl;
             lowerCorrect = 0;
             nBinCorrect = upperCorrect - lowerCorrect;
             return;
@@ -228,58 +241,78 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
     return false;
     // return !(nameLeafModified.BeginsWith("GenDMatching_rankJetPassedPt") ||
     //          nameLeafModified.BeginsWith("GenDMatching_JetMatchedId"));
-    // return !nameLeafModified.EqualTo("Jet_pt");
+    // return !nameLeafModified.EqualTo("GenDMathcing_deltaRJet") && !nameLeafModified.EqualTo("Jet_neEmEF");
+    // return !nameLeafModified.EqualTo("Jet_neEmEF");
+    // return !nameLeafModified.EqualTo("nGenDMatched");
+    // return !nameLeafModified.EqualTo("FatJetMatched_rankFatJetPassedPt");
   };
   merger->funTitleLeaf = [](TLeaf* leaf) -> TString {
     return leaf->GetBranch()->GetTitle();
   };
   for (TString nameTT : vNameTT) {
     if (nameTT.Contains("Match")) {
-      const TString tstrDJetDeltaR = "GenDMathcing_deltaRJet";
-      const TString tstrMatchedId = "GenDMatching_JetMatchedId";
-      const TString tstrDJetRankPt = "GenDMatching_rankJetPassedPt";
-      const TString tstrJetRankPt = "JetMatched_rankJetPassedPt";
-      for (UInt_t iD = 0; iD < 4; iD++) {
-        auto ptrAnalyzerDJetDeltaR = new HistMerger::LeafAnalyzerDefault;
-        ptrAnalyzerDJetDeltaR->SetNameTT(nameTT);
-        ptrAnalyzerDJetDeltaR->SetExpressionCustom(
-            TString::Format("%s%d", tstrDJetDeltaR.Data(), iD), "Float_t",
-            TString::Format("DeltaR between each d quark no. %d and its closest jet", iD),
-            TString::Format("%s[%d]", tstrDJetDeltaR.Data(), iD)
-        );
-        ptrAnalyzerDJetDeltaR->SetHasTarget({tstrDJetDeltaR});
-        merger->vAnalyzerCustomByName.push_back((HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetDeltaR);
-        auto ptrAnalyzerMatchedId = new HistMerger::LeafAnalyzerDefault;
-        ptrAnalyzerMatchedId->SetNameTT(nameTT);
-        ptrAnalyzerMatchedId->SetExpressionCustom(
-            TString::Format("%s%d", tstrMatchedId.Data(), iD), "Bool_t",
-            TString::Format("Whether d-quark no. %d matches a THIN jet", iD),
-            TString::Format("%s[%d]", tstrMatchedId.Data(), iD));
-        ptrAnalyzerMatchedId->SetHasTarget({tstrMatchedId});
-        merger->vAnalyzerCustomByName.push_back(
-            (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerMatchedId);
-        auto ptrAnalyzerDJetRankPt = new HistMerger::LeafAnalyzerDefault;
-        ptrAnalyzerDJetRankPt->SetNameTT(nameTT);
-        ptrAnalyzerDJetRankPt->SetExpressionCustom(
-            TString::Format("%s%d", tstrDJetRankPt.Data(), iD), "Int_t",
-            TString::Format("Rank (0-indexed) of pt among  passed jet matching "
-                            "quark no. %d",
-                            iD),
-            TString::Format("%s[%d]", tstrDJetRankPt.Data(), iD),
-            TString::Format("%s[%d]>0", tstrMatchedId.Data(), iD).Data());
-        ptrAnalyzerDJetRankPt->SetHasTarget({tstrDJetRankPt, tstrMatchedId});
-        merger->vAnalyzerCustomByName.push_back(
-            (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetRankPt);
-        auto ptrAnalyzerRankPtAllMatched =
-            new HistMerger::LeafAnalyzerDefault(*ptrAnalyzerDJetRankPt);
-        ptrAnalyzerRankPtAllMatched->SetSelection("");
-        ptrAnalyzerRankPtAllMatched->SetHasTarget(
-            {tstrDJetRankPt}, [tstrMatchedId](TTree* tree) -> Bool_t {
-              return tree->GetLeaf(tstrMatchedId) == nullptr;
-            });
-        merger->vAnalyzerCustomByName.push_back(
-            (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerRankPtAllMatched);
-      }
+      // const TString tstrDJetDeltaR = "GenDMatching_deltaRJet";
+      // const TString tstrMatchedId = "GenDMatching_JetMatchedId";
+      // const TString tstrDJetRankPt = "GenDMatching_rankJetPassedPt";
+      // const TString tstrJetRankPt = "JetMatched_rankJetPassedPt";
+      // for (UInt_t iD = 0; iD < 4; iD++) {
+      //   auto ptrAnalyzerDJetDeltaR = new HistMerger::LeafAnalyzerDefault;
+      //   ptrAnalyzerDJetDeltaR->SetNameTT(nameTT);
+      //   ptrAnalyzerDJetDeltaR->SetExpressionCustom(
+      //       TString::Format("%s%d", tstrDJetDeltaR.Data(), iD), "Float_t",
+      //       TString::Format(
+      //           "DeltaR between each d quark no. %d and its closest jet", iD),
+      //       TString::Format("%s[%d]", tstrDJetDeltaR.Data(), iD));
+      //   ptrAnalyzerDJetDeltaR->SetHasTarget({tstrDJetDeltaR});
+      //   merger->vAnalyzerCustomByName.push_back(
+      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetDeltaR);
+      //   auto ptrAnalyzerMatchedId = new HistMerger::LeafAnalyzerDefault;
+      //   ptrAnalyzerMatchedId->SetNameTT(nameTT);
+      //   ptrAnalyzerMatchedId->SetExpressionCustom(
+      //       TString::Format("%s%d", tstrMatchedId.Data(), iD), "Bool_t",
+      //       TString::Format("Whether d-quark no. %d matches a THIN jet", iD),
+      //       TString::Format("%s[%d]", tstrMatchedId.Data(), iD));
+      //   ptrAnalyzerMatchedId->SetHasTarget({tstrMatchedId});
+      //   merger->vAnalyzerCustomByName.push_back(
+      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerMatchedId);
+      //   auto ptrAnalyzerDJetRankPt = new HistMerger::LeafAnalyzerDefault;
+      //   ptrAnalyzerDJetRankPt->SetNameTT(nameTT);
+      //   ptrAnalyzerDJetRankPt->SetExpressionCustom(
+      //       TString::Format("%s%d", tstrDJetRankPt.Data(), iD), "Int_t",
+      //       TString::Format("Rank (0-indexed) of pt among  passed jet matching "
+      //                       "quark no. %d",
+      //                       iD),
+      //       TString::Format("%s[%d]", tstrDJetRankPt.Data(), iD),
+      //       TString::Format("%s[%d]>0", tstrMatchedId.Data(), iD).Data());
+      //   ptrAnalyzerDJetRankPt->SetHasTarget({tstrDJetRankPt, tstrMatchedId});
+      //   merger->vAnalyzerCustomByName.push_back(
+      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetRankPt);
+      //   auto ptrAnalyzerRankPtAllMatched =
+      //       new HistMerger::LeafAnalyzerDefault(*ptrAnalyzerDJetRankPt);
+      //   ptrAnalyzerRankPtAllMatched->SetSelection("");
+      //   ptrAnalyzerRankPtAllMatched->SetHasTarget(
+      //       {tstrDJetRankPt}, [tstrMatchedId](TTree* tree) -> Bool_t {
+      //         return tree->GetLeaf(tstrMatchedId) == nullptr;
+      //       });
+      //   merger->vAnalyzerCustomByName.push_back(
+      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerRankPtAllMatched);
+      // }
+      auto ptrAnalyzerJetRankLast = new HistMerger::LeafAnalyzerDefault;
+      ptrAnalyzerJetRankLast->SetNameTT(nameTT);
+      ptrAnalyzerJetRankLast->SetExpressionCustom(
+          "maxJetMatched_rankJetPassedPt",
+          "Int_t", "Last rank of pt among passed jets",
+          "JetMatched_rankJetPassedPt[nJetMatched-1]");
+      ptrAnalyzerJetRankLast->SetHasTarget({"JetMatched_rankJetPassedPt", "nJetMatched"});
+      merger->vAnalyzerCustomByName.push_back(ptrAnalyzerJetRankLast);
+      auto ptrAnalyzerFatJetRankLast = new HistMerger::LeafAnalyzerDefault;
+      ptrAnalyzerFatJetRankLast->SetNameTT(nameTT);
+      ptrAnalyzerFatJetRankLast->SetExpressionCustom(
+          "maxFatJetMatched_rankFatJetPassedPt",
+          "Int_t", "Last rank of pt among passed jets",
+          "FatJetMatched_rankFatJetPassedPt[nFatJetMatched-1]");
+      ptrAnalyzerFatJetRankLast->SetHasTarget({"FatJetMatched_rankFatJetPassedPt", "nFatJetMatched"});
+      merger->vAnalyzerCustomByName.push_back(ptrAnalyzerFatJetRankLast);
     }
   }
   merger->Run();
