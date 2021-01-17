@@ -38,7 +38,7 @@
 #ifndef ARRAY_SIZE_FUNCTION
 #define ARRAY_SIZE_FUNCTION
 
-template<typename T, size_t n>
+template <typename T, size_t n>
 size_t array_size(T const (&)[n]) {
   return n;
 }
@@ -195,18 +195,14 @@ void xAna_monoZ_preselect(
   std::vector<Float_t> vGenDMatchingPt(4, 0);
   std::vector<Float_t> vGenDMatchingEta(4, 0);
   std::vector<Float_t> vGenDMatchingPhi(4, 0);
-  std::vector<Float_t> *arrPVGenDMatchingP4Component[3] = {
-      &vGenDMatchingPt,
-      &vGenDMatchingEta,
-      &vGenDMatchingPhi};
+  std::vector<Float_t>* arrPVGenDMatchingP4Component[3] = {
+      &vGenDMatchingPt, &vGenDMatchingEta, &vGenDMatchingPhi};
   std::vector<Float_t> vGenDPairMatchingPt(2, 0);
   std::vector<Float_t> vGenDPairMatchingEta(2, 0);
   std::vector<Float_t> vGenDPairMatchingPhi(2, 0);
   std::vector<Float_t> vGenDPairMatchingMass(2, 0);
-  std::vector<Float_t> *arrPVGenDPairMatchingP4Component[4] = {
-      &vGenDPairMatchingPt,
-      &vGenDPairMatchingEta,
-      &vGenDPairMatchingPhi,
+  std::vector<Float_t>* arrPVGenDPairMatchingP4Component[4] = {
+      &vGenDPairMatchingPt, &vGenDPairMatchingEta, &vGenDPairMatchingPhi,
       &vGenDPairMatchingMass};
   {
     const char* nameTemplate = "GenD%sMatching_%s";
@@ -333,7 +329,8 @@ void xAna_monoZ_preselect(
   }
   Bool_t arrIsPassingZMassCut[2];
   for (Byte_t i = 0; i < 2; i++) {
-    TString name = namesLepton[i] + "Pair_isPassingZMassCut";
+    TString name =
+        TString::Format("is%sPairPassingZMassCut", namesLepton[i].Data());
     TString title = "Whether is the mass of the " + namesLeptonLower[i] +
                     " pair close to Z\'s";
     arrTTGen[i]
@@ -379,7 +376,8 @@ void xAna_monoZ_preselect(
         ->SetTitle("Whether all the d-quarks matches a jet");
     TString nameDPair = "areAllGenDPairMatched";
     arrTTPreselectedMatchingFatJet[i]
-        ->Branch(nameDPair, &areAllGenDPairMatched, nameDPair + "/O", __SIZEOF_INT__)
+        ->Branch(nameDPair, &areAllGenDPairMatched, nameDPair + "/O",
+                 __SIZEOF_INT__)
         ->SetTitle("Whether all the d-pairs matches a fat jet");
   }
   UInt_t nJetMatched;
@@ -406,13 +404,13 @@ void xAna_monoZ_preselect(
   }
   auto lambdaFillTheTrees = [&]() -> void {
     const Bool_t toCollectGen = isSignal;
-    const Bool_t toCollectNumCorrect = false;
+    const Bool_t toCollectNumCorrect = true;
     const Bool_t toCollectZMassCutted = true;
     const Bool_t toCollectJetMatching = true;
     const Bool_t toCollectAllMatched = true;
     if (toCollectGen)
       for (Byte_t i = 0; i < 3; i++) {
-        if (arrHasGenLepton[i]) {
+        if (arrHasGenLepton[i] && haveAllGenDMatching) {
           arrTTGen[i]->Fill();
         }
       }
@@ -427,15 +425,16 @@ void xAna_monoZ_preselect(
           arrIsPassingZMassCut[i]) {
         arrTTPreselectedMatchingJet[i]->Fill();
       }
-      if (((!isSignal) || areAllGenDMatchingPassed) && toCollectAllMatched && areAllGenDMatched &&
-          arrIsPassingZMassCut[i]) {
+      if (((!isSignal) || areAllGenDMatchingPassed) && toCollectAllMatched &&
+          areAllGenDMatched && arrIsPassingZMassCut[i]) {
         arrTTAllMatchedJet[i]->Fill();
       }
-      if (((!isSignal) || areAllGenDPairMatchingPassed) && toCollectJetMatching &&
-          arrIsPassingZMassCut[i]) {
+      if (((!isSignal) || areAllGenDPairMatchingPassed) &&
+          toCollectJetMatching && arrIsPassingZMassCut[i]) {
         arrTTPreselectedMatchingFatJet[i]->Fill();
       }
-      if (((!isSignal) || areAllGenDPairMatchingPassed) && toCollectAllMatched && areAllGenDPairMatched &&
+      if (((!isSignal) || areAllGenDPairMatchingPassed) &&
+          toCollectAllMatched && areAllGenDPairMatched &&
           arrIsPassingZMassCut[i]) {
         arrTTAllMatchedFatJet[i]->Fill();
       }
@@ -678,677 +677,687 @@ void xAna_monoZ_preselect(
           ->SetTitle(title);
     }
   }
-    DescriptionCollectorForUntuplizer collectorGenDMatching;
-    DescriptionCollectorForUntuplizer collectorHT;
-    DescriptionCollectorForUntuplizer collectorJet;
-    DescriptionCollectorForUntuplizer collectorFatJet;
-    UInt_t nLeafOriginal;
-    {
-      TFile* tfIn = TFile::Open(inputFile.data(), "READ");
-      TTree* ttIn = (TTree*)tfIn->Get(nameTreeIn);
-      TObjArray* tarrLeafOriginal = ttIn->GetListOfLeaves();
+  DescriptionCollectorForUntuplizer collectorGenDMatching;
+  DescriptionCollectorForUntuplizer collectorHT;
+  DescriptionCollectorForUntuplizer collectorJet;
+  DescriptionCollectorForUntuplizer collectorFatJet;
+  UInt_t nLeafOriginal;
+  {
+    TFile* tfIn = TFile::Open(inputFile.data(), "READ");
+    TTree* ttIn = (TTree*)tfIn->Get(nameTreeIn);
+    TObjArray* tarrLeafOriginal = ttIn->GetListOfLeaves();
 
-      nLeafOriginal = tarrLeafOriginal->GetSize();
+    nLeafOriginal = tarrLeafOriginal->GetSize();
 
-      // std::vector<Bool_t> arrVIdxLeafLeptonID[2];
-      std::vector<Int_t> vIdxLeafJet;
-      vIdxLeafJet.clear();
-      for (UInt_t i = 0; i < nLeafOriginal; i++) {
-        TLeaf* tlfCurrent = (TLeaf*)tarrLeafOriginal->At(i);
-        // ObjectDescription descriptionCurrent;
-        BranchDescription descriptionCurrent;
-        descriptionCurrent.name = (TString)tlfCurrent->GetName();
-        descriptionCurrent.title = (TString)tlfCurrent->GetBranch()->GetTitle();
-        // TString typeNameCurrent = tlfCurrent->GetTypeName();
-        descriptionCurrent.typeName = tlfCurrent->GetTypeName();
-        if (descriptionCurrent.name.BeginsWith("Jet_")) {
-          collectorJet.BranchFor(descriptionCurrent);
+    // std::vector<Bool_t> arrVIdxLeafLeptonID[2];
+    std::vector<Int_t> vIdxLeafJet;
+    vIdxLeafJet.clear();
+    for (UInt_t i = 0; i < nLeafOriginal; i++) {
+      TLeaf* tlfCurrent = (TLeaf*)tarrLeafOriginal->At(i);
+      // ObjectDescription descriptionCurrent;
+      BranchDescription descriptionCurrent;
+      descriptionCurrent.name = (TString)tlfCurrent->GetName();
+      descriptionCurrent.title = (TString)tlfCurrent->GetBranch()->GetTitle();
+      // TString typeNameCurrent = tlfCurrent->GetTypeName();
+      descriptionCurrent.typeName = tlfCurrent->GetTypeName();
+      if (descriptionCurrent.name.BeginsWith("Jet_")) {
+        collectorJet.BranchFor(descriptionCurrent);
+      }
+      if (descriptionCurrent.name.BeginsWith("FatJet_")) {
+        collectorFatJet.BranchFor(descriptionCurrent);
+      }
+      if (descriptionCurrent.name.BeginsWith("SoftActivityJetHT")) {
+        // if (typeNameCurrent == "Float_t") {
+        if (descriptionCurrent.typeName.EqualTo("Float_t")) {
+          if (debug)
+            std::cout << "Found " << descriptionCurrent.name
+                      << " with type "
+                      // << typeNameCurrent << std::endl;
+                      << descriptionCurrent.typeName << std::endl;
+          // vLeafDescriptionHTFloat.push_back(descriptionCurrent);
+          collectorHT.BranchFor(descriptionCurrent);
         }
-        if (descriptionCurrent.name.BeginsWith("FatJet_")) {
-          collectorFatJet.BranchFor(descriptionCurrent);
-        }
-        if (descriptionCurrent.name.BeginsWith("SoftActivityJetHT")) {
-          // if (typeNameCurrent == "Float_t") {
-          if (descriptionCurrent.typeName.EqualTo("Float_t")) {
-            if (debug)
-              std::cout << "Found " << descriptionCurrent.name
-                        << " with type "
-                        // << typeNameCurrent << std::endl;
-                        << descriptionCurrent.typeName << std::endl;
-            // vLeafDescriptionHTFloat.push_back(descriptionCurrent);
-            collectorHT.BranchFor(descriptionCurrent);
-          }
-        }
-        if (descriptionCurrent.name.BeginsWith("GenPart_") &&
-            !descriptionCurrent.name.EndsWith("_idx") &&
-            !descriptionCurrent.name.EndsWith("_pt") &&
-            !descriptionCurrent.name.EndsWith("_eta") &&
-            !descriptionCurrent.name.EndsWith("_phi") &&
-            !descriptionCurrent.name.EndsWith("_mass")) {
-          collectorGenDMatching.BranchFor(descriptionCurrent);
-        }
+      }
+      if (descriptionCurrent.name.BeginsWith("GenPart_") &&
+          !descriptionCurrent.name.EndsWith("_idx") &&
+          !descriptionCurrent.name.EndsWith("_pt") &&
+          !descriptionCurrent.name.EndsWith("_eta") &&
+          !descriptionCurrent.name.EndsWith("_phi") &&
+          !descriptionCurrent.name.EndsWith("_mass")) {
+        collectorGenDMatching.BranchFor(descriptionCurrent);
       }
     }
+  }
 
-    collectorGenDMatching.Prepare();
-    collectorHT.Prepare();
-    collectorJet.Prepare();
-    collectorFatJet.Prepare();
-    BranchMounterIterableForUntuplizer mounterGenDMatching(
-        collectorGenDMatching, data, [](BranchDescription descriptionCurrent) {
-          Ssiz_t lenName = descriptionCurrent.name.Length();
-          const Ssiz_t lenPrefOriginal = 8;
-          return BranchDescription(
-              "GenDMatching_" +
-                  descriptionCurrent.name(lenPrefOriginal, lenName - 1),
-              descriptionCurrent.title, descriptionCurrent.typeName);
-        });
-    // BranchMounterIterableForUntuplizer
-    // mounterGenDMatching(collectorGenDMatching, data);
-    BranchMounterScalarForUntuplizer mounterHT(collectorHT, data);
-    BranchMounterIterableForUntuplizer mounterJet(collectorJet, data);
-    BranchMounterIterableForUntuplizer mounterFatJet(collectorFatJet, data);
-    {
-      auto funDoIntersection = [&mounterHT](TTree* tree) {
-        mounterHT.BranchOn(tree);
-      };
-      auto funDoJet = [&mounterGenDMatching, &mounterJet](TTree *tree) {
-        mounterGenDMatching.BranchOn(tree);
-        mounterJet.BranchOn(tree);
-      };
-      auto funDoFatJet = [&mounterFatJet](TTree *tree) {
-        mounterFatJet.BranchOn(tree);
-      };
-      for (TTree *const tree: arrTTGen) {
-        funDoIntersection(tree);
-        funDoJet(tree);
-        funDoFatJet(tree);
-      }
-      for (TTree *const tree: arrTTPreselectedMatchingJet) {
-        funDoIntersection(tree);
-        funDoJet(tree);
-      }
-      for (TTree *const tree: arrTTAllMatchedJet) {
-        funDoIntersection(tree);
-        funDoJet(tree);
-      }
-      for (TTree *const tree: arrTTPreselectedMatchingFatJet) {
-        funDoIntersection(tree);
-        funDoFatJet(tree);
-      }
-      for (TTree *const tree: arrTTAllMatchedFatJet) {
-        funDoIntersection(tree);
-        funDoFatJet(tree);
-      }
+  collectorGenDMatching.Prepare();
+  collectorHT.Prepare();
+  collectorJet.Prepare();
+  collectorFatJet.Prepare();
+  BranchMounterIterableForUntuplizer mounterGenDMatching(
+      collectorGenDMatching, data, [](BranchDescription descriptionCurrent) {
+        Ssiz_t lenName = descriptionCurrent.name.Length();
+        const Ssiz_t lenPrefOriginal = 8;
+        return BranchDescription(
+            "GenDMatching_" +
+                descriptionCurrent.name(lenPrefOriginal, lenName - 1),
+            descriptionCurrent.title, descriptionCurrent.typeName);
+      });
+  // BranchMounterIterableForUntuplizer
+  // mounterGenDMatching(collectorGenDMatching, data);
+  BranchMounterScalarForUntuplizer mounterHT(collectorHT, data);
+  BranchMounterIterableForUntuplizer mounterJet(collectorJet, data);
+  BranchMounterIterableForUntuplizer mounterFatJet(collectorFatJet, data);
+  {
+    auto funDoIntersection = [&mounterHT](TTree* tree) {
+      mounterHT.BranchOn(tree);
+    };
+    auto funDoJet = [&mounterGenDMatching, &mounterJet](TTree* tree) {
+      mounterGenDMatching.BranchOn(tree);
+      mounterJet.BranchOn(tree);
+    };
+    auto funDoFatJet = [&mounterFatJet](TTree* tree) {
+      mounterFatJet.BranchOn(tree);
+    };
+    for (TTree* const tree : arrTTGen) {
+      funDoIntersection(tree);
+      funDoJet(tree);
+      funDoFatJet(tree);
     }
+    for (TTree* const tree : arrTTPreselectedMatchingJet) {
+      funDoIntersection(tree);
+      funDoJet(tree);
+    }
+    for (TTree* const tree : arrTTAllMatchedJet) {
+      funDoIntersection(tree);
+      funDoJet(tree);
+    }
+    for (TTree* const tree : arrTTPreselectedMatchingFatJet) {
+      funDoIntersection(tree);
+      funDoFatJet(tree);
+    }
+    for (TTree* const tree : arrTTAllMatchedFatJet) {
+      funDoIntersection(tree);
+      funDoFatJet(tree);
+    }
+  }
 
-    for (jEntry = 0; jEntry < nEntry; jEntry++) {
-      data.GetEntry(jEntry);
+  for (jEntry = 0; jEntry < nEntry; jEntry++) {
+    data.GetEntry(jEntry);
 
-      nJet = data.GetInt("nJet");
-      nFatJet = data.GetInt("nFatJet");
-      // if (debug) std::cout << "nJet: " << nJet << std::endl;
+    nJet = data.GetInt("nJet");
+    nFatJet = data.GetInt("nFatJet");
+    // if (debug) std::cout << "nJet: " << nJet << std::endl;
 
-      areAllGenDMatchingPassed = false;
-      areAllGenDPairMatchingPassed = false;
-      areAllGenDPairMatchingPassed = false;
-      areAllGenDMatched = false;
-      areAllGenDPairMatched = false;
-      areAllJetsMatchedLeading = false;
-      areAllFatJetsMatchedLeading = false;
-      nGenDMatchingPassed = 0;
-      nGenDPairMatchingPassed = 0;
-      nGenDMatched = 0;
-      nGenDPairMatched = 0;
-      nJetPassed = 0;
-      nFatJetPassed = 0;
-      nJetMatched= 0;
-      nFatJetMatched = 0;
-      // Allocated after declearation (2 or 4 elements)
-      std::fill(vGenDMatchingPt.begin(), vGenDMatchingPt.end(), -1);
-      std::fill(vGenDMatchingEta.begin(), vGenDMatchingEta.end(), -1000);
-      std::fill(vGenDMatchingPhi.begin(), vGenDMatchingPhi.end(), -10);
-      std::fill(vGenDPairMatchingPt.begin(), vGenDPairMatchingPt.end(), -1);
-      std::fill(vGenDPairMatchingEta.begin(), vGenDPairMatchingEta.end(), -1000);
-      std::fill(vGenDPairMatchingPhi.begin(), vGenDPairMatchingPhi.end(), -10);
-      std::fill(vGenDPairMatchingMass.begin(), vGenDPairMatchingMass.end(), -1);
-      std::fill(vDeltaRDJet.begin(), vDeltaRDJet.end(), -1);
-      std::fill(vDeltaRJetPair.begin(), vDeltaRJetPair.end(), -1);
-      std::fill(vDeltaRBetweenJetPairs.begin(), vDeltaRBetweenJetPairs.end(), -1);
-      std::fill(vDeltaRDPairFatJet.begin(), vDeltaRDPairFatJet.end(), -1);
-      std::fill(vDGenIdxJetClosest.begin(), vDGenIdxJetClosest.end(), -1);
-      std::fill(vGenDPairIdxFatJetClosest.begin(), vGenDPairIdxFatJetClosest.end(), -1);
-      std::fill(vGenDMatchedId.begin(), vGenDMatchedId.end(), false);
-      std::fill(vGenDPairMatchedId.begin(), vGenDPairMatchedId.end(), false);
-      vIdxJetPassed.clear();
-      vIdxFatJetPassed.clear();
+    areAllGenDMatchingPassed = false;
+    areAllGenDPairMatchingPassed = false;
+    areAllGenDPairMatchingPassed = false;
+    areAllGenDMatched = false;
+    areAllGenDPairMatched = false;
+    areAllJetsMatchedLeading = false;
+    areAllFatJetsMatchedLeading = false;
+    nGenDMatchingPassed = 0;
+    nGenDPairMatchingPassed = 0;
+    nGenDMatched = 0;
+    nGenDPairMatched = 0;
+    nJetPassed = 0;
+    nFatJetPassed = 0;
+    nJetMatched = 0;
+    nFatJetMatched = 0;
+    // Allocated after declearation (2 or 4 elements)
+    std::fill(vGenDMatchingPt.begin(), vGenDMatchingPt.end(), -1);
+    std::fill(vGenDMatchingEta.begin(), vGenDMatchingEta.end(), -1000);
+    std::fill(vGenDMatchingPhi.begin(), vGenDMatchingPhi.end(), -10);
+    std::fill(vGenDPairMatchingPt.begin(), vGenDPairMatchingPt.end(), -1);
+    std::fill(vGenDPairMatchingEta.begin(), vGenDPairMatchingEta.end(), -1000);
+    std::fill(vGenDPairMatchingPhi.begin(), vGenDPairMatchingPhi.end(), -10);
+    std::fill(vGenDPairMatchingMass.begin(), vGenDPairMatchingMass.end(), -1);
+    std::fill(vDeltaRDJet.begin(), vDeltaRDJet.end(), -1);
+    std::fill(vDeltaRJetPair.begin(), vDeltaRJetPair.end(), -1);
+    std::fill(vDeltaRBetweenJetPairs.begin(), vDeltaRBetweenJetPairs.end(), -1);
+    std::fill(vDeltaRDPairFatJet.begin(), vDeltaRDPairFatJet.end(), -1);
+    std::fill(vDGenIdxJetClosest.begin(), vDGenIdxJetClosest.end(), -1);
+    std::fill(vGenDPairIdxFatJetClosest.begin(),
+              vGenDPairIdxFatJetClosest.end(), -1);
+    std::fill(vGenDMatchedId.begin(), vGenDMatchedId.end(), false);
+    std::fill(vGenDPairMatchedId.begin(), vGenDPairMatchedId.end(), false);
+    vIdxJetPassed.clear();
+    vIdxFatJetPassed.clear();
 
-      areAllGenDMatchingPassed = false;
-      areAllGenDPairMatchingPassed = false;
+    areAllGenDMatchingPassed = false;
+    areAllGenDPairMatchingPassed = false;
 
-      Bool_t hasGenLepton = false;
-      UInt_t nGenPart = data.GetInt("nGenPart");
-      Int_t* ptrGenPart_pdgId = data.GetPtrInt("GenPart_pdgId");
-      Int_t* ptrGenPart_genPartIdxMother =
-          data.GetPtrInt("GenPart_genPartIdxMother");
-      for (Byte_t i = 0; i < 3; i++) arrHasGenLepton[i] = false;
+    Bool_t hasGenLepton = false;
+    UInt_t nGenPart = data.GetInt("nGenPart");
+    Int_t* ptrGenPart_pdgId = data.GetPtrInt("GenPart_pdgId");
+    Int_t* ptrGenPart_genPartIdxMother =
+        data.GetPtrInt("GenPart_genPartIdxMother");
+    for (Byte_t i = 0; i < 3; i++) arrHasGenLepton[i] = false;
 
-      haveAllGenDMatching = true;
-      Bool_t arrHasGenD[4];
-      std::fill(std::begin(arrHasGenD), std::end(arrHasGenD), false);
-      std::fill(std::begin(vGenDMatchingIdx), std::end(vGenDMatchingIdx), 0);
-      for (UInt_t ig = 0; ig < nGenPart; ig++) {
-        if (ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]] == pdgZ) {
-          Int_t genparIdAbs = TMath::Abs(ptrGenPart_pdgId[ig]);
-          if (genparIdAbs == pdgElectron) {
-            arrHasGenLepton[0] = true;
-            hasGenLepton = true;
-            // break;
-          } else if (genparIdAbs == pdgMuon) {
-            arrHasGenLepton[1] = true;
-            hasGenLepton = true;
-            // break;
-          } else if (genparIdAbs == pdgTau) {
-            arrHasGenLepton[2] = true;
-            hasGenLepton = true;
-            // break;
-          }
+    haveAllGenDMatching = true;
+    Bool_t arrHasGenD[4];
+    std::fill(std::begin(arrHasGenD), std::end(arrHasGenD), false);
+    std::fill(std::begin(vGenDMatchingIdx), std::end(vGenDMatchingIdx), -1);
+    for (UInt_t ig = 0; ig < nGenPart; ig++) {
+      if (ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]] == pdgZ) {
+        Int_t genparIdAbs = TMath::Abs(ptrGenPart_pdgId[ig]);
+        if (genparIdAbs == pdgElectron) {
+          arrHasGenLepton[0] = true;
+          hasGenLepton = true;
+          // break;
+        } else if (genparIdAbs == pdgMuon) {
+          arrHasGenLepton[1] = true;
+          hasGenLepton = true;
+          // break;
+        } else if (genparIdAbs == pdgTau) {
+          arrHasGenLepton[2] = true;
+          hasGenLepton = true;
+          // break;
         }
-        if (TMath::Abs(ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]]) ==
-                pdgX2 &&
-            TMath::Abs(ptrGenPart_pdgId[ig]) == pdgDown) {
-          Byte_t iD =
-              (signbit(ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]])
-               << 1) +
-              signbit(ptrGenPart_pdgId[ig]);
+      }
+      // if (debug) std::cout << "jEntry: " << jEntry << "\n";
+      if (TMath::Abs(ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]]) ==
+              pdgX2 &&
+          TMath::Abs(ptrGenPart_pdgId[ig]) == pdgDown) {
+        Byte_t iD = (static_cast<Byte_t>(signbit(
+                         ptrGenPart_pdgId[ptrGenPart_genPartIdxMother[ig]]))
+                     << 1) +
+                    (signbit(ptrGenPart_pdgId[ig]));
+        if (!arrHasGenD[iD]) {
+          // if (debug)
+          //   std::cout << "found lepton no. " << static_cast<Int_t>(iD) << " at "
+          //             << ig << "\n";
           arrHasGenD[iD] = true;
-          vGenDMatchingIdx[iD] = ig;
-        }
-        for (Byte_t i = 0; i < 4; i++) {
-          if (!arrHasGenD[i]) {
-            haveAllGenDMatching = false;
-            break;
-          }
+          if (debug) vGenDMatchingIdx[iD] = ig;
         }
       }
-      Bool_t isGenRightEvent = hasGenLepton && haveAllGenDMatching;
-
-      if (BranchMounterHelper::RunForEachNIdxSorted<
-              BranchMounterIterableForUntuplizer, std::vector<Int_t>::iterator,
-              Int_t>(mounterGenDMatching, vGenDMatchingIdx.begin(), 4) < 4 &&
-          debug) {
-        Error("BranchMounterHelper::RunForEachIdxSorted",
-              "Not all d indices found!");
-      };
-
-      Int_t nElectron = data.GetInt("nElectron");
-      Bool_t* ptrElectron_mvaFall17V2Iso_WPL =
-          data.GetPtrBool("Electron_mvaFall17V2Iso_WPL");
-      Bool_t* ptrElectron_mvaFall17V2Iso_WP90 =
-          data.GetPtrBool("Electron_mvaFall17V2Iso_WP90");
-      Bool_t* ptrElectron_mvaFall17V2Iso_WP80 =
-          data.GetPtrBool("Electron_mvaFall17V2Iso_WP80");
-      Bool_t* ptrElectron_isSoft = ptrElectron_mvaFall17V2Iso_WP80;
-      Bool_t* ptrElectron_isTight = ptrElectron_mvaFall17V2Iso_WP90;
-      Int_t nMuon = data.GetInt("nMuon");
-      Bool_t* ptrMuon_softId = data.GetPtrBool("Muon_softId");
-      Bool_t* ptrMuon_tightId = data.GetPtrBool("Muon_tightId");
-      Bool_t* ptrMuon_isSoft = ptrMuon_softId;
-      Bool_t* ptrMuon_isTight = ptrMuon_tightId;
-
-      Int_t nElectronSoft, nElectronTight;
-      {
-        Int_t i;
-        for (i = 0, nElectronSoft = 0, nElectronTight = 0; i < nElectron;
-             nElectronSoft += ptrElectron_isSoft[i],
-            nElectronTight += ptrElectron_isTight[i], i++)
-          ;
+    }
+    for (Byte_t iD = 0; iD < 4; iD++) {
+      if (!arrHasGenD[iD]) {
+        haveAllGenDMatching = false;
+        // if (debug)
+        //   std::cout << "lepton no. " << static_cast<Int_t>(iD) << "isn't found."
+        //             << "\n";
+        break;
       }
-      Bool_t isNumElectronCorrect = (nElectronSoft == 2 && nElectronTight == 2);
-      // nElectronPair = isNumElectronCorrect;
+    }
+    // if (debug) std::cout << std::flush;
+    Bool_t isGenRightEvent = hasGenLepton && haveAllGenDMatching;
 
-      Int_t nMuonSoft, nMuonTight;
-      {
-        Int_t i;
-        for (i = 0, nMuonSoft = 0, nMuonTight = 0; i < nElectron;
-             nMuonSoft += ptrMuon_isSoft[i], nMuonTight += ptrMuon_isTight[i],
-            i++)
-          ;
+    if (BranchMounterHelper::RunForEachNIdxSorted<
+            BranchMounterIterableForUntuplizer, std::vector<Int_t>::iterator,
+            Int_t>(mounterGenDMatching, vGenDMatchingIdx.begin(), 4) < 4 &&
+        debug) {
+      Error("BranchMounterHelper::RunForEachIdxSorted",
+            "Not all d indices found!");
+    }
+
+    Int_t nElectron = data.GetInt("nElectron");
+    Bool_t* ptrElectron_mvaFall17V2Iso_WPL =
+        data.GetPtrBool("Electron_mvaFall17V2Iso_WPL");
+    Bool_t* ptrElectron_mvaFall17V2Iso_WP90 =
+        data.GetPtrBool("Electron_mvaFall17V2Iso_WP90");
+    Bool_t* ptrElectron_mvaFall17V2Iso_WP80 =
+        data.GetPtrBool("Electron_mvaFall17V2Iso_WP80");
+    Bool_t* ptrElectron_isSoft = ptrElectron_mvaFall17V2Iso_WP80;
+    Bool_t* ptrElectron_isTight = ptrElectron_mvaFall17V2Iso_WP90;
+    Int_t nMuon = data.GetInt("nMuon");
+    Bool_t* ptrMuon_softId = data.GetPtrBool("Muon_softId");
+    Bool_t* ptrMuon_tightId = data.GetPtrBool("Muon_tightId");
+    Bool_t* ptrMuon_isSoft = ptrMuon_softId;
+    Bool_t* ptrMuon_isTight = ptrMuon_tightId;
+
+    Int_t nElectronSoft, nElectronTight;
+    {
+      Int_t i;
+      for (i = 0, nElectronSoft = 0, nElectronTight = 0; i < nElectron;
+           nElectronSoft += ptrElectron_isSoft[i],
+          nElectronTight += ptrElectron_isTight[i], i++)
+        ;
+    }
+    Bool_t isNumElectronCorrect = (nElectronSoft == 2 && nElectronTight == 2);
+    // nElectronPair = isNumElectronCorrect;
+
+    Int_t nMuonSoft, nMuonTight;
+    {
+      Int_t i;
+      for (i = 0, nMuonSoft = 0, nMuonTight = 0; i < nElectron;
+           nMuonSoft += ptrMuon_isSoft[i], nMuonTight += ptrMuon_isTight[i],
+          i++)
+        ;
+    }
+    Bool_t isNumMuonCorrect = (nMuonSoft == 2 && nMuonTight == 2);
+    // nMuonPair = isNumMuonCorrect;
+
+    Bool_t isNumCorrect = (isNumElectronCorrect != isNumMuonCorrect);
+    arrRecoIsLeptonNumCorrect[0] = isNumCorrect && isNumElectronCorrect;
+    arrRecoIsLeptonNumCorrect[1] = isNumCorrect && isNumMuonCorrect;
+
+    // if (!isNumCorrect) {
+    //   lambdaFillTheTrees();
+    //   continue;
+    // }
+    if (debug)
+      std::cout << "elepair, mupair: " << (Int_t)isNumElectronCorrect
+                << (Int_t)isNumMuonCorrect << std::endl;
+
+    for (Byte_t i = 0; i < 2; i++) arrIsPassingZMassCut[i] = 0;
+
+    Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
+    Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
+    Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
+    Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
+
+    TLorentzVector* ppElectronP4NumberCorrect[nElectronTight];
+    TLorentzVector* ptrElectronP4NumberCorrectSum;
+
+    if (arrRecoIsLeptonNumCorrect[0]) {
+      ptrElectronP4NumberCorrectSum = new TLorentzVector();
+      for (Int_t i = 0; i < nElectronTight; i++) {
+        ppElectronP4NumberCorrect[i] = new TLorentzVector();
+        // ppElectronP4NumberCorrect[i]->SetPtEtaPhiE(
+        //     ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
+        //     ptrElectron_eCorr[i]);
+        ppElectronP4NumberCorrect[i]->SetPtEtaPhiM(
+            ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
+            massElectron);
+        *ptrElectronP4NumberCorrectSum += *ppElectronP4NumberCorrect[i];
       }
-      Bool_t isNumMuonCorrect = (nMuonSoft == 2 && nMuonTight == 2);
-      // nMuonPair = isNumMuonCorrect;
+      // Double_t electronPair_mass = ptrElectronP4NumberCorrectSum->M();
+      // vElectronPair_massNumCorrect.push_back(electronPair_mass);
+      arrLeptonPair_mass[0] = ptrElectronP4NumberCorrectSum->M();
 
-      Bool_t isNumCorrect = (isNumElectronCorrect != isNumMuonCorrect);
-      arrRecoIsLeptonNumCorrect[0] = isNumCorrect && isNumElectronCorrect;
-      arrRecoIsLeptonNumCorrect[1] = isNumCorrect && isNumMuonCorrect;
+      // leptonPair_massNumCorrect = electronPair_mass;
+      // Mass z cuts
+      Double_t massZCutUpper = massZ + 20;
+      Double_t massZCutLower = massZ - 20;
+      // Z mass cut for electron pairs
+      arrIsPassingZMassCut[0] = (massZCutLower < arrLeptonPair_mass[0] &&
+                                 arrLeptonPair_mass[0] < massZCutUpper);
+      if (debug)
+        std::cout << "massLPair: " << arrLeptonPair_mass[0] << std::endl;
+    }
 
-      // if (!isNumCorrect) {
+    Float_t* ptrMuon_pt = data.GetPtrFloat("Muon_pt");
+    Float_t* ptrMuon_phi = data.GetPtrFloat("Muon_phi");
+    Float_t* ptrMuon_eta = data.GetPtrFloat("Muon_eta");
+    Float_t* ptrMuon_mass = data.GetPtrFloat("Muon_mass");
+
+    TLorentzVector* ppMuonP4NumberCorrect[nMuonTight];
+    TLorentzVector* ptrMuonP4NumberCorrectSum;
+    if (arrRecoIsLeptonNumCorrect[1]) {
+      ptrMuonP4NumberCorrectSum = new TLorentzVector();
+      for (Int_t i = 0; i < nMuonTight; i++) {
+        ppMuonP4NumberCorrect[i] = new TLorentzVector();
+        ppMuonP4NumberCorrect[i]->SetPtEtaPhiM(ptrMuon_pt[i], ptrMuon_eta[i],
+                                               ptrMuon_phi[i], ptrMuon_mass[i]);
+        *ptrMuonP4NumberCorrectSum += *ppMuonP4NumberCorrect[i];
+      }
+      // Double_t muonPair_mass = ptrMuonP4NumberCorrectSum->M();
+      // vMuonPair_massNumCorrect.push_back(muonPair_mass);
+      arrLeptonPair_mass[1] = ptrMuonP4NumberCorrectSum->M();
+
+      // leptonPair_massNumCorrect = muonPair_mass;
+      Double_t massZCutUpper = massZ + 20;
+      Double_t massZCutLower = massZ - 20;
+      // Z mass cut for muon pairs
+      arrIsPassingZMassCut[1] = (massZCutLower < arrLeptonPair_mass[1] &&
+                                 arrLeptonPair_mass[1] < massZCutUpper);
+      if (debug)
+        std::cout << "massLPair: " << arrLeptonPair_mass[1] << std::endl;
+    }
+
+    if (!arrIsPassingZMassCut[0] && !arrIsPassingZMassCut[1] &&
+        !isGenRightEvent) {
+      lambdaFillTheTrees();
+      continue;  // TODO
+    }
+
+    // std::vector<Int_t> vIdxZ_all, vIdxZp_all;
+    // vIdxZ_all.clear();
+    // vIdxZp_all.clear();
+    // for (Int_t i=0; i<nGenPart; i++) {
+    //   switch (ptrGenPart_pdgId[i]) {
+    //   case pdgZ:
+    //     vIdxZ_all.push_back(i);
+    //   case pdgZp:
+    //     vIdxZp_all.push_back(i);
+    //   }
+    // }
+
+    // ttNumCorrect->Fill();
+
+    // Jet_*
+    vIdxJetPassed.clear();
+    vIdxJetPassed.reserve(nJet);
+    Float_t* ptrJet_pt_original = data.GetPtrFloat("Jet_pt");
+    Float_t* ptrJet_eta_original = data.GetPtrFloat("Jet_eta");
+    Float_t* ptrJet_phi_original = data.GetPtrFloat("Jet_phi");
+    Float_t* ptrJet_mass_original = data.GetPtrFloat("Jet_mass");
+    // for (UInt_t idxJet = 0; idxJet < nJet; idxJet++) {
+    //   Bool_t isPassed = false;
+    //   if (ptrJet_pt_original[idxJet] < 30) continue;
+    //   if (TMath::Abs(ptrJet_eta_original[idxJet]) > 3) continue;
+    //   vIdxJetPassed.push_back(idxJet);
+    // }
+    mounterJet.PrepareForPushing(nJet);
+    {
+      auto ptrJet_pt_original_cloned = ptrJet_pt_original;
+      auto ptrJet_eta_original_cloned = ptrJet_eta_original;
+      // auto ptrJet_phi_original_cloned = ptrJet_phi_original;
+      // auto ptrJet_mass_original_cloned = ptrJet_mass_original;
+      for (UInt_t idxJet = 0; idxJet < nJet; idxJet++) {
+        Bool_t result = *ptrJet_pt_original_cloned > 30 &&
+                        TMath::Abs(*ptrJet_eta_original_cloned) < 3;
+        if (result) {
+          vIdxJetPassed.push_back(idxJet);
+        }
+        mounterJet.PushOrSkip(result);
+        ptrJet_pt_original_cloned++;
+        ptrJet_eta_original_cloned++;
+        // ptrJet_phi_original_cloned++;
+        // ptrJet_mass_original_cloned++;
+      }
+    }
+    nJetPassed = vIdxJetPassed.size();
+    vIdxJetPassed.shrink_to_fit();
+    vIdxFatJetPassed.clear();
+    vIdxFatJetPassed.reserve(nFatJet);
+    Float_t* ptrFatJet_pt_original = data.GetPtrFloat("FatJet_pt");
+    Float_t* ptrFatJet_eta_original = data.GetPtrFloat("FatJet_eta");
+    Float_t* ptrFatJet_phi_original = data.GetPtrFloat("FatJet_phi");
+    Float_t* ptrFatJet_mass_original = data.GetPtrFloat("FatJet_mass");
+    mounterFatJet.PrepareForPushing(nFatJet);
+    {
+      auto ptrFatJet_pt_original_cloned = ptrFatJet_pt_original;
+      auto ptrFatJet_eta_original_cloned = ptrFatJet_eta_original;
+      // auto ptrFatJet_phi_original_cloned = ptrFatJet_phi_original;
+      // auto ptrFatJet_mass_original_cloned = ptrFatJet_mass_original;
+      for (UInt_t idxFatJet = 0; idxFatJet < nFatJet; idxFatJet++) {
+        Bool_t result = *ptrFatJet_pt_original_cloned > 200 &&
+                        TMath::Abs(*ptrFatJet_eta_original_cloned) < 4.5;
+        if (result) {
+          vIdxFatJetPassed.push_back(idxFatJet);
+        }
+        mounterFatJet.PushOrSkip(result);
+        ptrFatJet_pt_original_cloned++;
+        ptrFatJet_eta_original_cloned++;
+      }
+    }
+    nFatJetPassed = vIdxFatJetPassed.size();
+    vIdxFatJetPassed.shrink_to_fit();
+    mounterHT.Push();
+
+    Byte_t iLeptonFound =
+        arrIsPassingZMassCut[0] ? 0 : 1;  // Electron event or muon event
+
+    Float_t* ptrGenPart_pt = data.GetPtrFloat("GenPart_pt");
+    Float_t* ptrGenPart_eta = data.GetPtrFloat("GenPart_eta");
+    Float_t* ptrGenPart_phi = data.GetPtrFloat("GenPart_phi");
+    std::fill(std::begin(vDGenIdxJetClosest), std::end(vDGenIdxJetClosest),
+              -10);
+    std::fill(std::begin(vDRankJetPassedPt), std::end(vDRankJetPassedPt), -10);
+    std::vector<UInt_t> vDMatchedRankActual(4);
+    vDMatchedRankActual.clear();
+    TLorentzVector* p4DMatching[4];
+    TLorentzVector* p4DJetClosest[4];
+    nGenDMatchingPassed = 0;
+    for (Byte_t iDMatching = 0; iDMatching < 4; iDMatching++) {
+      if (debug) std::printf("iDMatching: %d\n", iDMatching);
+      p4DJetClosest[iDMatching] = nullptr;
+      vDeltaRDJet[iDMatching] = __FLT_MAX__;
+      p4DMatching[iDMatching] = new TLorentzVector;
+      vGenDMatchingPt[iDMatching] = ptrGenPart_pt[vGenDMatchingIdx[iDMatching]];
+      vGenDMatchingEta[iDMatching] =
+          ptrGenPart_eta[vGenDMatchingIdx[iDMatching]];
+      vGenDMatchingPhi[iDMatching] =
+          ptrGenPart_phi[vGenDMatchingIdx[iDMatching]];
+      vGenDMatchingIdPassed[iDMatching] =
+          vGenDMatchingPt[iDMatching] > 30 &&
+          TMath::Abs(vGenDMatchingEta[iDMatching]) < 3;
+      if (vGenDMatchingIdPassed[iDMatching]) {
+        nGenDMatchingPassed++;
+      }
+      p4DMatching[iDMatching]->SetPtEtaPhiM(
+          vGenDMatchingPt[iDMatching], vGenDMatchingEta[iDMatching],
+          vGenDMatchingPhi[iDMatching], massDown);
+      for (Byte_t rankJetPassed = 0; rankJetPassed < nJetPassed;
+           rankJetPassed++) {
+        if (debug) std::printf("rankJetPassed: %d\n", rankJetPassed);
+        TLorentzVector* p4Jet = new TLorentzVector;
+        p4Jet->SetPtEtaPhiM(ptrJet_pt_original[vIdxJetPassed[rankJetPassed]],
+                            ptrJet_eta_original[vIdxJetPassed[rankJetPassed]],
+                            ptrJet_phi_original[vIdxJetPassed[rankJetPassed]],
+                            ptrJet_mass_original[vIdxJetPassed[rankJetPassed]]);
+        Double_t deltaRDJet = p4DMatching[iDMatching]->DeltaR(*p4Jet);
+        if (deltaRDJet < vDeltaRDJet[iDMatching]) {
+          // p4DJetClosest[iDMatching]->Delete();
+          // delete p4DJetClosest[iDMatching];
+          p4DJetClosest[iDMatching] = p4Jet;
+          vDeltaRDJet[iDMatching] = deltaRDJet;
+          vDRankJetPassedPt[iDMatching] = rankJetPassed;
+          vDGenIdxJetClosest[iDMatching] = vIdxJetPassed[rankJetPassed];
+        } else {
+          // p4Jet->Delete();
+          // delete p4Jet;
+        }
+      }
+      if (vDeltaRDJet[iDMatching] < 0.4) {
+        vGenDMatchedId[iDMatching] = true;
+        vDMatchedRankActual.push_back(vDRankJetPassedPt[iDMatching]);
+      } else {
+        vGenDMatchedId[iDMatching] = false;
+      }
+    }
+    areAllGenDMatchingPassed = nGenDMatchingPassed == 4;
+    // std::vector<UInt_t> vDPairMatchedRankActual(2);
+    // vDPairMatchedRankActual.clear();
+    vFatJetMatchedRankFatJetPassedPt.clear();
+    TLorentzVector* p4DPairMatching[2];
+    TLorentzVector* p4DPairFatJetClosest[2];
+    nGenDPairMatchingPassed = 0;
+    nGenDPairMatched = 0;
+    for (UInt_t iDPairMatching = 0; iDPairMatching < 2; iDPairMatching++) {
+      // std::cout << vGenDPairMatchingMass.size() << '\n';
+      // std::cout << (iDPairMatching << 1) << ((iDPairMatching << 1) + 1) <<
+      // "\n"; std::cout << p4DMatching[(iDPairMatching << 1)+1]->Pt() <<'\n';
+      p4DPairMatching[iDPairMatching] = new TLorentzVector;
+      *(p4DPairMatching[iDPairMatching]) =
+          *(p4DMatching[iDPairMatching << 1]) +
+          *(p4DMatching[(iDPairMatching << 1) + 1]);
+      // std::cout << "testtag" << std::endl;
+      vGenDPairMatchingPt[iDPairMatching] =
+          p4DPairMatching[iDPairMatching]->Pt();
+      vGenDPairMatchingEta[iDPairMatching] =
+          p4DPairMatching[iDPairMatching]->Eta();
+      vGenDPairMatchingPhi[iDPairMatching] =
+          p4DPairMatching[iDPairMatching]->Phi();
+      vGenDPairMatchingMass[iDPairMatching] =
+          p4DPairMatching[iDPairMatching]->M();
+      vGenDPairMatchingIdPassed[iDPairMatching] =
+          vGenDPairMatchingPt[iDPairMatching] > 200 &&
+          TMath::Abs(vGenDPairMatchingEta[iDPairMatching]) < 4.5;
+      if (vGenDPairMatchingIdPassed[iDPairMatching]) {
+        nGenDPairMatchingPassed++;
+      }
+      // Fat jet matching
+      for (Byte_t rankFatJetPassed = 0; rankFatJetPassed < nFatJetPassed;
+           rankFatJetPassed++) {
+        if (debug) std::printf("rankJetPassed: %d\n", rankFatJetPassed);
+        TLorentzVector* p4FatJet = new TLorentzVector;
+        p4FatJet->SetPtEtaPhiM(
+            ptrFatJet_pt_original[vIdxFatJetPassed[rankFatJetPassed]],
+            ptrFatJet_eta_original[vIdxFatJetPassed[rankFatJetPassed]],
+            ptrFatJet_phi_original[vIdxFatJetPassed[rankFatJetPassed]],
+            ptrFatJet_mass_original[vIdxFatJetPassed[rankFatJetPassed]]);
+        Double_t deltaRDPairFatJet =
+            p4DPairMatching[iDPairMatching]->DeltaR(*p4FatJet);
+        if (rankFatJetPassed == 0 ||
+            deltaRDPairFatJet < vDeltaRDPairFatJet[iDPairMatching]) {
+          // p4DJetClosest[iDMatching]->Delete();
+          // delete p4DJetClosest[iDMatching];
+          vDeltaRDPairFatJet[iDPairMatching] = deltaRDPairFatJet;
+          vDPairRankFatJetPassedPt[iDPairMatching] = rankFatJetPassed;
+          p4DPairFatJetClosest[iDPairMatching] = p4FatJet;
+          vGenDPairIdxFatJetClosest[iDPairMatching] =
+              vIdxFatJetPassed[rankFatJetPassed];
+        } else {
+        }
+      }
+      if (vDeltaRDPairFatJet[iDPairMatching] < 0.8) {
+        vGenDPairMatchedId[iDPairMatching] = true;
+        // vDPairMatchedRankActual.emplace_back(
+        vFatJetMatchedRankFatJetPassedPt.emplace_back(
+            vDPairRankFatJetPassedPt[iDPairMatching]);
+        nGenDPairMatched++;
+      } else {
+        vGenDPairMatchedId[iDPairMatching] = false;
+      }
+    }
+    areAllGenDPairMatchingPassed = nGenDPairMatchingPassed == 2;
+    areAllGenDPairMatched = nGenDPairMatched == 2;
+    {
+      std::sort(vFatJetMatchedRankFatJetPassedPt.begin(),
+                vFatJetMatchedRankFatJetPassedPt.end());
+      auto uniqueEnd = std::unique(vFatJetMatchedRankFatJetPassedPt.begin(),
+                                   vFatJetMatchedRankFatJetPassedPt.end());
+      nFatJetMatched =
+          std::distance(vFatJetMatchedRankFatJetPassedPt.begin(), uniqueEnd);
+      vFatJetMatchedRankFatJetPassedPt.resize(nFatJetMatched);
+      if (nFatJetMatched) {
+        areAllFatJetsMatchedLeading =
+            vFatJetMatchedRankFatJetPassedPt.back() == nFatJetMatched - 1;
+      } else {
+        areAllFatJetsMatchedLeading = false;
+      }
+    }
+    if (areAllGenDMatchingPassed) {
+      for (Byte_t i = 0; i < 2; i++) {
+        vDeltaRJetPair[i] =
+            p4DJetClosest[i << 1]->DeltaR(*p4DJetClosest[(i << 1) + 1]);
+      }
+      vDeltaRBetweenJetPairs[0] =
+          (*p4DJetClosest[0] + *p4DJetClosest[1])
+              .DeltaR(*p4DJetClosest[2] + *p4DJetClosest[3]);
+
+      nGenDMatched = vDMatchedRankActual.size();
+      if (nGenDMatched) {
+        std::sort(vDMatchedRankActual.begin(), vDMatchedRankActual.end());
+        // UInt_t rankMax = vDJetMatchedRankJetPassedPtActual.back();
+        typename std::vector<UInt_t>::iterator
+            iterJetMatchedRankJetPassedPtEnd = std::unique(
+                vDMatchedRankActual.begin(), vDMatchedRankActual.end());
+        nJetMatched = std::distance(vDMatchedRankActual.begin(),
+                                    iterJetMatchedRankJetPassedPtEnd);
+        vJetMatchedRankJetPassedPt.clear();
+        vJetMatchedRankJetPassedPt.assign(vDMatchedRankActual.begin(),
+                                          iterJetMatchedRankJetPassedPtEnd);
+        // areAllJetsMatchedLeading = rankMax == nJetMatched - 1;
+        areAllJetsMatchedLeading =
+            vJetMatchedRankJetPassedPt.back() == nJetMatched - 1;
+      } else {
+        nJetMatched = 0;
+        areAllJetsMatchedLeading = false;
+      }
+
+      areAllGenDMatched = (nGenDMatched == 4);
+      // if (!areAllDMatched) {
       //   lambdaFillTheTrees();
       //   continue;
       // }
-      if (debug)
-        std::cout << "elepair, mupair: " << (Int_t)isNumElectronCorrect
-                  << (Int_t)isNumMuonCorrect << std::endl;
-
-      for (Byte_t i = 0; i < 2; i++) arrIsPassingZMassCut[i] = 0;
-
-      Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
-      Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
-      Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
-      Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
-
-      TLorentzVector* ppElectronP4NumberCorrect[nElectronTight];
-      TLorentzVector* ptrElectronP4NumberCorrectSum;
-
-      if (arrRecoIsLeptonNumCorrect[0]) {
-        ptrElectronP4NumberCorrectSum = new TLorentzVector();
-        for (Int_t i = 0; i < nElectronTight; i++) {
-          ppElectronP4NumberCorrect[i] = new TLorentzVector();
-          // ppElectronP4NumberCorrect[i]->SetPtEtaPhiE(
-          //     ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
-          //     ptrElectron_eCorr[i]);
-          ppElectronP4NumberCorrect[i]->SetPtEtaPhiM(
-              ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
-              massElectron);
-          *ptrElectronP4NumberCorrectSum += *ppElectronP4NumberCorrect[i];
-        }
-        // Double_t electronPair_mass = ptrElectronP4NumberCorrectSum->M();
-        // vElectronPair_massNumCorrect.push_back(electronPair_mass);
-        arrLeptonPair_mass[0] = ptrElectronP4NumberCorrectSum->M();
-
-        // leptonPair_massNumCorrect = electronPair_mass;
-        // Mass z cuts
-        Double_t massZCutUpper = massZ + 20;
-        Double_t massZCutLower = massZ - 20;
-        // Z mass cut for electron pairs
-        arrIsPassingZMassCut[0] = (massZCutLower < arrLeptonPair_mass[0] &&
-                                   arrLeptonPair_mass[0] < massZCutUpper);
-        if (debug)
-          std::cout << "massLPair: " << arrLeptonPair_mass[0] << std::endl;
-      }
-
-      Float_t* ptrMuon_pt = data.GetPtrFloat("Muon_pt");
-      Float_t* ptrMuon_phi = data.GetPtrFloat("Muon_phi");
-      Float_t* ptrMuon_eta = data.GetPtrFloat("Muon_eta");
-      Float_t* ptrMuon_mass = data.GetPtrFloat("Muon_mass");
-
-      TLorentzVector* ppMuonP4NumberCorrect[nMuonTight];
-      TLorentzVector* ptrMuonP4NumberCorrectSum;
-      if (arrRecoIsLeptonNumCorrect[1]) {
-        ptrMuonP4NumberCorrectSum = new TLorentzVector();
-        for (Int_t i = 0; i < nMuonTight; i++) {
-          ppMuonP4NumberCorrect[i] = new TLorentzVector();
-          ppMuonP4NumberCorrect[i]->SetPtEtaPhiM(
-              ptrMuon_pt[i], ptrMuon_eta[i], ptrMuon_phi[i], ptrMuon_mass[i]);
-          *ptrMuonP4NumberCorrectSum += *ppMuonP4NumberCorrect[i];
-        }
-        // Double_t muonPair_mass = ptrMuonP4NumberCorrectSum->M();
-        // vMuonPair_massNumCorrect.push_back(muonPair_mass);
-        arrLeptonPair_mass[1] = ptrMuonP4NumberCorrectSum->M();
-
-        // leptonPair_massNumCorrect = muonPair_mass;
-        Double_t massZCutUpper = massZ + 20;
-        Double_t massZCutLower = massZ - 20;
-        // Z mass cut for muon pairs
-        arrIsPassingZMassCut[1] = (massZCutLower < arrLeptonPair_mass[1] &&
-                                   arrLeptonPair_mass[1] < massZCutUpper);
-        if (debug)
-          std::cout << "massLPair: " << arrLeptonPair_mass[1] << std::endl;
-      }
-
-      if (!arrIsPassingZMassCut[0] && !arrIsPassingZMassCut[1] &&
-          !isGenRightEvent) {
-        areAllGenDMatchingPassed = false;
-        lambdaFillTheTrees();
-        continue;  // TODO
-      }
-
-      // std::vector<Int_t> vIdxZ_all, vIdxZp_all;
-      // vIdxZ_all.clear();
-      // vIdxZp_all.clear();
-      // for (Int_t i=0; i<nGenPart; i++) {
-      //   switch (ptrGenPart_pdgId[i]) {
-      //   case pdgZ:
-      //     vIdxZ_all.push_back(i);
-      //   case pdgZp:
-      //     vIdxZp_all.push_back(i);
-      //   }
-      // }
-
-      // ttNumCorrect->Fill();
-
-      // Jet_*
-      vIdxJetPassed.clear();
-      vIdxJetPassed.reserve(nJet);
-      Float_t* ptrJet_pt_original = data.GetPtrFloat("Jet_pt");
-      Float_t* ptrJet_eta_original = data.GetPtrFloat("Jet_eta");
-      Float_t* ptrJet_phi_original = data.GetPtrFloat("Jet_phi");
-      Float_t* ptrJet_mass_original = data.GetPtrFloat("Jet_mass");
-      // for (UInt_t idxJet = 0; idxJet < nJet; idxJet++) {
-      //   Bool_t isPassed = false;
-      //   if (ptrJet_pt_original[idxJet] < 30) continue;
-      //   if (TMath::Abs(ptrJet_eta_original[idxJet]) > 3) continue;
-      //   vIdxJetPassed.push_back(idxJet);
-      // }
-      mounterJet.PrepareForPushing(nJet);
-      {
-        auto ptrJet_pt_original_cloned = ptrJet_pt_original;
-        auto ptrJet_eta_original_cloned = ptrJet_eta_original;
-        // auto ptrJet_phi_original_cloned = ptrJet_phi_original;
-        // auto ptrJet_mass_original_cloned = ptrJet_mass_original;
-        for (UInt_t idxJet = 0; idxJet < nJet; idxJet++) {
-          Bool_t result = *ptrJet_pt_original_cloned > 30 &&
-                          TMath::Abs(*ptrJet_eta_original_cloned) < 3;
-          if (result) {
-            vIdxJetPassed.push_back(idxJet);
-          }
-          mounterJet.PushOrSkip(result);
-          ptrJet_pt_original_cloned++;
-          ptrJet_eta_original_cloned++;
-          // ptrJet_phi_original_cloned++;
-          // ptrJet_mass_original_cloned++;
-        }
-      }
-      nJetPassed = vIdxJetPassed.size();
-      vIdxJetPassed.shrink_to_fit();
-      vIdxFatJetPassed.clear();
-      vIdxFatJetPassed.reserve(nFatJet);
-      Float_t* ptrFatJet_pt_original = data.GetPtrFloat("FatJet_pt");
-      Float_t* ptrFatJet_eta_original = data.GetPtrFloat("FatJet_eta");
-      Float_t* ptrFatJet_phi_original = data.GetPtrFloat("FatJet_phi");
-      Float_t* ptrFatJet_mass_original = data.GetPtrFloat("FatJet_mass");
-      mounterFatJet.PrepareForPushing(nFatJet);
-      {
-        auto ptrFatJet_pt_original_cloned = ptrFatJet_pt_original;
-        auto ptrFatJet_eta_original_cloned = ptrFatJet_eta_original;
-        // auto ptrFatJet_phi_original_cloned = ptrFatJet_phi_original;
-        // auto ptrFatJet_mass_original_cloned = ptrFatJet_mass_original;
-        for (UInt_t idxFatJet = 0; idxFatJet < nFatJet; idxFatJet++) {
-          Bool_t result = *ptrFatJet_pt_original_cloned > 200 &&
-                          TMath::Abs(*ptrFatJet_eta_original_cloned) < 4.5;
-          if (result) {
-            vIdxFatJetPassed.push_back(idxFatJet);
-          }
-          mounterFatJet.PushOrSkip(result);
-          ptrFatJet_pt_original_cloned++;
-          ptrFatJet_eta_original_cloned++;
-        }
-      }
-      nFatJetPassed = vIdxFatJetPassed.size();
-      vIdxFatJetPassed.shrink_to_fit();
-      mounterHT.Push();
-
-      Byte_t iLeptonFound =
-          arrIsPassingZMassCut[0] ? 0 : 1;  // Electron event or muon event
-
-      Float_t* ptrGenPart_pt = data.GetPtrFloat("GenPart_pt");
-      Float_t* ptrGenPart_eta = data.GetPtrFloat("GenPart_eta");
-      Float_t* ptrGenPart_phi = data.GetPtrFloat("GenPart_phi");
-      std::fill(std::begin(vDGenIdxJetClosest), std::end(vDGenIdxJetClosest), -10);
-      std::fill(std::begin(vDRankJetPassedPt), std::end(vDRankJetPassedPt),
-                -10);
-      std::vector<UInt_t> vDMatchedRankActual(4);
-      vDMatchedRankActual.clear();
-      TLorentzVector* p4DMatching[4];
-      TLorentzVector* p4DJetClosest[4];
-      nGenDMatchingPassed = 0;
-      for (Byte_t iDMatching = 0; iDMatching < 4; iDMatching++) {
-        if (debug) std::printf("iDMatching: %d\n", iDMatching);
-        p4DJetClosest[iDMatching] = nullptr;
-        vDeltaRDJet[iDMatching] = __FLT_MAX__;
-        p4DMatching[iDMatching] = new TLorentzVector;
-        vGenDMatchingPt[iDMatching] =
-            ptrGenPart_pt[vGenDMatchingIdx[iDMatching]];
-        vGenDMatchingEta[iDMatching] =
-            ptrGenPart_eta[vGenDMatchingIdx[iDMatching]];
-        vGenDMatchingPhi[iDMatching] =
-            ptrGenPart_phi[vGenDMatchingIdx[iDMatching]];
-        vGenDMatchingIdPassed[iDMatching] =
-            vGenDMatchingPt[iDMatching] > 30 &&
-            TMath::Abs(vGenDMatchingEta[iDMatching]) < 3;
-        if (vGenDMatchingIdPassed[iDMatching]) {
-          nGenDMatchingPassed++;
-        }
-        p4DMatching[iDMatching]->SetPtEtaPhiM(
-            vGenDMatchingPt[iDMatching], vGenDMatchingEta[iDMatching],
-            vGenDMatchingPhi[iDMatching], massDown);
-        for (Byte_t rankJetPassed = 0; rankJetPassed < nJetPassed;
-             rankJetPassed++) {
-          if (debug) std::printf("rankJetPassed: %d\n", rankJetPassed);
-          TLorentzVector* p4Jet = new TLorentzVector;
-          p4Jet->SetPtEtaPhiM(
-              ptrJet_pt_original[vIdxJetPassed[rankJetPassed]],
-              ptrJet_eta_original[vIdxJetPassed[rankJetPassed]],
-              ptrJet_phi_original[vIdxJetPassed[rankJetPassed]],
-              ptrJet_mass_original[vIdxJetPassed[rankJetPassed]]);
-          Double_t deltaRDJet = p4DMatching[iDMatching]->DeltaR(*p4Jet);
-          if (deltaRDJet < vDeltaRDJet[iDMatching]) {
-            // p4DJetClosest[iDMatching]->Delete();
-            // delete p4DJetClosest[iDMatching];
-            p4DJetClosest[iDMatching] = p4Jet;
-            vDeltaRDJet[iDMatching] = deltaRDJet;
-            vDRankJetPassedPt[iDMatching] = rankJetPassed;
-            vDGenIdxJetClosest[iDMatching] = vIdxJetPassed[rankJetPassed];
-          } else {
-            // p4Jet->Delete();
-            // delete p4Jet;
-          }
-        }
-        if (vDeltaRDJet[iDMatching] < 0.4) {
-          vGenDMatchedId[iDMatching] = true;
-          vDMatchedRankActual.push_back(
-              vDRankJetPassedPt[iDMatching]);
-        } else {
-          vGenDMatchedId[iDMatching] = false;
-        }
-      }
-      areAllGenDMatchingPassed = nGenDMatchingPassed == 4;
-      // std::vector<UInt_t> vDPairMatchedRankActual(2);
-      // vDPairMatchedRankActual.clear();
-      vFatJetMatchedRankFatJetPassedPt.clear();
-      TLorentzVector* p4DPairMatching[2];
-      TLorentzVector* p4DPairFatJetClosest[2];
-      nGenDPairMatchingPassed = 0;
-      nGenDPairMatched = 0;
-      for (UInt_t iDPairMatching = 0; iDPairMatching < 2; iDPairMatching++) {
-        // std::cout << vGenDPairMatchingMass.size() << '\n';
-        // std::cout << (iDPairMatching << 1) << ((iDPairMatching << 1) + 1) << "\n";
-        // std::cout << p4DMatching[(iDPairMatching << 1)+1]->Pt() <<'\n';
-        p4DPairMatching[iDPairMatching] = new TLorentzVector;
-        *(p4DPairMatching[iDPairMatching]) =
-            *(p4DMatching[iDPairMatching << 1]) +
-            *(p4DMatching[(iDPairMatching << 1) + 1]);
-        // std::cout << "testtag" << std::endl;
-        vGenDPairMatchingPt[iDPairMatching] =
-            p4DPairMatching[iDPairMatching]->Pt();
-        vGenDPairMatchingEta[iDPairMatching] =
-            p4DPairMatching[iDPairMatching]->Eta();
-        vGenDPairMatchingPhi[iDPairMatching] =
-            p4DPairMatching[iDPairMatching]->Phi();
-        vGenDPairMatchingMass[iDPairMatching] = 
-            p4DPairMatching[iDPairMatching]->M();
-        vGenDPairMatchingIdPassed[iDPairMatching] =
-            vGenDPairMatchingPt[iDPairMatching] > 200 &&
-            TMath::Abs(vGenDPairMatchingEta[iDPairMatching]) < 4.5;
-        if (vGenDPairMatchingIdPassed[iDPairMatching]) {
-          nGenDPairMatchingPassed++;
-        }
-        // Fat jet matching
-        for (Byte_t rankFatJetPassed = 0; rankFatJetPassed < nFatJetPassed;
-             rankFatJetPassed++) {
-          if (debug) std::printf("rankJetPassed: %d\n", rankFatJetPassed);
-          TLorentzVector* p4FatJet = new TLorentzVector;
-          p4FatJet->SetPtEtaPhiM(
-              ptrFatJet_pt_original[vIdxFatJetPassed[rankFatJetPassed]],
-              ptrFatJet_eta_original[vIdxFatJetPassed[rankFatJetPassed]],
-              ptrFatJet_phi_original[vIdxFatJetPassed[rankFatJetPassed]],
-              ptrFatJet_mass_original[vIdxFatJetPassed[rankFatJetPassed]]);
-          Double_t deltaRDPairFatJet = p4DPairMatching[iDPairMatching]->DeltaR(*p4FatJet);
-          if (rankFatJetPassed == 0 || deltaRDPairFatJet < vDeltaRDPairFatJet[iDPairMatching]) {
-            // p4DJetClosest[iDMatching]->Delete();
-            // delete p4DJetClosest[iDMatching];
-            vDeltaRDPairFatJet[iDPairMatching] = deltaRDPairFatJet;
-            vDPairRankFatJetPassedPt[iDPairMatching] = rankFatJetPassed;
-            p4DPairFatJetClosest[iDPairMatching] = p4FatJet;
-            vGenDPairIdxFatJetClosest[iDPairMatching] = vIdxFatJetPassed[rankFatJetPassed];
-          } else {
-          }
-        }
-        if (vDeltaRDPairFatJet[iDPairMatching] < 0.8) {
-          vGenDPairMatchedId[iDPairMatching] = true;
-          // vDPairMatchedRankActual.emplace_back(
-          vFatJetMatchedRankFatJetPassedPt.emplace_back(
-              vDPairRankFatJetPassedPt[iDPairMatching]);
-          nGenDPairMatched++;
-        } else {
-          vGenDPairMatchedId[iDPairMatching] = false;
-        }
-      }
-      areAllGenDPairMatchingPassed = nGenDPairMatchingPassed == 2;
-      areAllGenDPairMatched = nGenDPairMatched == 2;
-      {
-        std::sort(vFatJetMatchedRankFatJetPassedPt.begin(), vFatJetMatchedRankFatJetPassedPt.end());
-        auto uniqueEnd = std::unique(vFatJetMatchedRankFatJetPassedPt.begin(),
-          vFatJetMatchedRankFatJetPassedPt.end());
-        nFatJetMatched = std::distance(vFatJetMatchedRankFatJetPassedPt.begin(), uniqueEnd);
-        vFatJetMatchedRankFatJetPassedPt.resize(nFatJetMatched);
-        if (nFatJetMatched) {
-          areAllFatJetsMatchedLeading = vFatJetMatchedRankFatJetPassedPt.back() == nFatJetMatched - 1;
-        } else {
-          areAllFatJetsMatchedLeading = false;
-        }
-      }
-      if (areAllGenDMatchingPassed) {
-        for (Byte_t i = 0; i < 2; i++) {
-          vDeltaRJetPair[i] =
-              p4DJetClosest[i << 1]->DeltaR(*p4DJetClosest[(i << 1) + 1]);
-        }
-        vDeltaRBetweenJetPairs[0] =
-            (*p4DJetClosest[0] + *p4DJetClosest[1])
-                .DeltaR(*p4DJetClosest[2] + *p4DJetClosest[3]);
-
-        nGenDMatched = vDMatchedRankActual.size();
-        if (nGenDMatched) {
-          std::sort(vDMatchedRankActual.begin(),
-                    vDMatchedRankActual.end());
-          // UInt_t rankMax = vDJetMatchedRankJetPassedPtActual.back();
-          typename std::vector<UInt_t>::iterator
-              iterJetMatchedRankJetPassedPtEnd =
-                  std::unique(vDMatchedRankActual.begin(),
-                              vDMatchedRankActual.end());
-          nJetMatched = std::distance(vDMatchedRankActual.begin(),
-                                      iterJetMatchedRankJetPassedPtEnd);
-          vJetMatchedRankJetPassedPt.clear();
-          vJetMatchedRankJetPassedPt.assign(
-              vDMatchedRankActual.begin(),
-              iterJetMatchedRankJetPassedPtEnd);
-          // areAllJetsMatchedLeading = rankMax == nJetMatched - 1;
-          areAllJetsMatchedLeading =
-              vJetMatchedRankJetPassedPt.back() == nJetMatched - 1;
-        } else {
-          nJetMatched = 0;
-          areAllJetsMatchedLeading = false;
-        }
-
-        areAllGenDMatched = (nGenDMatched == 4);
-        // if (!areAllDMatched) {
-        //   lambdaFillTheTrees();
-        //   continue;
-        // }
-      }
-      if (areAllGenDPairMatchingPassed) {
-      }
-      lambdaFillTheTrees();
-      // ttZMassCutted->Fill();
     }
-
-    // ttNumCorrect->GetCurrentFile()->Write();
-    // ttZMassCutted->GetCurrentFile()->Write();
-    outFileTree->Write();
-
-    // // TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
-    // //                          outputFileVar + "_" + outputFileTail +
-    // "_hist"
-    // + ".root";
-
-    // // TFile *outFileHist = new TFile(outputFileHist.Data(),
-    // toRecreateOutFile ? "recreate" : "update");
-
-    // TString outImageDir =
-    //     (TString) "../out_images/output_" + outputFileHead + "_" +
-    //     outputFileTail;
-
-    // // TCanvas* c1 = new TCanvas;
-    // gStyle->SetOptStat(111111);
-    // auto lambdaPrintHistograms = [/*&c1,*/ /*&outFileHist,*/
-    // toRecreateOutFile, outImageDir, outputFileHead, outputFileVar,
-    // outputFileTail](TTree *tt)-> void {
-    //   std::cout << "Printing " << tt->GetName() << std::endl;
-    //   TString nameTree = tt->GetName();
-    //   TString outImageNameHead = (TString)outputFileHead + "_" +
-    //   outputFileVar
-    //   + "_" + nameTree; TString outImageCommonPath = outImageDir + "/" +
-    //   outImageNameHead + "_"; TString outputFileHist = (TString) "output_" +
-    //   outputFileHead + "_" +
-    //                          outputFileVar + "_" + outputFileTail + "_hist_"
-    //                          + nameTree + ".root";
-    //   TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile
-    //   ? "recreate" : "update"); for (TObject* leafObject :
-    //   *(tt->GetListOfLeaves())) {
-    //     TLeaf* leaf = (TLeaf*)leafObject;
-    //     TString nameLeaf = leaf->GetName();
-    //     if (nameLeaf.First("[") >= 0) {
-    //       nameLeaf.Resize(nameLeaf.First("["));
-    //     }
-    //     TString nameHist = "h" + nameLeaf;
-    //     tt->Draw(nameLeaf + ">>" + nameHist);
-    //     TH1 *hist = (TH1 *) gDirectory->Get(nameHist);
-    //     hist->SetTitle((TString)leaf->GetBranch()->GetTitle() + " (" +
-    //     nameTree
-    //     + ")"); TString outImagePath = outImageCommonPath + nameLeaf +
-    //     ".svg";
-    //     // c1->Clear();
-    //     // hist->Draw();
-    //     // c1->Print(outImagePath);
-    //     outFileHist->WriteObject(hist, nameHist);
-    //   }
-    //   outFileHist->Close();
-    // };
-    // if (true) {
-    // for (Byte_t i=0; i<3; i++) {
-    //   lambdaPrintHistograms(arrTTGen[i]);
-    // }
-    // }
-    // // for (Byte_t i=0; i<2; i++) {
-    // //   lambdaPrintHistograms(arrTTNumCorrect[i]);
-    // // }
-    // for (Byte_t i=0; i<2; i++) {
-    //   lambdaPrintHistograms(arrTTZMassCutted[i]);
-    // }
-    // // c1->Close();
-
-    outFileTree->Close();
-    // delete outFileTree;
-    // for (UInt_t i = 0; i < nLeafJetFloat; i++) {
-    //   // arrHLeafJetFloat[i]->Write();
-    //   // outFileHist->WriteObject(arrHLeafJetFloat[i],
-    //   // arrHLeafJetFloat[i]->GetName());
-    // }
-    // for (UInt_t i = 0; i < nLeafJetUInt; i++) {
-    //   // arrHLeafJetUInt[i]->Write();
-    //   // outFileHist->WriteObject(arrHLeafJetUInt[i],
-    //   // arrHLeafJetUInt[i]->GetName());
-    // }
-    // for (UInt_t i = 0; i < nLeafJetInt; i++) {
-    //   // arrHLeafJetInt[i]->Write();
-    //   // outFileHist->WriteObject(arrHLeafJetInt[i],
-    //   // arrHLeafJetInt[i]->GetName());
-    // }
-    // for (UInt_t i = 0; i < nLeafJetBool; i++) {
-    //   // arrHLeafJetBool[i]->Write();
-    //   // outFileHist->WriteObject(arrHLeafJetBool[i],
-    //   // arrHLeafJetBool[i]->GetName());
-    // }
-
-    // // outFileHist->Close();
+    if (areAllGenDPairMatchingPassed) {
+    }
+    lambdaFillTheTrees();
+    // ttZMassCutted->Fill();
   }
+
+  // ttNumCorrect->GetCurrentFile()->Write();
+  // ttZMassCutted->GetCurrentFile()->Write();
+  outFileTree->Write();
+
+  // // TString outputFileHist = (TString) "output_" + outputFileHead + "_" +
+  // //                          outputFileVar + "_" + outputFileTail +
+  // "_hist"
+  // + ".root";
+
+  // // TFile *outFileHist = new TFile(outputFileHist.Data(),
+  // toRecreateOutFile ? "recreate" : "update");
+
+  // TString outImageDir =
+  //     (TString) "../out_images/output_" + outputFileHead + "_" +
+  //     outputFileTail;
+
+  // // TCanvas* c1 = new TCanvas;
+  // gStyle->SetOptStat(111111);
+  // auto lambdaPrintHistograms = [/*&c1,*/ /*&outFileHist,*/
+  // toRecreateOutFile, outImageDir, outputFileHead, outputFileVar,
+  // outputFileTail](TTree *tt)-> void {
+  //   std::cout << "Printing " << tt->GetName() << std::endl;
+  //   TString nameTree = tt->GetName();
+  //   TString outImageNameHead = (TString)outputFileHead + "_" +
+  //   outputFileVar
+  //   + "_" + nameTree; TString outImageCommonPath = outImageDir + "/" +
+  //   outImageNameHead + "_"; TString outputFileHist = (TString) "output_" +
+  //   outputFileHead + "_" +
+  //                          outputFileVar + "_" + outputFileTail + "_hist_"
+  //                          + nameTree + ".root";
+  //   TFile *outFileHist = new TFile(outputFileHist.Data(), toRecreateOutFile
+  //   ? "recreate" : "update"); for (TObject* leafObject :
+  //   *(tt->GetListOfLeaves())) {
+  //     TLeaf* leaf = (TLeaf*)leafObject;
+  //     TString nameLeaf = leaf->GetName();
+  //     if (nameLeaf.First("[") >= 0) {
+  //       nameLeaf.Resize(nameLeaf.First("["));
+  //     }
+  //     TString nameHist = "h" + nameLeaf;
+  //     tt->Draw(nameLeaf + ">>" + nameHist);
+  //     TH1 *hist = (TH1 *) gDirectory->Get(nameHist);
+  //     hist->SetTitle((TString)leaf->GetBranch()->GetTitle() + " (" +
+  //     nameTree
+  //     + ")"); TString outImagePath = outImageCommonPath + nameLeaf +
+  //     ".svg";
+  //     // c1->Clear();
+  //     // hist->Draw();
+  //     // c1->Print(outImagePath);
+  //     outFileHist->WriteObject(hist, nameHist);
+  //   }
+  //   outFileHist->Close();
+  // };
+  // if (true) {
+  // for (Byte_t i=0; i<3; i++) {
+  //   lambdaPrintHistograms(arrTTGen[i]);
+  // }
+  // }
+  // // for (Byte_t i=0; i<2; i++) {
+  // //   lambdaPrintHistograms(arrTTNumCorrect[i]);
+  // // }
+  // for (Byte_t i=0; i<2; i++) {
+  //   lambdaPrintHistograms(arrTTZMassCutted[i]);
+  // }
+  // // c1->Close();
+
+  outFileTree->Close();
+  // delete outFileTree;
+  // for (UInt_t i = 0; i < nLeafJetFloat; i++) {
+  //   // arrHLeafJetFloat[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetFloat[i],
+  //   // arrHLeafJetFloat[i]->GetName());
+  // }
+  // for (UInt_t i = 0; i < nLeafJetUInt; i++) {
+  //   // arrHLeafJetUInt[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetUInt[i],
+  //   // arrHLeafJetUInt[i]->GetName());
+  // }
+  // for (UInt_t i = 0; i < nLeafJetInt; i++) {
+  //   // arrHLeafJetInt[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetInt[i],
+  //   // arrHLeafJetInt[i]->GetName());
+  // }
+  // for (UInt_t i = 0; i < nLeafJetBool; i++) {
+  //   // arrHLeafJetBool[i]->Write();
+  //   // outFileHist->WriteObject(arrHLeafJetBool[i],
+  //   // arrHLeafJetBool[i]->GetName());
+  // }
+
+  // // outFileHist->Close();
+}
