@@ -1,0 +1,80 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_14437/./xAna_monoZ_preselect_C.so
+Warning in <TClass::Init>: no dictionary for class edm::ProcessHistory is available
+Warning in <TClass::Init>: no dictionary for class edm::ProcessConfiguration is available
+Warning in <TClass::Init>: no dictionary for class edm::ParameterSetBlob is available
+Warning in <TClass::Init>: no dictionary for class edm::Hash<1> is available
+Warning in <TClass::Init>: no dictionary for class pair<edm::Hash<1>,edm::ParameterSetBlob> is available
+
+ *** Break *** segmentation violation
+
+
+
+===========================================================
+There was a crash.
+This is the entire stack trace of all threads:
+===========================================================
+    gdb.printing.register_pretty_printer(gdb.current_objfile(),
+    gdb.printing.register_pretty_printer(gdb.current_objfile(),
+#0  0x00002b10bcb4d46c in waitpid () from /lib64/libc.so.6
+#1  0x00002b10bcacaf62 in do_system () from /lib64/libc.so.6
+#2  0x00002b10bc1e75dc in TUnixSystem::StackTrace() () from /usr/lib64/root/libCore.so.6.22
+#3  0x00002b10bc1ea06a in TUnixSystem::DispatchSignals(ESignals) () from /usr/lib64/root/libCore.so.6.22
+#4  <signal handler called>
+#5  0x00002b10cd562ff4 in TVector3::PseudoRapidity() const () from /usr/lib64/root/libPhysics.so.6.22.02
+#6  0x00002b10cdf8b36b in PseudoRapidity (this=0x1200000021) at /usr/include/root/TLorentzVector.h:556
+#7  Eta (this=0x1200000021) at /usr/include/root/TLorentzVector.h:461
+#8  DeltaR (v=..., this=<optimized out>) at /usr/include/root/TLorentzVector.h:464
+#9  xAna_monoZ_preselect (inputFile=..., outputFileTree=..., toRecreateOutFile=<optimized out>, debug=<optimized out>) at /pool/condor/dir_14437/./xAna_monoZ_preselect.C:869
+#10 0x00002b10bbb060a6 in ?? ()
+#11 0x0000000003b9b030 in ?? ()
+#12 0x00002b10bfca0c9c in void std::vector<TCling::MutexStateAndRecurseCount, std::allocator<TCling::MutexStateAndRecurseCount> >::_M_emplace_back_aux<>() () from /usr/lib64/root/libCling.so
+#13 0x74754f7473657418 in ?? ()
+#14 0x000000746f6f722e in ?? ()
+#15 0x144546aceaf7ba00 in ?? ()
+#16 0x0000000001672ef8 in ?? ()
+#17 0x00002b10bfce0eb7 in cling::MultiplexInterpreterCallbacks::EnteringUserCode() () from /usr/lib64/root/libCling.so
+#18 0x00002b10bfd3e7ab in cling::IncrementalExecutor::executeWrapper(llvm::StringRef, cling::Value*) const () from /usr/lib64/root/libCling.so
+#19 0x00002b10bfce221c in cling::Interpreter::RunFunction(clang::FunctionDecl const*, cling::Value*) () from /usr/lib64/root/libCling.so
+#20 0x00002b10bfce2fce in cling::Interpreter::EvaluateInternal(std::string const&, cling::CompilationOptions, cling::Value*, cling::Transaction**, unsigned long) () from /usr/lib64/root/libCling.so
+#21 0x00002b10bfce3233 in cling::Interpreter::process(std::string const&, cling::Value*, cling::Transaction**, bool) () from /usr/lib64/root/libCling.so
+#22 0x00002b10bfd7f138 in cling::MetaProcessor::process(llvm::StringRef, cling::Interpreter::CompilationResult&, cling::Value*, bool) () from /usr/lib64/root/libCling.so
+#23 0x00002b10bfc5d8aa in HandleInterpreterException(cling::MetaProcessor*, char const*, cling::Interpreter::CompilationResult&, cling::Value*) () from /usr/lib64/root/libCling.so
+#24 0x00002b10bfc6fcc0 in TCling::ProcessLine(char const*, TInterpreter::EErrorCode*) () from /usr/lib64/root/libCling.so
+#25 0x00002b10bfc701b6 in TCling::ProcessLineSynch(char const*, TInterpreter::EErrorCode*) () from /usr/lib64/root/libCling.so
+#26 0x00002b10bc0b6bbc in TApplication::ExecuteFile(char const*, int*, bool) () from /usr/lib64/root/libCore.so.6.22
+#27 0x00002b10bc0b6139 in TApplication::ProcessLine(char const*, bool, int*) () from /usr/lib64/root/libCore.so.6.22
+#28 0x00002b10bbd15e15 in TRint::ProcessLineNr(char const*, char const*, int*) () from /usr/lib64/root/libRint.so.6.22
+#29 0x00002b10bbd17541 in TRint::Run(bool) () from /usr/lib64/root/libRint.so.6.22
+#30 0x00000000004008da in main ()
+===========================================================
+
+
+The lines below might hint at the cause of the crash.
+You may get help by asking at the ROOT forum http://root.cern.ch/forum
+Only if you are really convinced it is a bug in ROOT then please submit a
+report at http://root.cern.ch/bugs Please post the ENTIRE stack trace
+from above as an attachment in addition to anything else
+that might help us fixing this issue.
+===========================================================
+#5  0x00002b10cd562ff4 in TVector3::PseudoRapidity() const () from /usr/lib64/root/libPhysics.so.6.22.02
+#6  0x00002b10cdf8b36b in PseudoRapidity (this=0x1200000021) at /usr/include/root/TLorentzVector.h:556
+#7  Eta (this=0x1200000021) at /usr/include/root/TLorentzVector.h:461
+#8  DeltaR (v=..., this=<optimized out>) at /usr/include/root/TLorentzVector.h:464
+#9  xAna_monoZ_preselect (inputFile=..., outputFileTree=..., toRecreateOutFile=<optimized out>, debug=<optimized out>) at /pool/condor/dir_14437/./xAna_monoZ_preselect.C:869
+#10 0x00002b10bbb060a6 in ?? ()
+#11 0x0000000003b9b030 in ?? ()
+#12 0x00002b10bfca0c9c in void std::vector<TCling::MutexStateAndRecurseCount, std::allocator<TCling::MutexStateAndRecurseCount> >::_M_emplace_back_aux<>() () from /usr/lib64/root/libCling.so
+#13 0x74754f7473657418 in ?? ()
+#14 0x000000746f6f722e in ?? ()
+#15 0x144546aceaf7ba00 in ?? ()
+#16 0x0000000001672ef8 in ?? ()
+#17 0x00002b10bfce0eb7 in cling::MultiplexInterpreterCallbacks::EnteringUserCode() () from /usr/lib64/root/libCling.so
+#18 0x00002b10bfd3e7ab in cling::IncrementalExecutor::executeWrapper(llvm::StringRef, cling::Value*) const () from /usr/lib64/root/libCling.so
+#19 0x00002b10bfce221c in cling::Interpreter::RunFunction(clang::FunctionDecl const*, cling::Value*) () from /usr/lib64/root/libCling.so
+#20 0x00002b10bfce2fce in cling::Interpreter::EvaluateInternal(std::string const&, cling::CompilationOptions, cling::Value*, cling::Transaction**, unsigned long) () from /usr/lib64/root/libCling.so
+#21 0x00002b10bfce3233 in cling::Interpreter::process(std::string const&, cling::Value*, cling::Transaction**, bool) () from /usr/lib64/root/libCling.so
+#22 0x00002b10bfd7f138 in cling::MetaProcessor::process(llvm::StringRef, cling::Interpreter::CompilationResult&, cling::Value*, bool) () from /usr/lib64/root/libCling.so
+#23 0x00002b10bfc5d8aa in HandleInterpreterException(cling::MetaProcessor*, char const*, cling::Interpreter::CompilationResult&, cling::Value*) () from /usr/lib64/root/libCling.so
+===========================================================
+
+
