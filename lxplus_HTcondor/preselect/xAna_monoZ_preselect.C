@@ -902,7 +902,7 @@ void xAna_monoZ_preselect(
       Int_t iii = 0;
       BranchMounterHelper::RunOnFunAt(
           mounterGenDMatching,
-          (std::function<Bool_t(size_t)>)[
+          static_cast<std::function<Bool_t(size_t)>>([
             &vGenDMatchingIdx, &idxSortVGenDMatchingIdx, &iii
           ](size_t idx)
               ->Bool_t {
@@ -913,8 +913,8 @@ void xAna_monoZ_preselect(
                   return true;
                 }
                 return false;
-              },
-          (size_t)nGenPart);
+              }),
+          static_cast<size_t>(nGenPart));
       if (debug && iii != 4) {
         Fatal("xAna_monoZ_preselect",
               "mounterGenDMatching failed to collect four values. iii = %d",

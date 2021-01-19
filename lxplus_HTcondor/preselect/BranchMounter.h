@@ -86,7 +86,7 @@ class VirtualDescriptionCollectorSingle : public VirtualDescriptionCollector {
   std::vector<BranchDescription> vDescriptions;
   virtual Bool_t BranchFor(BranchDescription description) {
     if (GetIsAcceptable(description)) {
-      vDescriptions.emplace_back(description);
+      vDescriptions.push_back(description);
       return true;
     }
     return false;
@@ -241,14 +241,14 @@ class BranchMounterVectorSingle
          iDescription++) {
       vvE[iDescription].clear();
       vvE[iDescription].reserve(n);
-      vIterEIn.emplace_back(funIterEIn(vDescriptions[iDescription]));
+      vIterEIn.push_back(funIterEIn(vDescriptions[iDescription]));
     }
   }
   void PushOrSkip(const Bool_t isAcceptable) {
     for (TypeSize iDescription = 0; iDescription < nDescriptions;
          iDescription++) {
       if (isAcceptable) {
-        vvE[iDescription].emplace_back(*(vIterEIn[iDescription]));
+        vvE[iDescription].push_back(*(vIterEIn[iDescription]));
       }
       vIterEIn[iDescription]++;
     }
