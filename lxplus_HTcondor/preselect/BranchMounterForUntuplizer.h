@@ -48,11 +48,11 @@ class DescriptionCollectorForUntuplizer: public DescriptionCollectorChained<Virt
   }) {}
 };
 
-class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<VirtualBranchMounterScalar, true> {
+class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<size_t, VirtualBranchMounterScalar<size_t>, true> {
  public:
   BranchMounterScalarForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data,
     const std::function<BranchDescription(BranchDescription)> funDescriptionModified = nullptr)
-    : BranchMounterScalarChained<VirtualBranchMounterScalar, true>({
+    : BranchMounterScalarChained<size_t, VirtualBranchMounterScalar<size_t>, true>({
         // new BranchMounterScalarSingle<LongDouble_t>(setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
         //   [&data](BranchDescription description)->LongDouble_t{
         //     return *static_cast<LongDouble_t*>(data.GetPtr(description.name));
@@ -69,7 +69,7 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
           [&data](BranchDescription description)->Float16_t   {
             return *static_cast<Float16_t*>(data.GetPtr(description.name));
         }, funDescriptionModified),
-        new BranchMounterScalarSingle<ULong64_t    >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong64  ],
+        new BranchMounterScalarSingle<ULong64_t   >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong64  ],
           [&data](BranchDescription description)->ULong64_t      {
             return *static_cast<ULong64_t*>(data.GetPtr(description.name, TreeReader::kLong64));
         }, funDescriptionModified),
@@ -77,7 +77,7 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
           [&data](BranchDescription description)->Long64_t    {
             return data.GetLong64(description.name);
         }, funDescriptionModified),
-        new BranchMounterScalarSingle<ULong_t      >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong    ],
+        new BranchMounterScalarSingle<ULong_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kULong    ],
           [&data](BranchDescription description)->ULong_t      {
             return *static_cast<ULong_t*>(data.GetPtr(description.name));
         }, funDescriptionModified),
@@ -93,7 +93,7 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
           [&data](BranchDescription description)->Int_t       {
             return data.GetInt(description.name);
         }, funDescriptionModified),
-        new BranchMounterScalarSingle<UShort_t     >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUShort   ],
+        new BranchMounterScalarSingle<UShort_t    >(*setting.vCollectors[(size_t)MounterForUntuplizerMeta::Order::kUShort   ],
           [&data](BranchDescription description)->UShort_t      {
             return *static_cast<UShort_t*>(data.GetPtr(description.name, TreeReader::kShort));
         }, funDescriptionModified),
@@ -116,11 +116,11 @@ class BranchMounterScalarForUntuplizer: public BranchMounterScalarChained<Virtua
   }) {}
 };
 
-class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t, true> {
+class BranchMounterIterableForUntuplizer: public BranchMounterIterableChained<size_t, VirtualBranchMounterIterable<size_t>, true> {
  public:
   BranchMounterIterableForUntuplizer(const DescriptionCollectorForUntuplizer &setting, TreeReader &data,
     const std::function<BranchDescription(BranchDescription)> funDescriptionModified = nullptr)
-    : BranchMounterIterableChained<VirtualBranchMounterIterable<size_t>, size_t, true>({
+    : BranchMounterIterableChained<size_t, VirtualBranchMounterIterable<size_t>, true>({
         // new BranchMounterVectorSingle<LongDouble_t, LongDouble_t*>(binding.vvLongDouble, setting->vCollectors[(size_t)MounterForUntuplizerMeta::Order::kLongDouble],
         //   [&data](BranchDescription description)->LongDouble_t*{
         //     return static_cast<LongDouble_t*>(data.GetPtr(description.name));
