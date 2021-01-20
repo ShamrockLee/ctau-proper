@@ -188,7 +188,7 @@ void xAna_monoZ_preselect(
   }
   std::vector<Int_t> vGenDMatchingIdx(4, 0);
   for (Byte_t i = 0; i < 2; i++) {
-    const TString name = "GenDMatching_idx";
+    const TString name = "GenDMatching_genPartIdx";
     const TString title = "Indexes of the d quarks";
     arrTTGen[i]->Branch(name, &vGenDMatchingIdx)->SetTitle(title);
   }
@@ -410,7 +410,7 @@ void xAna_monoZ_preselect(
     const Bool_t toCollectAllMatched = true;
     if (toCollectGen)
       for (Byte_t i = 0; i < 3; i++) {
-        if (arrHasGenLepton[i] && haveAllGenDMatching) {
+        if (arrHasGenLepton[i]) {
           arrTTGen[i]->Fill();
         }
       }
@@ -421,20 +421,20 @@ void xAna_monoZ_preselect(
       if (toCollectZMassCutted && arrIsPassingZMassCut[i]) {
         arrTTZMassCutted[i]->Fill();
       }
-      if (((!isSignal) || areAllGenDMatchingPassed) && toCollectJetMatching &&
+      if (toCollectJetMatching && ((!isSignal) || areAllGenDMatchingPassed) &&
           arrIsPassingZMassCut[i]) {
         arrTTPreselectedMatchingJet[i]->Fill();
       }
-      if (((!isSignal) || areAllGenDMatchingPassed) && toCollectAllMatched &&
+      if (toCollectAllMatched && ((!isSignal) || areAllGenDMatchingPassed) &&
           areAllGenDMatched && arrIsPassingZMassCut[i]) {
         arrTTAllMatchedJet[i]->Fill();
       }
-      if (((!isSignal) || areAllGenDPairMatchingPassed) &&
-          toCollectJetMatching && arrIsPassingZMassCut[i]) {
+      if (toCollectJetMatching && ((!isSignal) || areAllGenDPairMatchingPassed) &&
+          arrIsPassingZMassCut[i]) {
         arrTTPreselectedMatchingFatJet[i]->Fill();
       }
-      if (((!isSignal) || areAllGenDPairMatchingPassed) &&
-          toCollectAllMatched && areAllGenDPairMatched &&
+      if (toCollectAllMatched && ((!isSignal) || areAllGenDPairMatchingPassed) &&
+          areAllGenDPairMatched &&
           arrIsPassingZMassCut[i]) {
         arrTTAllMatchedFatJet[i]->Fill();
       }
@@ -487,7 +487,7 @@ void xAna_monoZ_preselect(
   std::vector<UInt_t> vIdxFatJetPassed;
   // std::vector<UInt_t> vRankJetPassedPt;
   {
-    TString nameIdx = "Jet_idxPassed";
+    TString nameIdx = "Jet_jetIdxPassed";
     TString titleIdx = "Index of jets passing preselections";
     TString nameRank = "Jet_rankJetPassedPt";
     TString titleRank = "Rank (0-indexed) of pt among passed jets";
@@ -507,7 +507,7 @@ void xAna_monoZ_preselect(
     }
   }
   {
-    TString nameIdx = "FatJet_idxPassed";
+    TString nameIdx = "FatJet_fatJetIdxPassed";
     TString titleIdx = "Index of fat jets passing preselections";
     TString nameRank = "FatJet_rankJetPassedPt";
     TString titleRank = "Rank (0-indexed) of pt among passed fat jets";
@@ -534,7 +534,7 @@ void xAna_monoZ_preselect(
   std::vector<Int_t> vDRankJetPassedPt(4, -10);
   std::vector<UInt_t> vJetMatchedRankJetPassedPt;
   {
-    TString nameIdx = "GenDMatching_idxJet";
+    TString nameIdx = "GenDMatching_jetIdx";
     TString titleIdx = "Index of closest jets of each D quarks";
     TString nameRank = "GenDMatching_rankJetPassedPt";
     TString titleRank =
@@ -570,7 +570,7 @@ void xAna_monoZ_preselect(
   std::vector<Int_t> vDPairRankFatJetPassedPt(2, -10);
   std::vector<UInt_t> vFatJetMatchedRankFatJetPassedPt;
   {
-    TString nameIdx = "GenDPairMatching_idxFatJet";
+    TString nameIdx = "GenDPairMatching_fatJetIdx";
     TString titleIdx = "Index of closest fat jets of each d-pairs";
     TString nameRank = "GenDPairMatching_rankFatJetPassedPt";
     TString titleRank =
@@ -606,7 +606,7 @@ void xAna_monoZ_preselect(
   {
     TString name = "areAllJetsMatchedLeading";
     TString title =
-        "Whether all the jets matched are leading jets (rankMax == "
+        "Whether all the jets matched are leading jets ( (rankMax == "
         "nJetsMatched-1)";
     for (Byte_t i = 0; i < 2; i++) {
       arrTTPreselectedMatchingJet[i]
@@ -719,7 +719,6 @@ void xAna_monoZ_preselect(
         }
       }
       if (descriptionCurrent.name.BeginsWith("GenPart_") &&
-          !descriptionCurrent.name.EndsWith("_idx") &&
           !descriptionCurrent.name.EndsWith("_pt") &&
           !descriptionCurrent.name.EndsWith("_eta") &&
           !descriptionCurrent.name.EndsWith("_phi") &&
@@ -882,7 +881,7 @@ void xAna_monoZ_preselect(
       }
     }
     // if (debug) std::cout << std::flush;
-    Bool_t isGenRightEvent = hasGenLepton && haveAllGenDMatching;
+    Bool_t isGenLongLivedEvent = hasGenLepton && haveAllGenDMatching;
     {
       // if (BranchMounterHelper::RunForEachNIdxSorted<
       //         BranchMounterIterableForUntuplizer,
@@ -915,7 +914,7 @@ void xAna_monoZ_preselect(
                 return false;
               }),
           static_cast<size_t>(nGenPart));
-      if (debug && iii != 4) {
+      if (debug && outputFileTree.Contains("_ctau-") && iii != 4) {
         Fatal("xAna_monoZ_preselect",
               "mounterGenDMatching failed to collect four values. iii = %d",
               iii);
@@ -1052,11 +1051,11 @@ void xAna_monoZ_preselect(
         std::cout << "massLPair: " << arrLeptonPair_mass[1] << std::endl;
     }
 
-    if (!arrIsPassingZMassCut[0] && !arrIsPassingZMassCut[1] &&
-        !isGenRightEvent) {
-      lambdaFillTheTrees();
-      continue;  // TODO
-    }
+    // if (!arrIsPassingZMassCut[0] && !arrIsPassingZMassCut[1] &&
+    //     !isGenLongLivedEvent) {
+    //   lambdaFillTheTrees();
+    //   continue;  // TODO
+    // }
 
     // std::vector<Int_t> vIdxZ_all, vIdxZp_all;
     // vIdxZ_all.clear();
@@ -1134,22 +1133,16 @@ void xAna_monoZ_preselect(
     vIdxFatJetPassed.shrink_to_fit();
     mounterHT.Push();
 
-    Byte_t iLeptonFound =
-        arrIsPassingZMassCut[0] ? 0 : 1;  // Electron event or muon event
+    if (!isGenLongLivedEvent) {
+      lambdaFillTheTrees();
+      continue;
+    }
 
     Float_t* ptrGenPart_pt = data.GetPtrFloat("GenPart_pt");
     Float_t* ptrGenPart_eta = data.GetPtrFloat("GenPart_eta");
     Float_t* ptrGenPart_phi = data.GetPtrFloat("GenPart_phi");
-    std::fill(std::begin(vDGenIdxJetClosest), std::end(vDGenIdxJetClosest),
-              -10);
-    std::fill(std::begin(vDRankJetPassedPt), std::end(vDRankJetPassedPt), -10);
-    vJetMatchedRankJetPassedPt.clear();
-    // std::vector<UInt_t> vDMatchedRankActual(4);
-    // vDMatchedRankActual.clear();
     TLorentzVector* p4DMatching[4];
     TLorentzVector* p4DJetClosest[4];
-    nGenDMatchingPassed = 0;
-    nGenDMatched = 0;
     for (Byte_t iDMatching = 0; iDMatching < 4; iDMatching++) {
       if (debug) std::printf("iDMatching: %d\n", iDMatching);
       p4DJetClosest[iDMatching] = nullptr;
@@ -1199,14 +1192,14 @@ void xAna_monoZ_preselect(
       }
     }
     {
-      if (nGenDMatched) {
-        std::sort(vJetMatchedRankJetPassedPt.begin(),
-                  vJetMatchedRankJetPassedPt.end());
-        nJetMatched =
-            std::distance(vJetMatchedRankJetPassedPt.begin(),
-                          std::unique(vJetMatchedRankJetPassedPt.begin(),
-                                      vJetMatchedRankJetPassedPt.end()));
-        vJetMatchedRankJetPassedPt.resize(nJetMatched);
+      std::sort(vJetMatchedRankJetPassedPt.begin(),
+                vJetMatchedRankJetPassedPt.end());
+      nJetMatched =
+          std::distance(vJetMatchedRankJetPassedPt.begin(),
+                        std::unique(vJetMatchedRankJetPassedPt.begin(),
+                                    vJetMatchedRankJetPassedPt.end()));
+      vJetMatchedRankJetPassedPt.resize(nJetMatched);
+      if (nJetMatched) {
         areAllJetsMatchedLeading =
             vJetMatchedRankJetPassedPt.back() == nJetMatched - 1;
       } else {
@@ -1227,13 +1220,8 @@ void xAna_monoZ_preselect(
           (*p4DJetClosest[0] + *p4DJetClosest[1])
               .DeltaR(*p4DJetClosest[2] + *p4DJetClosest[3]);
     }
-    // std::vector<UInt_t> vDPairMatchedRankActual(2);
-    // vDPairMatchedRankActual.clear();
-    vFatJetMatchedRankFatJetPassedPt.clear();
     TLorentzVector* p4DPairMatching[2];
     TLorentzVector* p4DPairFatJetClosest[2];
-    nGenDPairMatchingPassed = 0;
-    nGenDPairMatched = 0;
     for (UInt_t iDPairMatching = 0; iDPairMatching < 2; iDPairMatching++) {
       // std::cout << vGenDPairMatchingMass.size() << '\n';
       // std::cout << (iDPairMatching << 1) << ((iDPairMatching << 1) + 1) <<
@@ -1271,8 +1259,6 @@ void xAna_monoZ_preselect(
             p4DPairMatching[iDPairMatching]->DeltaR(*p4FatJet);
         if (!rankFatJetPassed ||
             deltaRDPairFatJet < vDeltaRDPairFatJet[iDPairMatching]) {
-          // p4DJetClosest[iDMatching]->Delete();
-          // delete p4DJetClosest[iDMatching];
           vDeltaRDPairFatJet[iDPairMatching] = deltaRDPairFatJet;
           vDPairRankFatJetPassedPt[iDPairMatching] = rankFatJetPassed;
           std::swap(p4DPairFatJetClosest[iDPairMatching], p4FatJet);
