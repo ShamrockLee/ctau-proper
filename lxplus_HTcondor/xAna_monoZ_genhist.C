@@ -299,7 +299,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
       ptrAnalyzerJetRankLast->SetExpressionCustom(
           "maxJetMatched_rankJetPassedPt",
           "Int_t", "Last rank of pt among passed jets",
-          "JetMatched_rankJetPassedPt[nJetMatched-1]");
+          "(nJetMatched>0)?JetMatched_rankJetPassedPt[nJetMatched-1]:-10");
       ptrAnalyzerJetRankLast->SetHasTarget({"JetMatched_rankJetPassedPt", "nJetMatched"});
       merger->vAnalyzerCustomByName.push_back(ptrAnalyzerJetRankLast);
       auto ptrAnalyzerFatJetRankLast = new HistMerger::LeafAnalyzerDefault;
@@ -307,7 +307,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
       ptrAnalyzerFatJetRankLast->SetExpressionCustom(
           "maxFatJetMatched_rankFatJetPassedPt",
           "Int_t", "Last rank of pt among passed jets",
-          "FatJetMatched_rankFatJetPassedPt[nFatJetMatched-1]");
+          "(nFatJetMatched>0)?FatJetMatched_rankFatJetPassedPt[nFatJetMatched-1]:-10");
       ptrAnalyzerFatJetRankLast->SetHasTarget({"FatJetMatched_rankFatJetPassedPt", "nFatJetMatched"});
       merger->vAnalyzerCustomByName.push_back(ptrAnalyzerFatJetRankLast);
     }
