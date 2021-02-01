@@ -33,24 +33,21 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
 
   std::vector<TString> vNameTT;
   vNameTT.clear();
-  UInt_t iTreeZMassCuttedElectron = 0;
-  UInt_t iTreePreselectedMatchingElectron = 0;
-  UInt_t iTreeAllMatchedElectron = iTreeZMassCuttedElectron = vNameTT.size();
-  for (Byte_t i = 0; i < 2; i++) {
-    TString nameLeptonCurrent = namesLepton[i];
-    vNameTT.push_back((TString) "ZMassCutted" + nameLeptonCurrent);
-  }
-  if (nameDatagroup.SubString("signal").Start() == 0) {
+  {
+    Bool_t isSignal = nameDatagroup.BeginsWith("signal");
     for (Byte_t i = 0; i < 2; i++) {
+      TString nameLeptonCurrent = namesLepton[i];
+      vNameTT.push_back((TString) "ZMassCutted" + nameLeptonCurrent);
+    }
+    if (isSignal) for (Byte_t i = 0; i < 2; i++) {
       vNameTT.push_back("Gen" + namesLepton[i]);
     }
-    iTreePreselectedMatchingElectron = vNameTT.size();
     for (const char* nameJetCamel : {"Jet", "FatJet"}) {
       for (Byte_t i = 0; i < 2; i++) {
         vNameTT.push_back((TString) "PreselectedMatching" + nameJetCamel +
                           namesLepton[i]);
       }
-      for (Byte_t i = 0; i < 2; i++) {
+      if (isSignal) for (Byte_t i = 0; i < 2; i++) {
         vNameTT.push_back((TString) "AllMatched" + nameJetCamel +
                           namesLepton[i]);
       }
