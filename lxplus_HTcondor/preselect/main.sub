@@ -1,7 +1,10 @@
 ##########################################################
 ## user setting area
 
-datagroupName         = signal_Mx2-150_Mv-500_Mx1-1_ctau-1
+datagroupName         = DYJets
+# signal_Mx2-150_Mv-500_Mx1-1_ctau-1
+# TT
+# DYJets
 #listFile              = dataTest.txt
 listFile              = dataTest_$(datagroupName).txt
 exeMacro              = xAna_monoZ_preselect.C
@@ -35,7 +38,7 @@ arguments             = $(exeMacro) $(inputFile) $(outputVar)
 should_transfer_files   = Yes
 when_to_transfer_output = ON_EXIT
 transfer_output_remaps  = "$(outputVar)=$(outputTransfer)"
-transfer_input_files   = $(exeMacro), untuplizer.h
+transfer_input_files   = $(exeMacro), untuplizer.h, BranchMounter.h, BranchMounterForUntuplizer.h
 
 queue inputFile from $(listFile)
 
