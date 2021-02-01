@@ -365,10 +365,11 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
                 << " nEntriesToDrawMax: " << nEntriesToDrawMax
                 << " firstEntryToDraw: " << firstEntryToDraw << std::endl;
     isEverAnalyzed = true;
-    if (tree->GetEntriesFast() <= 0) {
+    if (tree->GetEntriesFast() == 0) {
       if (debug)
         std::cout << "Tree " << tree->GetName() << " has 0 entry." << std::endl;
       vIsEmpty.push_back(true);
+      vNEntriesFile.push_back(0);
       return;
     }
     TString nameHistAutogen = "h" + this->nameLeafModified + "Autogen" + "Temp";
