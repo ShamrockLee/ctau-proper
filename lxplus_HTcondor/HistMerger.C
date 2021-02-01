@@ -351,7 +351,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
                 << std::endl;
     if (leaf->GetLen() == 0) {
       if (debug) std::cout << "leaf->GetLen() returns 0" << std::endl;
-      vIsEmpty.emplace_back(true);
+      vIsEmpty.push_back(true);
       return;
     }
     expressionBeforeSetting = nameLeaf;
@@ -368,7 +368,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
     if (tree->GetEntriesFast() <= 0) {
       if (debug)
         std::cout << "Tree " << tree->GetName() << " has 0 entry." << std::endl;
-      vIsEmpty.emplace_back(true);
+      vIsEmpty.push_back(true);
       return;
     }
     TString nameHistAutogen = "h" + this->nameLeafModified + "Autogen" + "Temp";
@@ -1046,10 +1046,10 @@ void HistMerger::Run() {
                 "iFileOriginal=%d",
                 vNameTT[iTree].Data(), iTree, iFile, iFile + nFileMissingTot);
           for (auto &vvIsHistFile : vvvIsHistFileLeafTree[iTree]) {
-            vvIsHistFile.emplace_back(false);
+            vvIsHistFile.push_back(false);
           }
           for (auto &vvIsHistFileCustom : vvvIsHistFileLeafTreeCustom[iTree]) {
-            vvIsHistFileCustom.emplace_back(false);
+            vvIsHistFileCustom.push_back(false);
           }
           continue;
         }
