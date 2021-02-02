@@ -12,8 +12,16 @@
 #include <functional>
 #include <iostream>
 #include <vector>
+#include <numeric>
 
 #include "HistMerger.C"
+
+// std::vector<Int_t> vIota(Int_t iBegin, Int_t iEnd) {
+//   std::vector<Int_t> result(iEnd - iBegin);
+//   result.resize(result.capacity());
+//   std::iota(result.begin(), result.end(), iBegin);
+//   return result;
+// }
 
 void xAna_monoZ_genhist(const TString nameCondorPack,
                         const TString nameDatagroup,
@@ -312,5 +320,33 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
       merger->vAnalyzerCustomByName.push_back(ptrAnalyzerFatJetRankLast);
     }
   }
+  merger->pushCustomAnalyzersWhenRun = [debug](
+      TTree *tree, const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeafCustom,
+      const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeaf,
+      const UInt_t nAnalyzerLeafOld,
+      const std::function<void(HistMerger::LeafAnalyzerAbstract* analyzerNew)> pushbackNewAnalyzer) {
+    for (auto citerVAnalyzerLeaf = vAnalyzerLeaf.cbegin() + nAnalyzerLeafOld;
+         citerVAnalyzerLeaf != vAnalyzerLeaf.cend(); citerVAnalyzerLeaf++) {
+      if (debug) std::cout << "On normal analyzer " << " index " << std::distance(vAnalyzerLeaf.cbegin(), citerVAnalyzerLeaf) << " (" << *citerVAnalyzerLeaf << ")" << std::endl;
+      Bool_t isFatJet = false;
+      const TString nameLeafModified = (*citerVAnalyzerLeaf)->GetNameLeafModified();
+      if (nameLeafModified.BeginsWith("FatJet_")) {
+        isFatJet = true;
+      } else if (nameLeafModified.BeginsWith("Jet_")) {
+      } else {
+        continue;
+      }
+      const UInt_t rankUpperMax = isFatJet ? 6 : 8;
+      for (UInt_t rankUpper = 1; rankUpper <= rankUpperMax; rankUpper++) {
+        auto analyzer = new HistMerger::LeafAnalyzerDefault;
+        analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "First" + rankUpper + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
+            (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
+            Form("First %d -- %s", rankUpper, (*citerVAnalyzerLeaf)->GetTitleLeaf().Data()),
+            nameLeafModified, Form("Iteration$<%d", rankUpper));
+        analyzer->SetHasTarget({nameLeafModified});
+        pushbackNewAnalyzer(analyzer);
+      }
+    }
+  };
   merger->Run();
 }

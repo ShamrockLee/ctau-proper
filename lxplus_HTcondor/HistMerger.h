@@ -232,6 +232,8 @@ class HistMerger {
   std::vector<LeafAnalyzerAbstract*> vAnalyzerCustomByName;
   std::function<void(
       TTree* tree, const std::vector<LeafAnalyzerAbstract*> vAnalyzerLeafCustom,
+      const std::vector<LeafAnalyzerAbstract*> vAnalyzerLeaf,
+      const UInt_t nAnalyzerLeafOld,
       const std::function<void(LeafAnalyzerAbstract* analyzerNew)>
           pushbackNewAnalyzer)>
       pushCustomAnalyzersWhenRun;

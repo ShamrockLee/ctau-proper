@@ -805,6 +805,16 @@ void HistMerger::InitializeWhenRun() {
         "Truncate to fit the correct number");
     vvAnalyzerLeafTreeCustom.resize(nTT);
   }
+  if (debug) {
+    std::cout << "Initial custom analyzer ";
+    for (UInt_t indexNameCustom=0; indexNameCustom<nTT; indexNameCustom++) {
+      std::cout << vvAnalyzerLeafTreeCustom[indexNameCustom].size();
+      if (indexNameCustom != nTT-1) {
+        std::cout << "+";
+      }
+    }
+    std::cout << std::endl;
+  }
   for (LeafAnalyzerAbstract *analyzer : vAnalyzerCustomByName) {
     if (analyzer->GetNameTT().Length() == 0) {
       for (std::vector<LeafAnalyzerAbstract *> &vAnalyzerLeafCustom :
@@ -1224,16 +1234,19 @@ void HistMerger::Run() {
                       << " in file (iFile: " << iFile << " ..." << std::endl;
           UInt_t nAnalyzerLeafCustomOld =
               vvAnalyzerLeafTreeCustom[iTree].size();
-          vvAnalyzerLeafTreeCustom[iTree].push_back(nullptr);
+          // vvAnalyzerLeafTreeCustom[iTree].push_back(nullptr);
 
           pushCustomAnalyzersWhenRun(
               arrTT[iTree], vvAnalyzerLeafTreeCustom[iTree],
+              vvAnalyzerLeafTree[iTree],
+              nNameModifiedLeafOld,
               [this, iTree](LeafAnalyzerAbstract *analyzer) {
                 vvAnalyzerLeafTreeCustom[iTree].push_back(analyzer);
               });
           if (vvAnalyzerLeafTreeCustom[iTree].size() > nAnalyzerLeafCustomOld) {
             if (debug) {
-              for (UInt_t indexNameCustom = nAnalyzerLeafCustomOld + 1;
+              std::cout << "nAnalyzerLeafCustomOld: " << nAnalyzerLeafCustomOld << std::endl;
+              for (UInt_t indexNameCustom = nAnalyzerLeafCustomOld;
                    indexNameCustom < vvAnalyzerLeafTreeCustom[iTree].size();
                    indexNameCustom++) {
                 std::cout << "Push "
@@ -1256,6 +1269,8 @@ void HistMerger::Run() {
         for (UInt_t indexNameCustom = 0;
              indexNameCustom < vvAnalyzerLeafTreeCustom[iTree].size();
              indexNameCustom++) {
+          if (debug) std::cout << "On analyzer " << vvAnalyzerLeafTreeCustom[iTree][indexNameCustom]
+          << " " << vvAnalyzerLeafTreeCustom[iTree][indexNameCustom]->GetNameLeafModified() << std::endl;
           vvvIsHistFileLeafTreeCustom[iTree][indexNameCustom].push_back(
               vvAnalyzerLeafTreeCustom[iTree][indexNameCustom]->GetHasTarget(
                   arrTT[iTree]));
