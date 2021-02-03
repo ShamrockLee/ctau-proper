@@ -200,15 +200,21 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
           }
         }
         if (typeNameLeaf.Contains("Int") || typeNameLeaf.Contains("int")) {
-          if (nameLeafModified.EndsWith("idxJet")) {
+          if (nameLeafModified.EndsWith("idxJet") || nameLeafModified.EndsWith("idxFatJet")) {
             if (debug) std::cout << "Found idxJet" << std::endl;
             lowerCorrect = 0;
+            if (upperCorrect <= lowerCorrect) {
+              upperCorrect = lowerCorrect + 1;
+            }
             nBinCorrect = upperCorrect - lowerCorrect;
             return;
           }
           if (nameLeafModified.Contains("_rank")) {
             if (debug) std::cout << "Found rank" << std::endl;
             lowerCorrect = 0;
+            if (upperCorrect <= lowerCorrect) {
+              upperCorrect = lowerCorrect + 1;
+            }
             nBinCorrect = upperCorrect - lowerCorrect;
             return;
           }
@@ -238,6 +244,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   merger->debug = debug;
   merger->allowMissingInputFiles = allowMissing;
   // merger->nLeavesToUseCorrectedTempFileMin = 0;
+  // merger->nLeavesToUseCorrectedTempFileMin = 1;
   merger->funIsToVetoLeaf = [](TString nameTT,
                                TString nameLeafModified) -> Bool_t {
     if (nameLeafModified.Contains("jEntr")) {
@@ -250,6 +257,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
     // return !nameLeafModified.EqualTo("Jet_neEmEF");
     // return !nameLeafModified.EqualTo("nGenDMatched");
     // return !nameLeafModified.EqualTo("FatJetMatched_rankFatJetPassedPt");
+    // return !nameLeafModified.EqualTo("FatJet_nBHadrons");
   };
   merger->funTitleLeaf = [](TLeaf* leaf) -> TString {
     return leaf->GetBranch()->GetTitle();
@@ -335,6 +343,14 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
       } else if (nameLeafModified.BeginsWith("Jet_")) {
       } else {
         continue;
+      }
+      if (((TString)tree->GetName()).Contains("Match")) {
+        auto analyzer = new HistMerger::LeafAnalyzerDefault;
+        analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "Matched" + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
+        (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
+        (*citerVAnalyzerLeaf)->GetTitleLeaf() + " that is matched",
+        Form("%s[%sMatched_rank%sPassedPt]", nameLeafModified.Data(), isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet"));
+        analyzer->SetHasTarget({nameLeafModified, TString::Format("%sMatched_rank%sPassedPt", isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet")});
       }
       const UInt_t rankUpperMax = isFatJet ? 6 : 8;
       for (UInt_t rankUpper = 1; rankUpper <= rankUpperMax; rankUpper++) {

@@ -1762,6 +1762,8 @@ void HistMerger::Run() {
         }
         // if (isErrorUnexpected) continue;
         if (debug) std::cout << " Done." << std::endl;
+        tlHistCorrectedToMerge->Delete();
+        delete tlHistCorrectedToMerge;
       }
     }
     if (isToUseCorrectedTempFile) {
