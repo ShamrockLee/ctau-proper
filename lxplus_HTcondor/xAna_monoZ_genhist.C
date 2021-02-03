@@ -160,27 +160,32 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             upperCorrect = TMath::Pi();
             return;
           }
-          if (nameLeafModified.Contains("Jet_btag")) {
-            if (nameLeafModified.Contains("Jet_btagCMVA") ||
-                nameLeafModified.Contains("Jet_btagHbb")) {
-              if (debug) std::cout << "Found Jet_btagCMVA" << std::endl;
+          if (nameLeafModified.Contains("_btag")) {
+            if (nameLeafModified.Contains("_btagCMVA") ||
+                nameLeafModified.Contains("_btagHbb")) {
+              if (debug) std::cout << "Found _btagCMVA" << std::endl;
               lowerCorrect = -1;
               upperCorrect = 1;
             } else {
-              if (debug) std::cout << "Found Jet_btag" << std::endl;
+              if (debug) std::cout << "Found _btag" << std::endl;
               lowerCorrect = 0;
               upperCorrect = 1;
             }
             return;
           }
-          if (nameLeafModified.Contains("Jet_ch")) {
-            if (debug) std::cout << "Found Jet_ch" << std::endl;
+          if (nameLeafModified.Contains("_deepTag")) {
+            if (debug) std::cout << "Found _deepTag" << std::endl;
+            lowerCorrect = 0;
+            upperCorrect = 1;
+          }
+          if (nameLeafModified.Contains("_ch")) {
+            if (debug) std::cout << "Found _ch" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
             return;
           }
-          if (nameLeafModified.Contains("Jet_qgl")) {
-            if (debug) std::cout << "Found Jet_qgl" << std::endl;
+          if (nameLeafModified.Contains("_qgl")) {
+            if (debug) std::cout << "Found _qgl" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
             return;
