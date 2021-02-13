@@ -821,6 +821,8 @@ void xAna_monoZ_preselect(
     std::fill(vGenDPairMatchedId.begin(), vGenDPairMatchedId.end(), false);
     vIdxJetPassed.clear();
     vIdxFatJetPassed.clear();
+    vJetMatchedRankJetPassedPt.clear();
+    vFatJetMatchedRankFatJetPassedPt.clear();
 
     areAllGenDMatchingPassed = false;
     areAllGenDPairMatchingPassed = false;
@@ -1162,6 +1164,9 @@ void xAna_monoZ_preselect(
       p4DMatching[iDMatching]->SetPtEtaPhiM(
           vGenDMatchingPt[iDMatching], vGenDMatchingEta[iDMatching],
           vGenDMatchingPhi[iDMatching], massDown);
+      if (!nJetPassed) {
+        continue;
+      }
       for (Byte_t rankJetPassed = 0; rankJetPassed < nJetPassed;
            rankJetPassed++) {
         if (debug) std::printf("rankJetPassed: %d\n", rankJetPassed);
@@ -1191,7 +1196,10 @@ void xAna_monoZ_preselect(
         vGenDMatchedId[iDMatching] = false;
       }
     }
-    {
+    if (nJetPassed) {
+      if (debug && vJetMatchedRankJetPassedPt.size() > nDQuarksExpected) {
+        Fatal(Form("xAna_monoZ_preselected, line %d", __LINE__), "Size of vJetMatchedRankJetPassedPt (%zu) is greater than %d", vJetMatchedRankJetPassedPt.size(), nDQuarksExpected);
+      }
       std::sort(vJetMatchedRankJetPassedPt.begin(),
                 vJetMatchedRankJetPassedPt.end());
       nJetMatched =
@@ -1212,6 +1220,16 @@ void xAna_monoZ_preselect(
       if (debug)
         std::printf("areAllGenDMatchingPassed: %d\n", areAllGenDMatchingPassed);
       if (debug) std::printf("areAllGenDMatched: %d\n", areAllGenDMatched);
+      // if (debug) std::cout << "line: " << __LINE__ << " jEntry: " << jEntry << std::endl;
+      if (debug) for (Byte_t i=0; i<4; i++) {
+        std::cout
+        << "p4DJetClosest[" << static_cast<UShort_t>(i) << "] ("<< p4DJetClosest[i] << ") (px, py, pz, e) ("
+        << p4DJetClosest[i]->Px() << ", "
+        << p4DJetClosest[i]->Py() << ", "
+        << p4DJetClosest[i]->Pz() << ", "
+        << p4DJetClosest[i]->E()
+        << ")" << std::endl;
+      }
       for (Byte_t i = 0; i < 2; i++) {
         vDeltaRJetPair[i] =
             p4DJetClosest[i << 1]->DeltaR(*p4DJetClosest[(i << 1) + 1]);
@@ -1226,10 +1244,12 @@ void xAna_monoZ_preselect(
       // std::cout << vGenDPairMatchingMass.size() << '\n';
       // std::cout << (iDPairMatching << 1) << ((iDPairMatching << 1) + 1) <<
       // "\n"; std::cout << p4DMatching[(iDPairMatching << 1)+1]->Pt() <<'\n';
+      // if (debug) std::cout << "line: " << __LINE__ << " jEntry: " << jEntry << std::endl;
       p4DPairMatching[iDPairMatching] = new TLorentzVector;
       *(p4DPairMatching[iDPairMatching]) =
           *(p4DMatching[iDPairMatching << 1]) +
           *(p4DMatching[(iDPairMatching << 1) + 1]);
+      // if (debug) std::cout << "line: " << __LINE__ << " jEntry: " << jEntry << std::endl;
       // std::cout << "testtag" << std::endl;
       vGenDPairMatchingPt[iDPairMatching] =
           p4DPairMatching[iDPairMatching]->Pt();
@@ -1244,6 +1264,9 @@ void xAna_monoZ_preselect(
           TMath::Abs(vGenDPairMatchingEta[iDPairMatching]) < 4.5;
       if (vGenDPairMatchingIdPassed[iDPairMatching]) {
         nGenDPairMatchingPassed++;
+      }
+      if (!nFatJetPassed) {
+        continue;
       }
       // Fat jet matching
       for (Byte_t rankFatJetPassed = 0; rankFatJetPassed < nFatJetPassed;
@@ -1286,7 +1309,7 @@ void xAna_monoZ_preselect(
       std::printf(
           "areAllGenDPairMatchingPassed: %d, areAllGenDPairMatched: %d\n",
           areAllGenDPairMatchingPassed, areAllGenDPairMatched);
-    {
+    if (nFatJetPassed) {
       std::sort(vFatJetMatchedRankFatJetPassedPt.begin(),
                 vFatJetMatchedRankFatJetPassedPt.end());
       auto uniqueEnd = std::unique(vFatJetMatchedRankFatJetPassedPt.begin(),
