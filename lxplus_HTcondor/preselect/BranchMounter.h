@@ -254,7 +254,8 @@ class BranchMounterVectorSingle
     }
   }
   void SwapAt(const TypeSize i, const TypeSize j) {
-    if (vvE.size() && (i < 0 || j < 0 || i >= vvE.back().size() || j >= vvE.back().size())) {
+    if (vvE.size() &&
+        (i < 0 || j < 0 || i >= vvE.back().size() || j >= vvE.back().size())) {
       Fatal("BranchMounterVectorSingle::SwapAt",
             "Parameters (%ld, %ld) exceed the boundary (%ld).", i, j,
             vvE.back().size());
@@ -474,7 +475,7 @@ TypeSize RunForEachIdxSorted(BranchMounter &mounter, TypeIterIdx begin,
 }
 }  // namespace BranchMounterHelper
 
-namespace CommonAcceptability {
+namespace MounterCommonAcceptability {
 Bool_t GetIsAcceptableLongDouble(BranchDescription description) {
   return description.typeName.Contains("LongDouble") ||
          description.typeName.Contains("long double") ||
@@ -555,6 +556,6 @@ Bool_t GetIsAcceptableBool(BranchDescription description) {
   return description.typeName.Contains("Bool") ||
          description.typeName.Contains("bool");
 }
-}  // namespace CommonAcceptability
+}  // namespace MounterCommonAcceptability
 
-#endif
+#endif // BRANCH_MOUNTER_H
