@@ -60,12 +60,12 @@ template <typename E, typename TypeSize = size_t>
 class VirtualBranchMounterScalarSingle
     : public VirtualBranchMounterScalar<TypeSize> {
  public:
-  void SetFunPush(std::function<E(BranchDescription description)> funPush) {
-    this->funPush = funPush;
+  void SetFunEIn(std::function<E(BranchDescription description)> funEIn) {
+    this->funEIn = funEIn;
   }
   // ~VirtualBranchMounterScalarSingle() {};
  protected:
-  std::function<E(BranchDescription description)> funPush;
+  std::function<E(BranchDescription description)> funEIn;
 };
 
 template <typename E, typename TypeIterEIn = E *, typename TypeSize = size_t>
@@ -106,15 +106,15 @@ class BranchMounterScalarSingle
   typedef size_t TypeSize;
   const std::vector<BranchDescription> vDescriptions;
   TypeSize nDescriptions;
-  std::function<E(BranchDescription)> funPush;
+  std::function<E(BranchDescription)> funEIn;
   std::function<BranchDescription(BranchDescription)> funDescriptionModified;
 
  public:
   // typedef VirtualDescriptionCollectorSingle Setting;
   typedef std::vector<E> Binding;
   Binding vE;
-  void SetFunPush(std::function<E(BranchDescription)> funPush) {
-    this->funPush = funPush;
+  void SetFunEIn(std::function<E(BranchDescription)> funEIn) {
+    this->funEIn = funEIn;
   }
   void BranchOn(TTree *treeOut) {
     for (TypeSize iDescription = 0; iDescription < nDescriptions;
@@ -130,7 +130,7 @@ class BranchMounterScalarSingle
   void Push() {
     for (TypeSize iDescription = 0; iDescription < nDescriptions;
          iDescription++) {
-      vE[iDescription] = funPush(vDescriptions[iDescription]);
+      vE[iDescription] = funEIn(vDescriptions[iDescription]);
     }
   }
   void SwapAt(const TypeSize i, const TypeSize j) {
@@ -143,21 +143,21 @@ class BranchMounterScalarSingle
   }
   BranchMounterScalarSingle(
       const std::vector<BranchDescription> vDescriptions,
-      std::function<E(BranchDescription)> funPush = nullptr,
+      std::function<E(BranchDescription)> funEIn = nullptr,
       std::function<BranchDescription(BranchDescription)>
           funDescriptionModified = nullptr)
       : vDescriptions(vDescriptions),
         nDescriptions(vDescriptions.size()),
-        funPush(funPush),
+        funEIn(funEIn),
         funDescriptionModified(funDescriptionModified) {
     vE.resize(nDescriptions);
   }
   BranchMounterScalarSingle(
       const VirtualDescriptionCollectorSingle &setting,
-      std::function<E(BranchDescription)> funPush = nullptr,
+      std::function<E(BranchDescription)> funEIn = nullptr,
       std::function<BranchDescription(BranchDescription)>
           funDescriptionModified = nullptr)
-      : BranchMounterScalarSingle(setting.vDescriptions, funPush,
+      : BranchMounterScalarSingle(setting.vDescriptions, funEIn,
                                   funDescriptionModified) {}
 };
 
@@ -182,25 +182,25 @@ class BranchMounterScalarSingle<Bool_t>
           ->SetTitle(description.title);
     }
   }
-  void SetFunPush(std::function<Bool_t(BranchDescription)> funPush) {
-    BranchMounterScalarSingle<Char_t>::SetFunPush(
-        [funPush](BranchDescription description) -> Char_t {
-          return static_cast<Char_t>(funPush(description));
+  void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
+    BranchMounterScalarSingle<Char_t>::SetFunEIn(
+        [funEIn](BranchDescription description) -> Char_t {
+          return static_cast<Char_t>(funEIn(description));
         });
   }
   BranchMounterScalarSingle(
       const std::vector<BranchDescription> vDescriptions,
-      std::function<Bool_t(BranchDescription)> funPush = nullptr,
+      std::function<Bool_t(BranchDescription)> funEIn = nullptr,
       std::function<BranchDescription(BranchDescription)>
           funDescriptionModified = nullptr)
-      : BranchMounterScalarSingle<Char_t>(vDescriptions, funPush,
+      : BranchMounterScalarSingle<Char_t>(vDescriptions, funEIn,
                                           funDescriptionModified) {}
   BranchMounterScalarSingle(
       const VirtualDescriptionCollectorSingle &setting,
-      std::function<Bool_t(BranchDescription)> funPush = nullptr,
+      std::function<Bool_t(BranchDescription)> funEIn = nullptr,
       std::function<BranchDescription(BranchDescription)>
           funDescriptionModified = nullptr)
-      : BranchMounterScalarSingle<Char_t>(setting, funPush,
+      : BranchMounterScalarSingle<Char_t>(setting, funEIn,
                                           funDescriptionModified) {}
 };
 
