@@ -365,6 +365,7 @@ class HistMerger::LeafAnalyzerAbstract {
                          TString titleLeaf)>
           adjustHistSettingPerLeafTreeExtra) {}
   virtual void AnalyzeLeafBasic(TLeaf* leaf) = 0;
+  virtual void AnalyzeLeafBasicExtra() = 0;
   // const std::function<TString(TString nameLeaf)> getNameLeafModified;
   virtual TString GetNameLeafModified() const = 0;
   virtual void SetFunTitleLeaf(

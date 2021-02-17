@@ -274,8 +274,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
     this->AnalyzeLeafBasicExtra();
   }
 
- protected:
-  virtual inline void AnalyzeLeafBasicExtra() {
+  virtual void AnalyzeLeafBasicExtra() {
     // isTypeFloatingPoint = containsOfTString(typeNameLeaf, "loat") ||
     //                containsOfTString(typeNameLeaf, "ouble");
     if (typeNameLeaf.Contains("Bool") || typeNameLeaf.Contains("bool")) {
@@ -305,7 +304,6 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
                 << std::endl;
   }
 
- public:
   TString GetNameLeafModified() const { return this->nameLeafModified; }
   TString GetTitleLeaf() const { return this->titleLeaf; }
   TString GetTypeNameLeaf() const { return this->typeNameLeaf; }
@@ -805,16 +803,6 @@ void HistMerger::InitializeWhenRun() {
         "Truncate to fit the correct number");
     vvAnalyzerLeafTreeCustom.resize(nTT);
   }
-  if (debug) {
-    std::cout << "Initial custom analyzer ";
-    for (UInt_t indexNameCustom=0; indexNameCustom<nTT; indexNameCustom++) {
-      std::cout << vvAnalyzerLeafTreeCustom[indexNameCustom].size();
-      if (indexNameCustom != nTT-1) {
-        std::cout << "+";
-      }
-    }
-    std::cout << std::endl;
-  }
   for (LeafAnalyzerAbstract *analyzer : vAnalyzerCustomByName) {
     if (analyzer->GetNameTT().Length() == 0) {
       for (std::vector<LeafAnalyzerAbstract *> &vAnalyzerLeafCustom :
@@ -834,9 +822,20 @@ void HistMerger::InitializeWhenRun() {
       iterNameTT++;
     }
   }
+  if (debug) {
+    std::cout << "Initial custom analyzer ";
+    for (UInt_t iTree=0; iTree<nTT; iTree++) {
+      std::cout << vvAnalyzerLeafTreeCustom[iTree].size();
+      if (iTree != nTT-1) {
+        std::cout << "+";
+      }
+    }
+    std::cout << std::endl;
+  }
   for (UInt_t iTree = 0; iTree < vNameTT.size(); iTree++) {
     for (LeafAnalyzerAbstract *analyzer : vvAnalyzerLeafTreeCustom[iTree]) {
       ProcessAnalyzerNew(analyzer, vNameTT[iTree]);
+      analyzer->AnalyzeLeafBasicExtra();
     }
   }
   for (UInt_t iTree = 0; iTree < nTT; iTree++) {
@@ -1241,6 +1240,8 @@ void HistMerger::Run() {
               vvAnalyzerLeafTree[iTree],
               nNameModifiedLeafOld,
               [this, iTree](LeafAnalyzerAbstract *analyzer) {
+                ProcessAnalyzerNew(analyzer, vNameTT[iTree]);
+                analyzer->AnalyzeLeafBasicExtra();
                 vvAnalyzerLeafTreeCustom[iTree].push_back(analyzer);
               });
           if (vvAnalyzerLeafTreeCustom[iTree].size() > nAnalyzerLeafCustomOld) {
