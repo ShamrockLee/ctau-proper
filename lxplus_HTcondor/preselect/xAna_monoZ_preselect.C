@@ -178,6 +178,29 @@ void xAna_monoZ_preselect(
   for (Byte_t i = 0; i < 2; i++) {
     arrTTZMassCutted[i]->Branch("jEntry", &jEntry);
   }
+  // Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
+  // Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
+  // Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
+  // Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
+
+  auto collectorElectronDynamics = DescriptionCollectorFromFun(MounterCommonAcceptability::GetIsAcceptableFloat);
+  collectorElectronDynamics.BranchFor(BranchDescription("Electron_pt", "Pt of each electron", "Float_t"));
+  collectorElectronDynamics.BranchFor(BranchDescription("Electron_eta", "Eta of each electron", "Float_t"));
+  collectorElectronDynamics.BranchFor(BranchDescription("Electron_phi", "Phi of each electron", "Float_t"));
+  collectorElectronDynamics.BranchFor(BranchDescription("Electron_eCorr", "Corrected energy of each electron", "Float_t"));
+  collectorElectronDynamics.Prepare();
+  auto mounterElectronDynamics = BranchMounterVectorSingle<Float_t, Float_t *>(collectorElectronDynamics);
+  auto &vElectronPt = mounterElectronDynamics.vvE[0];
+  auto &vElectronEta = mounterElectronDynamics.vvE[1];
+  auto &vElectronPhi = mounterElectronDynamics.vvE[2];
+  auto &vElectronECorr = mounterElectronDynamics.vvE[3];
+  mounterElectronDynamics.BranchOn(arrTTGen[0]);
+  mounterElectronDynamics.BranchOn(arrTTNumCorrect[0]);
+  mounterElectronDynamics.BranchOn(arrTTZMassCutted[0]);
+  mounterElectronDynamics.SetFunIterEIn([&data](BranchDescription description)->Float_t*{
+    return data.GetPtrFloat(description.name);
+  });
+
   Bool_t haveAllGenDMatching;
   for (Byte_t i = 0; i < 2; i++) {
     TString name = "haveAllGenDMatching";
@@ -259,6 +282,7 @@ void xAna_monoZ_preselect(
   std::vector<Bool_t> vGenDPairMatchingIdPassed(2, false);
   UInt_t nGenDPairMatchingPassed = 0;
   Bool_t areAllGenDPairMatchingPassed;
+  for (TTree *const *const ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted}) {
   for (Byte_t i = 0; i < 2; i++) {
     const char* nameIdTemplate = "GenD%sMatching_idPassed";
     const char* titleIdTemplate =
@@ -268,32 +292,33 @@ void xAna_monoZ_preselect(
     const char* nameAreAllTemplate = "areAllGenD%sMatchingPassed";
     const char* titleAreAllTemplate =
         "Whether all the %ss have passed the preselections";
-    arrTTGen[i]
+    ppTT[i]
         ->Branch(TString::Format(nameIdTemplate, ""), &vGenDMatchingIdPassed)
         ->SetTitle(TString::Format(titleIdTemplate, "d quark"));
-    arrTTGen[i]
+    ppTT[i]
         ->Branch(TString::Format(nameNTemplate, ""), &nGenDMatchingPassed,
                  TString::Format(nameNTemplate, "") + "/I", __SIZEOF_INT__)
         ->SetTitle(TString::Format(titleNTemplate, "d quark"));
-    arrTTGen[i]
+    ppTT[i]
         ->Branch(TString::Format(nameAreAllTemplate, ""),
                  &areAllGenDMatchingPassed,
                  TString::Format(nameAreAllTemplate, "") + "/O", 1)
         ->SetTitle(TString::Format(titleAreAllTemplate, "d quark"));
-    arrTTGen[i]
+    ppTT[i]
         ->Branch(TString::Format(nameIdTemplate, "Pair"),
                  &vGenDPairMatchingIdPassed)
         ->SetTitle(TString::Format(titleIdTemplate, "d-pair"));
-    arrTTGen[i]
+    ppTT[i]
         ->Branch(TString::Format(nameNTemplate, "Pair"),
                  &nGenDPairMatchingPassed,
                  TString::Format(nameNTemplate, "Pair") + "/I", __SIZEOF_INT__)
         ->SetTitle(TString::Format(titleNTemplate, "d-pair"));
-    arrTTGen[i]
+    ppTT[i]
         ->Branch(TString::Format(nameAreAllTemplate, "Pair"),
                  &areAllGenDPairMatchingPassed,
                  TString::Format(nameAreAllTemplate, "Pair") + "/O", 1)
         ->SetTitle(TString::Format(titleAreAllTemplate, "d-pair"));
+  }
   }
   Bool_t arrHasGenLepton[3];
   for (Byte_t i = 0; i < 2; i++) {
@@ -457,10 +482,23 @@ void xAna_monoZ_preselect(
         ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
                  nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleJetPrefix + titlePassSuffix);
+    arrTTNumCorrect[i]
+        ->Branch(nameJetPrefix, &nJet, nameJetPrefix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix);
+    arrTTNumCorrect[i]
+        ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
+                 nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix + titlePassSuffix);
+    arrTTPreselectedMatchingJet[i]
+        ->Branch(nameJetPrefix, &nJet, nameJetPrefix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix);
     arrTTPreselectedMatchingJet[i]
         ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
                  nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleJetPrefix + titlePassSuffix);
+    arrTTAllMatchedJet[i]
+        ->Branch(nameJetPrefix, &nJet, nameJetPrefix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix);
     arrTTAllMatchedJet[i]
         ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
                  nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
@@ -473,10 +511,26 @@ void xAna_monoZ_preselect(
         ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed,
                  nameFatJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleFatJetPrefix + titlePassSuffix);
+    arrTTNumCorrect[i]
+        ->Branch(nameFatJetPrefix, &nFatJet, nameFatJetPrefix + "/I",
+                 __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix);
+    arrTTNumCorrect[i]
+        ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed,
+                 nameFatJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix + titlePassSuffix);
+    arrTTPreselectedMatchingFatJet[i]
+        ->Branch(nameFatJetPrefix, &nFatJet, nameFatJetPrefix + "/I",
+                 __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix);
     arrTTPreselectedMatchingFatJet[i]
         ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed,
                  nameFatJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleFatJetPrefix + titlePassSuffix);
+    arrTTAllMatchedFatJet[i]
+        ->Branch(nameFatJetPrefix, &nFatJet, nameFatJetPrefix + "/I",
+                 __SIZEOF_INT__)
+        ->SetTitle(titleFatJetPrefix);
     arrTTAllMatchedFatJet[i]
         ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed,
                  nameFatJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
@@ -591,13 +645,13 @@ void xAna_monoZ_preselect(
           ->SetTitle(titleRankUnique);
     }
     for (Byte_t i = 0; i < 2; i++) {
-      arrTTAllMatchedJet[i]
+      arrTTAllMatchedFatJet[i]
           ->Branch(nameIdx, &vGenDPairIdxFatJetClosest)
           ->SetTitle(titleIdx);
-      arrTTAllMatchedJet[i]
+      arrTTAllMatchedFatJet[i]
           ->Branch(nameRank, &vDPairRankFatJetPassedPt)
           ->SetTitle(titleRank);
-      arrTTAllMatchedJet[i]
+      arrTTAllMatchedFatJet[i]
           ->Branch(nameRankUnique, &vFatJetMatchedRankFatJetPassedPt)
           ->SetTitle(titleRankUnique);
     }
@@ -751,7 +805,9 @@ void xAna_monoZ_preselect(
       mounterHT.BranchOn(tree);
     };
     auto funDoJet = [&mounterGenDMatching, &mounterJet](TTree* tree) {
-      mounterGenDMatching.BranchOn(tree);
+      if (!TString(tree->GetName()).BeginsWith("NumCorrect")) {
+        mounterGenDMatching.BranchOn(tree);
+      }
       mounterJet.BranchOn(tree);
     };
     auto funDoFatJet = [&mounterFatJet](TTree* tree) {
@@ -961,7 +1017,7 @@ void xAna_monoZ_preselect(
           nElectronTight += ptrElectron_isTight[i], i++)
         ;
     }
-    Bool_t isNumElectronCorrect = (nElectronSoft == 2 && nElectronTight == 2);
+    Bool_t isNumElectronCorrect = (nElectronSoft == 2);
     // nElectronPair = isNumElectronCorrect;
 
     Int_t nMuonSoft, nMuonTight;
@@ -989,10 +1045,12 @@ void xAna_monoZ_preselect(
 
     for (Byte_t i = 0; i < 2; i++) arrIsPassingZMassCut[i] = 0;
 
-    Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
-    Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
-    Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
-    Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
+    // Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
+    // Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
+    // Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
+    // Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
+    mounterElectronDynamics.PrepareForPushing(nElectron);
+    for (Byte_t i = 0; i < nElectron; i++) mounterElectronDynamics.PushOrSkip(true);
 
     TLorentzVector* ppElectronP4NumberCorrect[nElectronTight];
     TLorentzVector* ptrElectronP4NumberCorrectSum;
@@ -1005,7 +1063,7 @@ void xAna_monoZ_preselect(
         //     ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
         //     ptrElectron_eCorr[i]);
         ppElectronP4NumberCorrect[i]->SetPtEtaPhiM(
-            ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
+            vElectronPt[i], vElectronEta[i], vElectronPhi[i],
             massElectron);
         *ptrElectronP4NumberCorrectSum += *ppElectronP4NumberCorrect[i];
       }
