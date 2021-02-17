@@ -45,6 +45,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
     Bool_t isSignal = nameDatagroup.BeginsWith("signal");
     for (Byte_t i = 0; i < 2; i++) {
       TString nameLeptonCurrent = namesLepton[i];
+      vNameTT.push_back((TString) "NumCorrect" + nameLeptonCurrent);
       vNameTT.push_back((TString) "ZMassCutted" + nameLeptonCurrent);
     }
     if (isSignal) for (Byte_t i = 0; i < 2; i++) {
@@ -190,9 +191,15 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             upperCorrect = 1;
             return;
           }
-          if (nameLeafModified.EndsWith("_puIdDisc")) {
+          if (nameLeafModified.Contains("_puIdDisc")) {
             // Pileup ID discriminant
-            if (debug) std::cout << "Found puIdDisc" << std::endl;
+            if (debug) std::cout << "Found _puIdDisc" << std::endl;
+            lowerCorrect = -1;
+            upperCorrect = 1;
+          }
+          if (nameLeafModified.Contains("_lsf")) {
+            //
+            if (debug) std::cout << "Found _lsf" << std::endl;
             lowerCorrect = -1;
             upperCorrect = 1;
           }
@@ -267,107 +274,152 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   merger->funTitleLeaf = [](TLeaf* leaf) -> TString {
     return leaf->GetBranch()->GetTitle();
   };
-  for (TString nameTT : vNameTT) {
-    if (nameTT.Contains("Match")) {
-      // const TString tstrDJetDeltaR = "GenDMatching_deltaRJet";
-      // const TString tstrMatchedId = "GenDMatching_JetMatchedId";
-      // const TString tstrDJetRankPt = "GenDMatching_rankJetPassedPt";
-      // const TString tstrJetRankPt = "JetMatched_rankJetPassedPt";
-      // for (UInt_t iD = 0; iD < 4; iD++) {
-      //   auto ptrAnalyzerDJetDeltaR = new HistMerger::LeafAnalyzerDefault;
-      //   ptrAnalyzerDJetDeltaR->SetNameTT(nameTT);
-      //   ptrAnalyzerDJetDeltaR->SetExpressionCustom(
-      //       TString::Format("%s%d", tstrDJetDeltaR.Data(), iD), "Float_t",
-      //       TString::Format(
-      //           "DeltaR between each d quark no. %d and its closest jet", iD),
-      //       TString::Format("%s[%d]", tstrDJetDeltaR.Data(), iD));
-      //   ptrAnalyzerDJetDeltaR->SetHasTarget({tstrDJetDeltaR});
-      //   merger->vAnalyzerCustomByName.push_back(
-      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetDeltaR);
-      //   auto ptrAnalyzerMatchedId = new HistMerger::LeafAnalyzerDefault;
-      //   ptrAnalyzerMatchedId->SetNameTT(nameTT);
-      //   ptrAnalyzerMatchedId->SetExpressionCustom(
-      //       TString::Format("%s%d", tstrMatchedId.Data(), iD), "Bool_t",
-      //       TString::Format("Whether d-quark no. %d matches a THIN jet", iD),
-      //       TString::Format("%s[%d]", tstrMatchedId.Data(), iD));
-      //   ptrAnalyzerMatchedId->SetHasTarget({tstrMatchedId});
-      //   merger->vAnalyzerCustomByName.push_back(
-      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerMatchedId);
-      //   auto ptrAnalyzerDJetRankPt = new HistMerger::LeafAnalyzerDefault;
-      //   ptrAnalyzerDJetRankPt->SetNameTT(nameTT);
-      //   ptrAnalyzerDJetRankPt->SetExpressionCustom(
-      //       TString::Format("%s%d", tstrDJetRankPt.Data(), iD), "Int_t",
-      //       TString::Format("Rank (0-indexed) of pt among  passed jet matching "
-      //                       "quark no. %d",
-      //                       iD),
-      //       TString::Format("%s[%d]", tstrDJetRankPt.Data(), iD),
-      //       TString::Format("%s[%d]>0", tstrMatchedId.Data(), iD).Data());
-      //   ptrAnalyzerDJetRankPt->SetHasTarget({tstrDJetRankPt, tstrMatchedId});
-      //   merger->vAnalyzerCustomByName.push_back(
-      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetRankPt);
-      //   auto ptrAnalyzerRankPtAllMatched =
-      //       new HistMerger::LeafAnalyzerDefault(*ptrAnalyzerDJetRankPt);
-      //   ptrAnalyzerRankPtAllMatched->SetSelection("");
-      //   ptrAnalyzerRankPtAllMatched->SetHasTarget(
-      //       {tstrDJetRankPt}, [tstrMatchedId](TTree* tree) -> Bool_t {
-      //         return tree->GetLeaf(tstrMatchedId) == nullptr;
-      //       });
-      //   merger->vAnalyzerCustomByName.push_back(
-      //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerRankPtAllMatched);
-      // }
-      auto ptrAnalyzerJetRankLast = new HistMerger::LeafAnalyzerDefault;
-      ptrAnalyzerJetRankLast->SetNameTT(nameTT);
-      ptrAnalyzerJetRankLast->SetExpressionCustom(
-          "maxJetMatched_rankJetPassedPt",
-          "Int_t", "Last rank of pt among passed jets",
-          "(nJetMatched>0)?JetMatched_rankJetPassedPt[nJetMatched-1]:-10");
-      ptrAnalyzerJetRankLast->SetHasTarget({"JetMatched_rankJetPassedPt", "nJetMatched"});
-      merger->vAnalyzerCustomByName.push_back(ptrAnalyzerJetRankLast);
-      auto ptrAnalyzerFatJetRankLast = new HistMerger::LeafAnalyzerDefault;
-      ptrAnalyzerFatJetRankLast->SetNameTT(nameTT);
-      ptrAnalyzerFatJetRankLast->SetExpressionCustom(
-          "maxFatJetMatched_rankFatJetPassedPt",
-          "Int_t", "Last rank of pt among passed jets",
-          "(nFatJetMatched>0)?FatJetMatched_rankFatJetPassedPt[nFatJetMatched-1]:-10");
-      ptrAnalyzerFatJetRankLast->SetHasTarget({"FatJetMatched_rankFatJetPassedPt", "nFatJetMatched"});
-      merger->vAnalyzerCustomByName.push_back(ptrAnalyzerFatJetRankLast);
+  if (nameCondorPack.EqualTo("preselect")) { 
+    for (TString nameTT : vNameTT) {
+      if (nameTT.Contains("Match")) {
+        // const TString tstrDJetDeltaR = "GenDMatching_deltaRJet";
+        // const TString tstrMatchedId = "GenDMatching_JetMatchedId";
+        // const TString tstrDJetRankPt = "GenDMatching_rankJetPassedPt";
+        // const TString tstrJetRankPt = "JetMatched_rankJetPassedPt";
+        // for (UInt_t iD = 0; iD < 4; iD++) {
+        //   auto ptrAnalyzerDJetDeltaR = new HistMerger::LeafAnalyzerDefault;
+        //   ptrAnalyzerDJetDeltaR->SetNameTT(nameTT);
+        //   ptrAnalyzerDJetDeltaR->SetExpressionCustom(
+        //       TString::Format("%s%d", tstrDJetDeltaR.Data(), iD), "Float_t",
+        //       TString::Format(
+        //           "DeltaR between each d quark no. %d and its closest jet", iD),
+        //       TString::Format("%s[%d]", tstrDJetDeltaR.Data(), iD));
+        //   ptrAnalyzerDJetDeltaR->SetHasTarget({tstrDJetDeltaR});
+        //   merger->vAnalyzerCustomByName.push_back(
+        //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetDeltaR);
+        //   auto ptrAnalyzerMatchedId = new HistMerger::LeafAnalyzerDefault;
+        //   ptrAnalyzerMatchedId->SetNameTT(nameTT);
+        //   ptrAnalyzerMatchedId->SetExpressionCustom(
+        //       TString::Format("%s%d", tstrMatchedId.Data(), iD), "Bool_t",
+        //       TString::Format("Whether d-quark no. %d matches a THIN jet", iD),
+        //       TString::Format("%s[%d]", tstrMatchedId.Data(), iD));
+        //   ptrAnalyzerMatchedId->SetHasTarget({tstrMatchedId});
+        //   merger->vAnalyzerCustomByName.push_back(
+        //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerMatchedId);
+        //   auto ptrAnalyzerDJetRankPt = new HistMerger::LeafAnalyzerDefault;
+        //   ptrAnalyzerDJetRankPt->SetNameTT(nameTT);
+        //   ptrAnalyzerDJetRankPt->SetExpressionCustom(
+        //       TString::Format("%s%d", tstrDJetRankPt.Data(), iD), "Int_t",
+        //       TString::Format("Rank (0-indexed) of pt among  passed jet matching "
+        //                       "quark no. %d",
+        //                       iD),
+        //       TString::Format("%s[%d]", tstrDJetRankPt.Data(), iD),
+        //       TString::Format("%s[%d]>0", tstrMatchedId.Data(), iD).Data());
+        //   ptrAnalyzerDJetRankPt->SetHasTarget({tstrDJetRankPt, tstrMatchedId});
+        //   merger->vAnalyzerCustomByName.push_back(
+        //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerDJetRankPt);
+        //   auto ptrAnalyzerRankPtAllMatched =
+        //       new HistMerger::LeafAnalyzerDefault(*ptrAnalyzerDJetRankPt);
+        //   ptrAnalyzerRankPtAllMatched->SetSelection("");
+        //   ptrAnalyzerRankPtAllMatched->SetHasTarget(
+        //       {tstrDJetRankPt}, [tstrMatchedId](TTree* tree) -> Bool_t {
+        //         return tree->GetLeaf(tstrMatchedId) == nullptr;
+        //       });
+        //   merger->vAnalyzerCustomByName.push_back(
+        //       (HistMerger::LeafAnalyzerAbstract*)ptrAnalyzerRankPtAllMatched);
+        // }
+        auto ptrAnalyzerJetRankLast = new HistMerger::LeafAnalyzerDefault;
+        ptrAnalyzerJetRankLast->SetNameTT(nameTT);
+        ptrAnalyzerJetRankLast->SetExpressionCustom(
+            "maxJetMatched_rankJetPassedPt",
+            "Int_t", "Last rank of pt among passed jets",
+            "(nJetMatched>0)?JetMatched_rankJetPassedPt[nJetMatched-1]:-10");
+        ptrAnalyzerJetRankLast->SetHasTarget({"JetMatched_rankJetPassedPt", "nJetMatched"});
+        merger->vAnalyzerCustomByName.push_back(ptrAnalyzerJetRankLast);
+        auto ptrAnalyzerFatJetRankLast = new HistMerger::LeafAnalyzerDefault;
+        ptrAnalyzerFatJetRankLast->SetNameTT(nameTT);
+        ptrAnalyzerFatJetRankLast->SetExpressionCustom(
+            "maxFatJetMatched_rankFatJetPassedPt",
+            "Int_t", "Last rank of pt among passed jets",
+            "(nFatJetMatched>0)?FatJetMatched_rankFatJetPassedPt[nFatJetMatched-1]:-10");
+        ptrAnalyzerFatJetRankLast->SetHasTarget({"FatJetMatched_rankFatJetPassedPt", "nFatJetMatched"});
+        merger->vAnalyzerCustomByName.push_back(ptrAnalyzerFatJetRankLast);
+      }
+      {
+        auto analyzer = new HistMerger::LeafAnalyzerDefault;
+        analyzer->SetNameTT(nameTT);
+        analyzer->SetExpressionCustom("hasJetPassed", "Bool_t", "nJetPassed >= 1",
+            "nJetPassed>0");
+        analyzer->SetHasTarget({"nJetPassed"});
+        merger->vAnalyzerCustomByName.push_back(analyzer);
+      }
+      {
+        auto analyzer = new HistMerger::LeafAnalyzerDefault;
+        analyzer->SetNameTT(nameTT);
+        analyzer->SetExpressionCustom("hasFatJetPassed", "Bool_t", "nFatJetPassed >= 1",
+            "nFatJetPassed>0");
+        analyzer->SetHasTarget({"nFatJetPassed"});
+        merger->vAnalyzerCustomByName.push_back(analyzer);
+      }
     }
+    merger->pushCustomAnalyzersWhenRun = [debug](
+        TTree *tree, const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeafCustom,
+        const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeaf,
+        const UInt_t nAnalyzerLeafOld,
+        const std::function<void(HistMerger::LeafAnalyzerAbstract* analyzerNew)> pushbackNewAnalyzer) {
+      for (auto citerVAnalyzerLeaf = vAnalyzerLeaf.cbegin() + nAnalyzerLeafOld;
+          citerVAnalyzerLeaf != vAnalyzerLeaf.cend(); citerVAnalyzerLeaf++) {
+        if (debug) std::cout << "On normal analyzer " << " index " << std::distance(vAnalyzerLeaf.cbegin(), citerVAnalyzerLeaf) << " (" << *citerVAnalyzerLeaf << ")" << std::endl;
+        const TString nameLeafModified = (*citerVAnalyzerLeaf)->GetNameLeafModified();
+        if (nameLeafModified.BeginsWith("n")
+            || nameLeafModified.BeginsWith("is") || nameLeafModified.BeginsWith("are")
+            || nameLeafModified.BeginsWith("has") || nameLeafModified.BeginsWith("have")) {
+          if (!TString(tree->GetName()).Contains("Fat") && !nameLeafModified.EqualTo("nJetPassed")) {
+            for (Int_t nJetPassedExpected=1; nJetPassedExpected <= 8; nJetPassedExpected++) {
+              auto analyzer = new HistMerger::LeafAnalyzerDefault;
+              analyzer->SetExpressionCustom(
+                  nameLeafModified + "WithnJetPassedEq" + nJetPassedExpected, (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
+                  (*citerVAnalyzerLeaf)->GetTitleLeaf() + " with nJetPassed==" + nJetPassedExpected,
+                  nameLeafModified, Form("nJetPassed==%d", nJetPassedExpected));
+              analyzer->SetHasTarget({nameLeafModified, "nJetPassed"});
+              pushbackNewAnalyzer(analyzer);
+            }
+          }
+          if (TString(tree->GetName()).Contains("Fat") && !nameLeafModified.EqualTo("nFatJetPassed")) {
+            for (Int_t nFatJetPassedExpected=1; nFatJetPassedExpected <= 6; nFatJetPassedExpected++) {
+              auto analyzer = new HistMerger::LeafAnalyzerDefault;
+              analyzer->SetExpressionCustom(
+                  nameLeafModified + "WithnFatJetPassedEq" + nFatJetPassedExpected, (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
+                  (*citerVAnalyzerLeaf)->GetTitleLeaf() + " with nFatJetPassed==" + nFatJetPassedExpected,
+                  nameLeafModified, Form("nFatJetPassed==%d",nFatJetPassedExpected));
+              analyzer->SetHasTarget({nameLeafModified, "nFatJetPassed"});
+              pushbackNewAnalyzer(analyzer);
+            }
+          }
+        };
+        Bool_t isFatJet = false;
+        if (nameLeafModified.BeginsWith("FatJet_")) {
+          isFatJet = true;
+        } else if (nameLeafModified.BeginsWith("Jet_")) {
+        } else {
+          continue;
+        }
+        if (((TString)tree->GetName()).Contains("Match")) {
+          auto analyzer = new HistMerger::LeafAnalyzerDefault;
+          analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "Matched" + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
+          (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
+          (*citerVAnalyzerLeaf)->GetTitleLeaf() + " that is matched",
+          Form("%s[%sMatched_rank%sPassedPt]", nameLeafModified.Data(), isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet"));
+          analyzer->SetHasTarget({nameLeafModified, TString::Format("%sMatched_rank%sPassedPt", isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet")});
+          pushbackNewAnalyzer(analyzer);
+        }
+        const UInt_t rankUpperMax = isFatJet ? 6 : 8;
+        for (UInt_t rankUpper = 1; rankUpper <= rankUpperMax; rankUpper++) {
+          auto analyzer = new HistMerger::LeafAnalyzerDefault;
+          analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "First" + rankUpper + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
+              (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
+              Form("First %d -- %s", rankUpper, (*citerVAnalyzerLeaf)->GetTitleLeaf().Data()),
+              nameLeafModified, Form("Iteration$<%d", rankUpper));
+          analyzer->SetHasTarget({nameLeafModified});
+          pushbackNewAnalyzer(analyzer);
+        }
+      }
+    };
   }
-  merger->pushCustomAnalyzersWhenRun = [debug](
-      TTree *tree, const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeafCustom,
-      const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeaf,
-      const UInt_t nAnalyzerLeafOld,
-      const std::function<void(HistMerger::LeafAnalyzerAbstract* analyzerNew)> pushbackNewAnalyzer) {
-    for (auto citerVAnalyzerLeaf = vAnalyzerLeaf.cbegin() + nAnalyzerLeafOld;
-         citerVAnalyzerLeaf != vAnalyzerLeaf.cend(); citerVAnalyzerLeaf++) {
-      if (debug) std::cout << "On normal analyzer " << " index " << std::distance(vAnalyzerLeaf.cbegin(), citerVAnalyzerLeaf) << " (" << *citerVAnalyzerLeaf << ")" << std::endl;
-      Bool_t isFatJet = false;
-      const TString nameLeafModified = (*citerVAnalyzerLeaf)->GetNameLeafModified();
-      if (nameLeafModified.BeginsWith("FatJet_")) {
-        isFatJet = true;
-      } else if (nameLeafModified.BeginsWith("Jet_")) {
-      } else {
-        continue;
-      }
-      if (((TString)tree->GetName()).Contains("Match")) {
-        auto analyzer = new HistMerger::LeafAnalyzerDefault;
-        analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "Matched" + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
-        (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
-        (*citerVAnalyzerLeaf)->GetTitleLeaf() + " that is matched",
-        Form("%s[%sMatched_rank%sPassedPt]", nameLeafModified.Data(), isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet"));
-        analyzer->SetHasTarget({nameLeafModified, TString::Format("%sMatched_rank%sPassedPt", isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet")});
-      }
-      const UInt_t rankUpperMax = isFatJet ? 6 : 8;
-      for (UInt_t rankUpper = 1; rankUpper <= rankUpperMax; rankUpper++) {
-        auto analyzer = new HistMerger::LeafAnalyzerDefault;
-        analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "First" + rankUpper + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
-            (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
-            Form("First %d -- %s", rankUpper, (*citerVAnalyzerLeaf)->GetTitleLeaf().Data()),
-            nameLeafModified, Form("Iteration$<%d", rankUpper));
-        analyzer->SetHasTarget({nameLeafModified});
-        pushbackNewAnalyzer(analyzer);
-      }
-    }
-  };
   merger->Run();
 }
