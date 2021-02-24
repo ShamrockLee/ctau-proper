@@ -178,28 +178,104 @@ void xAna_monoZ_preselect(
   for (Byte_t i = 0; i < 2; i++) {
     arrTTZMassCutted[i]->Branch("jEntry", &jEntry);
   }
+
+
+  std::vector<Int_t> arrVGenLeptonIdx[3];
+  for (Byte_t i = 0; i < 3; i++) {
+    const TString name = "Gen" + namesLepton[i] + "_genPartIdx";
+    const TString title = "Indexes of the d quarks";
+    arrVGenLeptonIdx[i].clear();
+    arrVGenLeptonIdx[i].resize(2);
+    arrTTGen[i]->Branch(name, &(arrVGenLeptonIdx[i]))->SetTitle(title);
+  }
+
+  // std::vector<Int_t> arrVGenLeptonPairPtEtaPhiMass[4][3];
+  // {
+  //   auto arrCstrPtEtaPhiMassLower = {"Pt", "Eta", "Phi", "Mass"};
+  //   for (Byte_t j = 0; j < 4; j++) {
+  //     for (Byte_t i = 0; i < 3; i++) {
+  //       {
+
+  //       }
+  //       {
+  //         const TString name = "Gen" + namesLepton[i] + "_genPartIdx";
+  //         const TString title = "Indexes of the GEN-level " + namesLeptonLower[i];
+  //         arrVGenLeptonPairPtEtaPhiMass[i][j].clear();
+  //         arrVGenLeptonPairPtEtaPhiMass[i][j].resize(1);
+  //         arrTTGen[i]->Branch(name, &(arrVGenLeptonPairPtEtaPhiMass[i][j]))->SetTitle(title);
+  //       }
+  //     }
+  //   }
+  // }
+
+
   // Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
   // Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
   // Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
   // Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
 
-  auto collectorElectronDynamics = DescriptionCollectorFromFun(MounterCommonAcceptability::GetIsAcceptableFloat);
-  collectorElectronDynamics.BranchFor(BranchDescription("Electron_pt", "Pt of each electron", "Float_t"));
-  collectorElectronDynamics.BranchFor(BranchDescription("Electron_eta", "Eta of each electron", "Float_t"));
-  collectorElectronDynamics.BranchFor(BranchDescription("Electron_phi", "Phi of each electron", "Float_t"));
-  collectorElectronDynamics.BranchFor(BranchDescription("Electron_eCorr", "Corrected energy of each electron", "Float_t"));
-  collectorElectronDynamics.Prepare();
-  auto mounterElectronDynamics = BranchMounterVectorSingle<Float_t, Float_t *>(collectorElectronDynamics);
-  auto &vElectronPt = mounterElectronDynamics.vvE[0];
-  auto &vElectronEta = mounterElectronDynamics.vvE[1];
-  auto &vElectronPhi = mounterElectronDynamics.vvE[2];
-  auto &vElectronECorr = mounterElectronDynamics.vvE[3];
-  mounterElectronDynamics.BranchOn(arrTTGen[0]);
-  mounterElectronDynamics.BranchOn(arrTTNumCorrect[0]);
-  mounterElectronDynamics.BranchOn(arrTTZMassCutted[0]);
-  mounterElectronDynamics.SetFunIterEIn([&data](BranchDescription description)->Float_t*{
-    return data.GetPtrFloat(description.name);
-  });
+  // auto collectorElectronDynamics = DescriptionCollectorFromFun(MounterCommonAcceptability::GetIsAcceptableFloat);
+  // collectorElectronDynamics.BranchFor(BranchDescription("Electron_pt", "Pt of each electron", "Float_t"));
+  // collectorElectronDynamics.BranchFor(BranchDescription("Electron_eta", "Eta of each electron", "Float_t"));
+  // collectorElectronDynamics.BranchFor(BranchDescription("Electron_phi", "Phi of each electron", "Float_t"));
+  // collectorElectronDynamics.BranchFor(BranchDescription("Electron_eCorr", "Corrected energy of each electron", "Float_t"));
+  // collectorElectronDynamics.Prepare();
+
+  // std::vector<DescriptionCollectorFromFun> vCollectorLeptonDynamics(2, DescriptionCollectorFromFun(MounterCommonAcceptability::GetIsAcceptableFloat));
+
+  std::vector<BranchDescription> arrVDescriptionLeptonDynamics[2];
+  for (Byte_t i=0; i<2; i++) {
+    arrVDescriptionLeptonDynamics[i].clear();
+    arrVDescriptionLeptonDynamics[i].reserve(4);
+    for (TString&& tstrParameter: {"pt", "eta", "phi", "mass"}) {
+      // vCollectorLeptonDynamics[i].BranchFor(BranchDescription(
+      arrVDescriptionLeptonDynamics[i].push_back(BranchDescription(
+          namesLepton[i] + "_" + tstrParameter,
+          tstrParameter + " of each " + namesLeptonLower[i],
+          static_cast<TString>("Float_t")));
+    }
+    // arrCollectorLeptonDynamics[i].Prepare();
+  }
+  arrVDescriptionLeptonDynamics[0].resize(arrVDescriptionLeptonDynamics[0].size()-1);
+
+  // auto mounterElectronDynamics = BranchMounterVectorSingle<Float_t, Float_t *>(collectorElectronDynamics);
+  // auto &vElectronPt = mounterElectronDynamics.vvE[0];
+  // auto &vElectronEta = mounterElectronDynamics.vvE[1];
+  // auto &vElectronPhi = mounterElectronDynamics.vvE[2];
+  // auto &vElectronECorr = mounterElectronDynamics.vvE[3];
+
+  std::vector<BranchMounterVectorSingle<Float_t, Float_t*>> vMounterLeptonDynamics;
+  vMounterLeptonDynamics.clear();
+  vMounterLeptonDynamics.reserve(2);
+  for (Byte_t i=0; i<2; i++) {
+    vMounterLeptonDynamics.push_back(BranchMounterVectorSingle<Float_t, Float_t*>(arrVDescriptionLeptonDynamics[i]));
+  }
+
+  // mounterElectronDynamics.BranchOn(arrTTGen[0]);
+  // mounterElectronDynamics.BranchOn(arrTTNumCorrect[0]);
+  // mounterElectronDynamics.BranchOn(arrTTZMassCutted[0]);
+  // mounterElectronDynamics.SetFunIterEIn([&data](BranchDescription description)->Float_t*{
+  //   return data.GetPtrFloat(description.name);
+  // });
+  {
+    auto funIterEIn = [&data](BranchDescription description)->Float_t*{
+      return data.GetPtrFloat(description.name);
+    };
+    for (Byte_t i=0; i<2; i++) {
+      for (auto&& ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted}) {
+        vMounterLeptonDynamics[i].BranchOn(ppTT[i]);
+        vMounterLeptonDynamics[i].SetFunIterEIn(funIterEIn);
+      }
+    }
+  }
+
+  std::vector<Int_t> arrVLeptonIdxNumCorrect[2];
+  for (Byte_t i = 0; i < 2; i++) {
+    arrVLeptonIdxNumCorrect[i].resize(2);
+    for (TTree *const *const ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+      ppTT[i]->Branch(namesLepton[i] + "_idxNumCorrect", &(arrVLeptonIdxNumCorrect[i]));
+    }
+  }
 
   Bool_t haveAllGenDMatching;
   for (Byte_t i = 0; i < 2; i++) {
@@ -338,19 +414,45 @@ void xAna_monoZ_preselect(
         ->Branch(name, &(arrRecoIsLeptonNumCorrect[i]), name + "/O", 1)
         ->SetTitle(title);
   }
+  Float_t arrLeptonPair_pt[2];
+  for (Byte_t i = 0; i < 2; i++) {
+    TString name = namesLepton[i] + "Pair_pt";
+    TString title = "Pt of the " + namesLeptonLower[i] + " pair";
+    for (TTree **ppTT: {arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+      ppTT[i]
+          ->Branch(name, &(arrLeptonPair_pt[i]), name + "/F", __SIZEOF_FLOAT__)
+          ->SetTitle(title);
+    }
+  }
+  Float_t arrLeptonPair_eta[2];
+  for (Byte_t i = 0; i < 2; i++) {
+    TString name = namesLepton[i] + "Pair_eta";
+    TString title = "Eta of the " + namesLeptonLower[i] + " pair";
+    for (TTree **ppTT: {arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+      ppTT[i]
+          ->Branch(name, &(arrLeptonPair_eta[i]), name + "/F", __SIZEOF_FLOAT__)
+          ->SetTitle(title);
+    }
+  }
+  Float_t arrLeptonPair_phi[2];
+  for (Byte_t i = 0; i < 2; i++) {
+    TString name = namesLepton[i] + "Pair_phi";
+    TString title = "Phi of the " + namesLeptonLower[i] + " pair";
+    for (TTree **ppTT: {arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+      ppTT[i]
+          ->Branch(name, &(arrLeptonPair_phi[i]), name + "/F", __SIZEOF_FLOAT__)
+          ->SetTitle(title);
+    }
+  }
   Float_t arrLeptonPair_mass[2];
   for (Byte_t i = 0; i < 2; i++) {
     TString name = namesLepton[i] + "Pair_mass";
-    TString title = "The mass of the " + namesLeptonLower[i] + " pair";
-    arrTTGen[i]
-        ->Branch(name, &(arrLeptonPair_mass[i]), name + "/F", __SIZEOF_FLOAT__)
-        ->SetTitle(title);
-    arrTTNumCorrect[i]
-        ->Branch(name, &(arrLeptonPair_mass[i]), name + "/F", __SIZEOF_FLOAT__)
-        ->SetTitle(title);
-    arrTTZMassCutted[i]
-        ->Branch(name, &(arrLeptonPair_mass[i]), name + "/F", __SIZEOF_FLOAT__)
-        ->SetTitle(title);
+    TString title = "Mass of the " + namesLeptonLower[i] + " pair";
+    for (TTree **ppTT: {arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+      ppTT[i]
+          ->Branch(name, &(arrLeptonPair_mass[i]), name + "/F", __SIZEOF_FLOAT__)
+          ->SetTitle(title);
+    }
   }
   Bool_t arrIsPassingZMassCut[2];
   for (Byte_t i = 0; i < 2; i++) {
@@ -858,7 +960,15 @@ void xAna_monoZ_preselect(
     nFatJetPassed = 0;
     nJetMatched = 0;
     nFatJetMatched = 0;
+    std::fill(std::begin(arrRecoIsLeptonNumCorrect), std::end(arrRecoIsLeptonNumCorrect), false);
+    std::fill(std::begin(arrLeptonPair_pt), std::end(arrLeptonPair_pt), -1);
+    std::fill(std::begin(arrLeptonPair_eta), std::end(arrLeptonPair_eta), -1000);
+    std::fill(std::begin(arrLeptonPair_phi), std::end(arrLeptonPair_phi), -10);
+    std::fill(std::begin(arrLeptonPair_mass), std::end(arrLeptonPair_mass), -1);
     // Allocated after declearation (2 or 4 elements)
+    for (auto& vLeptonIdxNumCorrect: arrVLeptonIdxNumCorrect) {
+      std::fill(vLeptonIdxNumCorrect.begin(), vLeptonIdxNumCorrect.end(), -1);
+    }
     std::fill(vGenDMatchingPt.begin(), vGenDMatchingPt.end(), -1);
     std::fill(vGenDMatchingEta.begin(), vGenDMatchingEta.end(), -1000);
     std::fill(vGenDMatchingPhi.begin(), vGenDMatchingPhi.end(), -10);
@@ -1009,27 +1119,40 @@ void xAna_monoZ_preselect(
     Bool_t* ptrMuon_isSoft = ptrMuon_softId;
     Bool_t* ptrMuon_isTight = ptrMuon_tightId;
 
-    Int_t nElectronSoft, nElectronTight;
-    {
-      Int_t i;
-      for (i = 0, nElectronSoft = 0, nElectronTight = 0; i < nElectron;
-           nElectronSoft += ptrElectron_isSoft[i],
-          nElectronTight += ptrElectron_isTight[i], i++)
-        ;
+    Bool_t isNumElectronCorrect = true;
+    for (Int_t iElectron = 0, iiElectronNumCorrect = 0; iElectron < nElectron; iElectron++) {
+      if (ptrElectron_isSoft[iElectron]) {
+        if (iiElectronNumCorrect == 2) {
+          isNumElectronCorrect = false;
+          std::fill(arrVLeptonIdxNumCorrect[0].begin(), arrVLeptonIdxNumCorrect[0].end(), -1);
+          break;
+        }
+        arrVLeptonIdxNumCorrect[0][iiElectronNumCorrect] = iElectron;
+        iiElectronNumCorrect++;
+      }
     }
-    Bool_t isNumElectronCorrect = (nElectronSoft == 2);
+    if (arrVLeptonIdxNumCorrect[0].back() < 0) {
+      isNumElectronCorrect = false;
+      std::fill(arrVLeptonIdxNumCorrect[0].begin(), arrVLeptonIdxNumCorrect[0].end(), -1);
+    }
     // nElectronPair = isNumElectronCorrect;
 
-    Int_t nMuonSoft, nMuonTight;
-    {
-      Int_t i;
-      for (i = 0, nMuonSoft = 0, nMuonTight = 0; i < nElectron;
-           nMuonSoft += ptrMuon_isSoft[i], nMuonTight += ptrMuon_isTight[i],
-          i++)
-        ;
+    Bool_t isNumMuonCorrect = true;
+    for (Int_t iMuon = 0, iiMuonNumCorrect = 0; iMuon < nMuon; iMuon++) {
+      if (ptrMuon_isSoft[iMuon]) {
+        if (iiMuonNumCorrect == 2) {
+          isNumMuonCorrect = false;
+          std::fill(arrVLeptonIdxNumCorrect[1].begin(), arrVLeptonIdxNumCorrect[1].end(), -1);
+          break;
+        }
+        arrVLeptonIdxNumCorrect[1][iiMuonNumCorrect] = iMuon;
+        iiMuonNumCorrect++;
+      }
     }
-    Bool_t isNumMuonCorrect = (nMuonSoft == 2 && nMuonTight == 2);
-    // nMuonPair = isNumMuonCorrect;
+    if (arrVLeptonIdxNumCorrect[1].back() < 0) {
+      isNumMuonCorrect = false;
+      std::fill(arrVLeptonIdxNumCorrect[1].begin(), arrVLeptonIdxNumCorrect[1].end(), -1);
+    }
 
     Bool_t isNumCorrect = (isNumElectronCorrect != isNumMuonCorrect);
     arrRecoIsLeptonNumCorrect[0] = isNumCorrect && isNumElectronCorrect;
@@ -1043,33 +1166,50 @@ void xAna_monoZ_preselect(
       std::cout << "elepair, mupair: " << (Int_t)isNumElectronCorrect
                 << (Int_t)isNumMuonCorrect << std::endl;
 
-    for (Byte_t i = 0; i < 2; i++) arrIsPassingZMassCut[i] = 0;
+    for (Byte_t i = 0; i < 2; i++) arrIsPassingZMassCut[i] = false;
 
     // Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
     // Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
     // Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
     // Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
-    mounterElectronDynamics.PrepareForPushing(nElectron);
-    for (Byte_t i = 0; i < nElectron; i++) mounterElectronDynamics.PushOrSkip(true);
 
-    TLorentzVector* ppElectronP4NumberCorrect[nElectronTight];
+    // mounterElectronDynamics.PrepareForPushing(nElectron);
+    // for (Byte_t i = 0; i < nElectron; i++) mounterElectronDynamics.PushOrSkip(true);
+
+    for (Byte_t i=0; i<2; i++) {
+      Int_t nLepton = i ? nMuon : nElectron;
+      vMounterLeptonDynamics[i].PrepareForPushing(nLepton);
+      for (Byte_t j=0; j<nLepton; j++) {
+        vMounterLeptonDynamics[i].PushOrSkip(true);
+      }
+    }
+
+    TLorentzVector* ppElectronP4NumberCorrect[2];
     TLorentzVector* ptrElectronP4NumberCorrectSum;
 
     if (arrRecoIsLeptonNumCorrect[0]) {
       ptrElectronP4NumberCorrectSum = new TLorentzVector();
-      for (Int_t i = 0; i < nElectronTight; i++) {
-        ppElectronP4NumberCorrect[i] = new TLorentzVector();
+      for (Int_t iiElectronNumCorrect = 0; iiElectronNumCorrect < 2; iiElectronNumCorrect++) {
+        const auto& indexElectronNumCorrect = arrVLeptonIdxNumCorrect[0][iiElectronNumCorrect];
+        ppElectronP4NumberCorrect[iiElectronNumCorrect] = new TLorentzVector();
         // ppElectronP4NumberCorrect[i]->SetPtEtaPhiE(
         //     ptrElectron_pt[i], ptrElectron_eta[i], ptrElectron_phi[i],
         //     ptrElectron_eCorr[i]);
-        ppElectronP4NumberCorrect[i]->SetPtEtaPhiM(
-            vElectronPt[i], vElectronEta[i], vElectronPhi[i],
+        ppElectronP4NumberCorrect[iiElectronNumCorrect]->SetPtEtaPhiM(
+            vMounterLeptonDynamics[0].vvE[0][indexElectronNumCorrect],
+            vMounterLeptonDynamics[0].vvE[1][indexElectronNumCorrect],
+            vMounterLeptonDynamics[0].vvE[2][indexElectronNumCorrect],
             massElectron);
-        *ptrElectronP4NumberCorrectSum += *ppElectronP4NumberCorrect[i];
+        *ptrElectronP4NumberCorrectSum += *ppElectronP4NumberCorrect[iiElectronNumCorrect];
       }
       // Double_t electronPair_mass = ptrElectronP4NumberCorrectSum->M();
       // vElectronPair_massNumCorrect.push_back(electronPair_mass);
-      arrLeptonPair_mass[0] = ptrElectronP4NumberCorrectSum->M();
+      if (arrRecoIsLeptonNumCorrect[0]) {
+        arrLeptonPair_pt[0] = ptrElectronP4NumberCorrectSum->Pt();
+        arrLeptonPair_eta[0] = ptrElectronP4NumberCorrectSum->Eta();
+        arrLeptonPair_phi[0] = ptrElectronP4NumberCorrectSum->Phi();
+        arrLeptonPair_mass[0] = ptrElectronP4NumberCorrectSum->M();
+      }
 
       // leptonPair_massNumCorrect = electronPair_mass;
       // Mass z cuts
@@ -1082,24 +1222,33 @@ void xAna_monoZ_preselect(
         std::cout << "massLPair: " << arrLeptonPair_mass[0] << std::endl;
     }
 
-    Float_t* ptrMuon_pt = data.GetPtrFloat("Muon_pt");
-    Float_t* ptrMuon_phi = data.GetPtrFloat("Muon_phi");
-    Float_t* ptrMuon_eta = data.GetPtrFloat("Muon_eta");
-    Float_t* ptrMuon_mass = data.GetPtrFloat("Muon_mass");
+    // Float_t* ptrMuon_pt = data.GetPtrFloat("Muon_pt");
+    // Float_t* ptrMuon_phi = data.GetPtrFloat("Muon_phi");
+    // Float_t* ptrMuon_eta = data.GetPtrFloat("Muon_eta");
+    // Float_t* ptrMuon_mass = data.GetPtrFloat("Muon_mass");
 
-    TLorentzVector* ppMuonP4NumberCorrect[nMuonTight];
+    TLorentzVector* ppMuonP4NumberCorrect[2];
     TLorentzVector* ptrMuonP4NumberCorrectSum;
     if (arrRecoIsLeptonNumCorrect[1]) {
       ptrMuonP4NumberCorrectSum = new TLorentzVector();
-      for (Int_t i = 0; i < nMuonTight; i++) {
-        ppMuonP4NumberCorrect[i] = new TLorentzVector();
-        ppMuonP4NumberCorrect[i]->SetPtEtaPhiM(ptrMuon_pt[i], ptrMuon_eta[i],
-                                               ptrMuon_phi[i], ptrMuon_mass[i]);
-        *ptrMuonP4NumberCorrectSum += *ppMuonP4NumberCorrect[i];
+      for (Int_t iiMuonNumCorrect = 0; iiMuonNumCorrect < 2; iiMuonNumCorrect++) {
+        const auto& indexMuonNumCorrect = arrVLeptonIdxNumCorrect[1][iiMuonNumCorrect];
+        ppMuonP4NumberCorrect[iiMuonNumCorrect] = new TLorentzVector();
+        ppMuonP4NumberCorrect[iiMuonNumCorrect]->SetPtEtaPhiM(
+            vMounterLeptonDynamics[1].vvE[0][indexMuonNumCorrect],
+            vMounterLeptonDynamics[1].vvE[1][indexMuonNumCorrect],
+            vMounterLeptonDynamics[1].vvE[2][indexMuonNumCorrect],
+            vMounterLeptonDynamics[1].vvE[3][indexMuonNumCorrect]);
+        *ptrMuonP4NumberCorrectSum += *ppMuonP4NumberCorrect[iiMuonNumCorrect];
       }
       // Double_t muonPair_mass = ptrMuonP4NumberCorrectSum->M();
       // vMuonPair_massNumCorrect.push_back(muonPair_mass);
-      arrLeptonPair_mass[1] = ptrMuonP4NumberCorrectSum->M();
+      if (arrRecoIsLeptonNumCorrect[1]) {
+        arrLeptonPair_pt[1] = ptrMuonP4NumberCorrectSum->Pt();
+        arrLeptonPair_eta[1] = ptrMuonP4NumberCorrectSum->Eta();
+        arrLeptonPair_phi[1] = ptrMuonP4NumberCorrectSum->Phi();
+        arrLeptonPair_mass[1] = ptrMuonP4NumberCorrectSum->M();
+      }
 
       // leptonPair_massNumCorrect = muonPair_mass;
       Double_t massZCutUpper = massZ + 20;
