@@ -357,7 +357,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
         merger->vAnalyzerCustomByName.push_back(analyzer);
       }
     }
-    merger->pushCustomAnalyzersWhenRun = [debug](
+    merger->pushCustomAnalyzersWhenRun = [debug, namesLepton, namesLeptonLower](
         TTree *tree, const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeafCustom,
         const std::vector<HistMerger::LeafAnalyzerAbstract*> vAnalyzerLeaf,
         const UInt_t nAnalyzerLeafOld,
@@ -391,7 +391,21 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
               pushbackNewAnalyzer(analyzer);
             }
           }
-        };
+        }
+        if (nameLeafModified.BeginsWith("Electron_") || nameLeafModified.BeginsWith("Muon_")) {
+          Bool_t isMuon = nameLeafModified.BeginsWith("Muon_");
+          {
+            auto analyzer = new HistMerger::LeafAnalyzerDefault;
+            analyzer->SetExpressionCustom(
+                namesLepton[isMuon] +  "NumCorrect" + nameLeafModified(isMuon ? 4 : 8, nameLeafModified.Length()),
+                (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
+                (*citerVAnalyzerLeaf)->GetTitleLeaf(),
+                TString::Format("%s[%s_idxNumCorrect]", nameLeafModified.Data(), namesLepton[isMuon].Data()),
+                Form("%s_idxNumCorrect>=0", namesLepton[isMuon].Data()));
+            analyzer->SetHasTarget({nameLeafModified, namesLepton[isMuon] + "_idxNumCorrect"});
+            pushbackNewAnalyzer(analyzer);
+          }
+        }
         Bool_t isFatJet = false;
         if (nameLeafModified.BeginsWith("FatJet_")) {
           isFatJet = true;
@@ -404,7 +418,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
           analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "Matched" + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
           (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
           (*citerVAnalyzerLeaf)->GetTitleLeaf() + " that is matched",
-          Form("%s[%sMatched_rank%sPassedPt]", nameLeafModified.Data(), isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet"));
+          TString::Format("%s[%sMatched_rank%sPassedPt]", nameLeafModified.Data(), isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet"));
           analyzer->SetHasTarget({nameLeafModified, TString::Format("%sMatched_rank%sPassedPt", isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet")});
           pushbackNewAnalyzer(analyzer);
         }
