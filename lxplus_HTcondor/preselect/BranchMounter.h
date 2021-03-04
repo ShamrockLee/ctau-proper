@@ -60,9 +60,10 @@ template <typename E, typename TypeSize = size_t>
 class VirtualBranchMounterScalarSingle
     : public VirtualBranchMounterScalar<TypeSize> {
  public:
-  void SetFunEIn(std::function<E(BranchDescription description)> funEIn) {
+  virtual void SetFunEIn(std::function<E(BranchDescription description)> funEIn) {
     this->funEIn = funEIn;
   }
+  virtual const E Peek(const TypeSize iDescription) const = 0;
   // ~VirtualBranchMounterScalarSingle() {};
  protected:
   std::function<E(BranchDescription description)> funEIn;
@@ -75,10 +76,11 @@ class VirtualBranchMounterIterableSingle
   std::function<TypeIterEIn(BranchDescription description)> funIterEIn;
 
  public:
-  void SetFunIterEIn(
+  virtual void SetFunIterEIn(
       std::function<TypeIterEIn(BranchDescription description)> funIterEIn) {
     this->funIterEIn = funIterEIn;
   }
+  virtual const E Peek(const TypeSize iDescription) const = 0;
 };
 
 class VirtualDescriptionCollectorSingle : public VirtualDescriptionCollector {
@@ -126,6 +128,9 @@ class BranchMounterScalarSingle
       treeOut->Branch(description.name, static_cast<E *>(&(vE[iDescription])))
           ->SetTitle(description.title);
     }
+  }
+  const E Peek(const TypeSize iDescription) const {
+    return funEIn(vDescriptions[iDescription]);
   }
   void Push() {
     for (TypeSize iDescription = 0; iDescription < nDescriptions;
@@ -182,6 +187,7 @@ class BranchMounterScalarSingle<Bool_t>
           ->SetTitle(description.title);
     }
   }
+  // Wrap the bool funEIn as char funEIn
   void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
     BranchMounterScalarSingle<Char_t>::SetFunEIn(
         [funEIn](BranchDescription description) -> Char_t {
@@ -243,6 +249,10 @@ class BranchMounterVectorSingle
       vvE[iDescription].reserve(n);
       vIterEIn.push_back(funIterEIn(vDescriptions[iDescription]));
     }
+  }
+  const E Peek(const TypeSize iDescription) const {
+    // std::cout << "size of vvE[iDescription]: " << vvE[iDescription].size() << std::endl;
+    return *vIterEIn[iDescription];
   }
   void PushOrSkip(const Bool_t isAcceptable) {
     for (TypeSize iDescription = 0; iDescription < nDescriptions;
