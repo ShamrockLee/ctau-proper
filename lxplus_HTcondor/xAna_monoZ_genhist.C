@@ -150,7 +150,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
 
   std::function<void(Int_t&, Double_t&, Double_t&, TString, TString, TString,
                      TString)>
-      adjustHistSetting = [debug](Int_t& nBinCorrect, Double_t& lowerCorrect,
+      adjustHistSetting = [debug, nameCondorPack](Int_t& nBinCorrect, Double_t& lowerCorrect,
                                   Double_t& upperCorrect, TString nameTT,
                                   TString nameLeafModified,
                                   TString typeNameLeaf, TString titleLeaf) {
@@ -229,6 +229,15 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             }
             nBinCorrect = upperCorrect - lowerCorrect;
             return;
+          }
+        }
+        if (nameCondorPack.EqualTo("preselect")) {
+          if (typeNameLeaf.Contains("loat") || typeNameLeaf.Contains("ouble")) {
+            if (nameLeafModified.BeginsWith("Electron") && nameLeafModified.Contains("_pt")) {
+              if (lowerCorrect < 200) {
+                upperCorrect = TMath::Min(upperCorrect, 200.);
+              }
+            }
           }
         }
         if (debug)
@@ -343,16 +352,16 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
       {
         auto analyzer = new HistMerger::LeafAnalyzerDefault;
         analyzer->SetNameTT(nameTT);
-        analyzer->SetExpressionCustom("hasJetPassed", "Bool_t", "nJetPassed >= 1",
-            "nJetPassed>0");
+        analyzer->SetExpressionCustom("have2JetPassed", "Bool_t", "nJetPassed >= 2",
+            "nJetPassed>=2");
         analyzer->SetHasTarget({"nJetPassed"});
         merger->vAnalyzerCustomByName.push_back(analyzer);
       }
       {
         auto analyzer = new HistMerger::LeafAnalyzerDefault;
         analyzer->SetNameTT(nameTT);
-        analyzer->SetExpressionCustom("hasFatJetPassed", "Bool_t", "nFatJetPassed >= 1",
-            "nFatJetPassed>0");
+        analyzer->SetExpressionCustom("have2FatJetPassed", "Bool_t", "nFatJetPassed >= 2",
+            "nFatJetPassed>=2");
         analyzer->SetHasTarget({"nFatJetPassed"});
         merger->vAnalyzerCustomByName.push_back(analyzer);
       }
@@ -400,9 +409,9 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
                 namesLepton[isMuon] +  "NumCorrect" + nameLeafModified(isMuon ? 4 : 8, nameLeafModified.Length()),
                 (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
                 (*citerVAnalyzerLeaf)->GetTitleLeaf(),
-                TString::Format("%s[%s_idxNumCorrect]", nameLeafModified.Data(), namesLepton[isMuon].Data()),
-                Form("%s_idxNumCorrect>=0", namesLepton[isMuon].Data()));
-            analyzer->SetHasTarget({nameLeafModified, namesLepton[isMuon] + "_idxNumCorrect"});
+                nameLeafModified,
+                Form("(%s_idxNumCorrect>=0)&&(%s_idxPassedPtEta==%s_idxNumCorrect)", namesLepton[isMuon].Data(), namesLepton[isMuon].Data(), namesLepton[isMuon].Data()));
+            analyzer->SetHasTarget({nameLeafModified, namesLepton[isMuon] + "_idxNumCorrect", namesLepton[isMuon] + "_idxPassedPtEta"});
             pushbackNewAnalyzer(analyzer);
           }
         }
@@ -423,7 +432,9 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
           pushbackNewAnalyzer(analyzer);
         }
         const UInt_t rankUpperMax = isFatJet ? 6 : 8;
-        for (UInt_t rankUpper = 1; rankUpper <= rankUpperMax; rankUpper++) {
+        // for (UInt_t rankUpper = 1; rankUpper <= rankUpperMax; rankUpper++) {
+        {
+          UInt_t rankUpper = rankUpperMax;
           auto analyzer = new HistMerger::LeafAnalyzerDefault;
           analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "First" + rankUpper + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
               (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
@@ -432,6 +443,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
           analyzer->SetHasTarget({nameLeafModified});
           pushbackNewAnalyzer(analyzer);
         }
+        // }
       }
     };
   }
