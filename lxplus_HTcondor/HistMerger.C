@@ -616,6 +616,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
               upperCorrect = -valueInner;
             }
           }
+          nBinsCorrect = TMath::Max(nBinsCorrect, TMath::Min(TMath::Nint((upperCorrect - lowerCorrect) * 100), std::accumulate(vNBinsFile.cbegin(), vNBinsFile.cend(), static_cast<decltype(vNBinsFile)::value_type>(0)) / 10));
           // tstrHistSetting = TString::Format("(%d,%F,%F)", nBinsCorrect,
           //                                   lowerCorrect, upperCorrect);
         }
@@ -811,13 +812,13 @@ void HistMerger::InitializeWhenRun() {
       }
       continue;
     }
-    typename std::vector<TString>::iterator iterNameTT = vNameTT.begin();
+    typename std::vector<TString>::const_iterator iterNameTT = vNameTT.cbegin();
     while (true) {
-      iterNameTT = std::find(iterNameTT, vNameTT.end(), analyzer->GetNameTT());
+      iterNameTT = std::find(iterNameTT, vNameTT.cend(), analyzer->GetNameTT());
       if (iterNameTT == vNameTT.end()) {
         break;
       }
-      UInt_t iTree = std::distance(vNameTT.begin(), iterNameTT);
+      UInt_t iTree = std::distance(vNameTT.cbegin(), iterNameTT);
       vvAnalyzerLeafTreeCustom[iTree].push_back(analyzer);
       iterNameTT++;
     }
@@ -1096,9 +1097,9 @@ void HistMerger::Run() {
           //   indexName++;
           // }
           indexName = std::distance(
-              vvNameModifiedLeafTree[iTree].begin(),
-              std::find(vvNameModifiedLeafTree[iTree].begin(),
-                        vvNameModifiedLeafTree[iTree].end(), nameLeafModified));
+              vvNameModifiedLeafTree[iTree].cbegin(),
+              std::find(vvNameModifiedLeafTree[iTree].cbegin(),
+                        vvNameModifiedLeafTree[iTree].cend(), nameLeafModified));
           isIncluded = indexName != vvNameModifiedLeafTree[iTree].size();
           // if (debug) std::cout << std::endl;
           if (!isIncluded) {
