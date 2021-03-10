@@ -239,7 +239,6 @@ void xAna_monoZ_preselect(
     arrTTZMassCutted[i]->Branch("jEntry", &jEntry);
   }
 
-
   std::vector<Int_t> arrVGenLeptonIdx[3];
   for (Byte_t i = 0; i < 3; i++) {
     const TString name = "Gen" + namesLepton[i] + "_genPartIdx";
@@ -268,6 +267,14 @@ void xAna_monoZ_preselect(
   //   }
   // }
 
+  Int_t arrNLepton[2];
+  Int_t arrNLeptonPassedPtEta[2];
+  for (Byte_t i=0; i<2; i++) {
+    for (TTree **ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+      ppTT[i]->Branch("n" + namesLepton[i], &(arrNLepton[i]))->SetTitle("Number of " + namesLepton[i]);
+      ppTT[i]->Branch("n" + namesLepton[i] + "PassedPtEta", &(arrNLeptonPassedPtEta[i]))->SetTitle("Number of " + namesLepton[i] + " passing Pt-Eta cut");
+    }
+  }
 
   // Float_t* ptrElectron_pt = data.GetPtrFloat("Electron_pt");
   // Float_t* ptrElectron_phi = data.GetPtrFloat("Electron_phi");
@@ -1203,15 +1210,15 @@ void xAna_monoZ_preselect(
     // Float_t* ptrElectron_eta = data.GetPtrFloat("Electron_eta");
     // Float_t* ptrElectron_eCorr = data.GetPtrFloat("Electron_eCorr");
 
-    // mounterElectronDynamics.PrepareForPushing(nElectron);
-    // for (Byte_t i = 0; i < nElectron; i++) mounterElectronDynamics.PushOrSkip(true);
+    // mounterElectronDynamics.PrepareForPushing(arrNLepton[0]);
+    // for (Byte_t i = 0; i < arrNLepton[0]; i++) mounterElectronDynamics.PushOrSkip(true);
 
-    Int_t nElectron = data.GetInt("nElectron");
-    Int_t nMuon = data.GetInt("nMuon");
+    arrNLepton[0] = data.GetInt("nElectron");
+    arrNLepton[1] = data.GetInt("nMuon");
     for (Byte_t i=0; i<2; i++) {
-      Int_t nLepton = i ? nMuon : nElectron;
+      Int_t nLepton = i ? arrNLepton[1] : arrNLepton[0];
       vMounterLeptonChained[i].PrepareForPushing(nLepton);
-      if (debug) std::cout << (i ? "nMuon: " : "nElectron: ") << (i ? nMuon : nElectron) << std::endl;
+      if (debug) std::cout << (i ? "arrNLepton[1]: " : "arrNLepton[0]: ") << (i ? arrNLepton[1] : arrNLepton[0]) << std::endl;
       for (Byte_t j=0; j<nLepton; j++) {
         // Pt > 20 and |Eta| < 4.5
         vMounterLeptonChained[i].PushOrSkip(
@@ -1219,10 +1226,10 @@ void xAna_monoZ_preselect(
             TMath::Abs(vMounterLeptonDynamics[i].Peek(1)) < 4.5);
       }
     }
-    Int_t nElectronPassedPtEta = vMounterLeptonDynamics[0].vvE.back().size();
-    Int_t nMuonPassedPtEta = vMounterLeptonDynamics[1].vvE.back().size();
-    if (debug) std::cout << "nElectronPassedPtEta: " << nElectronPassedPtEta << "\n"
-        "nMuonPassedPtEta: " << nMuonPassedPtEta << std::endl;
+    arrNLeptonPassedPtEta[0] = vMounterLeptonDynamics[0].vvE.back().size();
+    arrNLeptonPassedPtEta[1] = vMounterLeptonDynamics[1].vvE.back().size();
+    if (debug) std::cout << "arrNLeptonPassedPtEta[0]: " << arrNLeptonPassedPtEta[0] << "\n"
+        "arrNLeptonPassedPtEta[1]: " << arrNLeptonPassedPtEta[1] << std::endl;
 
     std::vector<Int_t> arrVLeptonIdxPassedPtEtaNumCorrect[2] = {{-1, -1}, {-1, -1}};
 
@@ -1240,7 +1247,7 @@ void xAna_monoZ_preselect(
     Bool_t* ptrMuon_isTight = ptrMuon_tightId;
 
     Bool_t isNumElectronCorrect = true;
-    for (Int_t iElectronPassed = 0, iiElectronNumCorrect = 0; iElectronPassed < nElectronPassedPtEta; iElectronPassed++) {
+    for (Int_t iElectronPassed = 0, iiElectronNumCorrect = 0; iElectronPassed < arrNLeptonPassedPtEta[0]; iElectronPassed++) {
       const Int_t iElectron = vMounterLeptonIdxPassedPtEta[0].vvE.back()[iElectronPassed];
       if (ptrElectron_isSoft[iElectron]) {
         if (iiElectronNumCorrect == 2) {
@@ -1260,7 +1267,7 @@ void xAna_monoZ_preselect(
     // nElectronPair = isNumElectronCorrect;
 
     Bool_t isNumMuonCorrect = true;
-    for (Int_t iMuonPassed = 0, iiMuonNumCorrect = 0; iMuonPassed < nMuonPassedPtEta; iMuonPassed++) {
+    for (Int_t iMuonPassed = 0, iiMuonNumCorrect = 0; iMuonPassed < arrNLeptonPassedPtEta[1]; iMuonPassed++) {
       const Int_t iMuon = vMounterLeptonIdxPassedPtEta[1].vvE.back()[iMuonPassed];
       if (ptrMuon_isSoft[iMuon]) {
         if (iiMuonNumCorrect == 2) {
