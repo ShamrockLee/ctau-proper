@@ -285,6 +285,35 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   };
   if (nameCondorPack.EqualTo("preselect")) { 
     for (TString nameTT : vNameTT) {
+      for (Byte_t i=0; i<2; i++) {
+        for (Byte_t isPassedPtEta=0; isPassedPtEta < 2; isPassedPtEta++) for (Byte_t isExact = 0; isExact < 2; isExact++) {
+          auto analyzer = new HistMerger::LeafAnalyzerDefault;
+          analyzer->SetNameTT(nameTT);
+          const TString nameVarIn = "n" + namesLepton[i] + (isPassedPtEta ? "PassedPtEta" : "");
+          const TString nameOperatorOut = isExact ? "==" : ">=";
+          analyzer->SetExpressionCustom((isExact ? "have2" : "have2More") + namesLepton[i] + (isPassedPtEta ? "PassedPtEta" : ""), "Bool_t",
+          nameVarIn + " " + nameOperatorOut + " 2",
+          nameVarIn + nameOperatorOut + "2");
+          analyzer->SetHasTarget({nameVarIn});
+          merger->vAnalyzerCustomByName.push_back(analyzer);
+        }
+      }
+      {
+        auto analyzer = new HistMerger::LeafAnalyzerDefault;
+        analyzer->SetNameTT(nameTT);
+        analyzer->SetExpressionCustom("have2MoreJetPassed", "Bool_t", "nJetPassed >= 2",
+            "nJetPassed>=2");
+        analyzer->SetHasTarget({"nJetPassed"});
+        merger->vAnalyzerCustomByName.push_back(analyzer);
+      }
+      {
+        auto analyzer = new HistMerger::LeafAnalyzerDefault;
+        analyzer->SetNameTT(nameTT);
+        analyzer->SetExpressionCustom("have2MoreFatJetPassed", "Bool_t", "nFatJetPassed >= 2",
+            "nFatJetPassed>=2");
+        analyzer->SetHasTarget({"nFatJetPassed"});
+        merger->vAnalyzerCustomByName.push_back(analyzer);
+      }
       if (nameTT.Contains("Match")) {
         // const TString tstrDJetDeltaR = "GenDMatching_deltaRJet";
         // const TString tstrMatchedId = "GenDMatching_JetMatchedId";
@@ -348,22 +377,6 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             "(nFatJetMatched>0)?FatJetMatched_rankFatJetPassedPt[nFatJetMatched-1]:-10");
         ptrAnalyzerFatJetRankLast->SetHasTarget({"FatJetMatched_rankFatJetPassedPt", "nFatJetMatched"});
         merger->vAnalyzerCustomByName.push_back(ptrAnalyzerFatJetRankLast);
-      }
-      {
-        auto analyzer = new HistMerger::LeafAnalyzerDefault;
-        analyzer->SetNameTT(nameTT);
-        analyzer->SetExpressionCustom("have2JetPassed", "Bool_t", "nJetPassed >= 2",
-            "nJetPassed>=2");
-        analyzer->SetHasTarget({"nJetPassed"});
-        merger->vAnalyzerCustomByName.push_back(analyzer);
-      }
-      {
-        auto analyzer = new HistMerger::LeafAnalyzerDefault;
-        analyzer->SetNameTT(nameTT);
-        analyzer->SetExpressionCustom("have2FatJetPassed", "Bool_t", "nFatJetPassed >= 2",
-            "nFatJetPassed>=2");
-        analyzer->SetHasTarget({"nFatJetPassed"});
-        merger->vAnalyzerCustomByName.push_back(analyzer);
       }
     }
     merger->pushCustomAnalyzersWhenRun = [debug, namesLepton, namesLeptonLower](
@@ -431,10 +444,10 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
           analyzer->SetHasTarget({nameLeafModified, TString::Format("%sMatched_rank%sPassedPt", isFatJet ? "FatJet" : "Jet", isFatJet ? "FatJet" : "Jet")});
           pushbackNewAnalyzer(analyzer);
         }
-        const UInt_t rankUpperMax = isFatJet ? 6 : 8;
+        // const UInt_t rankUpperMax = isFatJet ? 6 : 8;
         // for (UInt_t rankUpper = 1; rankUpper <= rankUpperMax; rankUpper++) {
         {
-          UInt_t rankUpper = rankUpperMax;
+          UInt_t rankUpper = isFatJet ? 2 : 6;
           auto analyzer = new HistMerger::LeafAnalyzerDefault;
           analyzer->SetExpressionCustom((TString)(isFatJet ? "FatJet" : "Jet") + "First" + rankUpper + nameLeafModified(isFatJet ? 6 : 3, nameLeafModified.Length()),
               (*citerVAnalyzerLeaf)->GetTypeNameLeaf(),
