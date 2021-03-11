@@ -1581,6 +1581,7 @@ void HistMerger::Run() {
             if (debug)
               std::cout << "Writing to tfCorrectedHist (" << tfCorrectedHist
                         << ") ...";
+            tfCorrectedHist->cd();
             histCorrected->SetDirectory(tfCorrectedHist);
             histCorrected->SetName(nameHistCorrected);
             histCorrected->Write(nameHistCorrected);
@@ -1661,6 +1662,7 @@ void HistMerger::Run() {
     if (isToUseCorrectedTempFile) {
       tfOutHistMerge = TFile::Open(funPathTFOutHist(iTree),
                                    toRecreateOutFile ? "recreate" : "update");
+      tfOutHistMerge->cd();
       if (debug)
         std::cout << "tfOutHist: " << tfOutHistMerge
                   << " (isOpen: " << tfOutHistMerge->IsOpen() << ")"

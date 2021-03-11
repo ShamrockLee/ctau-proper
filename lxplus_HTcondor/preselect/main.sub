@@ -1,8 +1,10 @@
 ##########################################################
 ## user setting area
 
-datagroupName         = DYJets
+datagroupName         = TT
 # signal_Mx2-150_Mv-500_Mx1-1_ctau-1
+# signal_Mx2-1_Mv-500_Mx1-0p1_ctau-1
+# signal_Mx2-50_Mv-500_Mx1-1_ctau-10
 # TT
 # DYJets
 #listFile              = dataTest.txt
@@ -25,6 +27,7 @@ exeMacro              = xAna_monoZ_preselect.C
 
 outputTransfer        = $Fn(listFile)/output_$(datagroupName)_$(ClusterId)_$(ProcId).root
 outputVar             = testOut.root
+#outputVar             = testOutSignal.root
 
 universe              = vanilla
 executable            = subMacro.sh
