@@ -20,6 +20,7 @@
 #include <iostream>
 #include <iterator>
 #include <vector>
+#include <numeric>
 
 #include "HistMerger.h"
 
@@ -286,7 +287,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
       histTypeFlavor = HistTypeFlavor::Integer;
     }
     if (histTypeFlavor == HistTypeFlavor::Boolean) {
-      AssignHistSetting(2, 0, 2);
+      AssignHistSetting(2, -0.5, 0.5);
       // tstrHistSetting = TString::Format("(%d,%d,%d)", nBinsCorrect,
       // (Int_t)lowerCorrect, (Int_t)upperCorrect);
     }
@@ -381,13 +382,15 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
   static inline TString GetTStrHistSetting(
       Int_t nBinsCorrect, Double_t lowerCorrect, Double_t upperCorrect,
       HistTypeFlavor histTypeFlavor = HistTypeFlavor::FloatingPoint) {
-    if (histTypeFlavor == HistTypeFlavor::FloatingPoint) {
-      return TString::Format("(%d,%F,%F)", nBinsCorrect, lowerCorrect,
-                             upperCorrect);
-    } else {
-      return TString::Format("(%d,%lld,%lld)", nBinsCorrect,
-                             (Long64_t)lowerCorrect, (Long64_t)upperCorrect);
-    }
+    // if (histTypeFlavor == HistTypeFlavor::FloatingPoint) {
+    //   return TString::Format("(%d,%F,%F)", nBinsCorrect, lowerCorrect,
+    //                          upperCorrect);
+    // } else {
+    //   return TString::Format("(%d,%lld,%lld)", nBinsCorrect,
+    //                          (Long64_t)lowerCorrect, (Long64_t)upperCorrect);
+    // }
+    return TString::Format("(%d,%F,%F)", nBinsCorrect, lowerCorrect,
+                           upperCorrect);
   }
   void CalculateTStrHistSetting() {
     this->tstrHistSetting = GetTStrHistSetting(nBinsCorrect, lowerCorrect,
@@ -483,7 +486,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
     } else {
       if (areAllEmpty) {
         if (!tstrHistSetting.Length()) {
-          nBinsCorrect = 0;
+          nBinsCorrect = 1;
           lowerCorrect = 0.;
           upperCorrect = 1.;
         }
@@ -534,89 +537,165 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
           } else {
             nBinsCorrect = upperCorrect - lowerCorrect;
           }
+          lowerCorrect -= 0.5;
+          upperCorrect -= 0.5;
           // tstrHistSetting =
           //     TString::Format("(%d,%lld,%lld)", nBinsCorrect,
           //                     (Long64_t)lowerCorrect,
           //                     (Long64_t)upperCorrect);
         } else {
-          UInt_t nHists = vNBinsFile.size();
-          std::sort(vNBinsFile.begin(), vNBinsFile.end());
-          nBinsCorrect = vNBinsFile[nHists >> 1];
-          if (minimumValueAllFiles <= 0 && maximumValueAllFiles >= 0) {
-            if (minimumValueAllFiles != 0) {
-              Int_t nDigitsM1Minimum = getNDigitsM1(minimumValueAllFiles);
-              lowerCorrect = intpow(10, nDigitsM1Minimum,
-                                    TMath::Floor(intpow(10, -nDigitsM1Minimum,
-                                                        minimumValueAllFiles)));
+          // {
+          //   UInt_t nHists = vNBinsFile.size();
+          //   std::sort(vNBinsFile.begin(), vNBinsFile.end());
+          //   nBinsCorrect = vNBinsFile[nHists >> 1];
+          // }
+          // if (minimumValueAllFiles <= 0 && maximumValueAllFiles >= 0) {
+          //   if (minimumValueAllFiles != 0) {
+          //     Int_t nDigitsM1Minimum = getNDigitsM1(minimumValueAllFiles);
+          //     lowerCorrect = intpow(10, nDigitsM1Minimum,
+          //                           TMath::Floor(intpow(10, -nDigitsM1Minimum,
+          //                                               minimumValueAllFiles)));
+          //   } else {
+          //     lowerCorrect = 0.;
+          //   }
+          //   if (maximumValueAllFiles != 0) {
+          //     Int_t nDigitsM1Maximum = getNDigitsM1(maximumValueAllFiles);
+          //     upperCorrect = intpow(10, nDigitsM1Maximum,
+          //                           TMath::Ceil(intpow(10, -nDigitsM1Maximum,
+          //                                              maximumValueAllFiles)));
+          //   } else {
+          //     upperCorrect = 0.;
+          //   }
+          //   if (lowerCorrect == 0 && upperCorrect == 0) {
+          //     lowerCorrect -= static_cast<Double_t>(__FLT_EPSILON__);
+          //     upperCorrect += static_cast<Double_t>(__FLT_EPSILON__);
+          //   }
+          // } else if (minimumValueAllFiles == maximumValueAllFiles) {
+          //   lowerCorrect = minimumValueAllFiles - TMath::Min(TMath::Abs(minimumValueAllFiles),
+          //                              static_cast<Double_t>(__FLT_EPSILON__));
+          //   upperCorrect += maximumValueAllFiles + TMath::Min(TMath::Abs(maximumValueAllFiles),
+          //                              static_cast<Double_t>(__FLT_EPSILON__));
+          // } else {
+          //   Bool_t isPositive = maximumValueAllFiles > 0;
+          //   Double_t valueOuter =
+          //       isPositive ? maximumValueAllFiles : -minimumValueAllFiles;
+          //   Double_t valueInner =
+          //       isPositive ? minimumValueAllFiles : -maximumValueAllFiles;
+          //   Int_t nDigitsM1Outer = getNDigitsM1(valueOuter);
+          //   Int_t orderDiff = TMath::Nint(
+          //       TMath::Log10(maximumValueAllFiles - minimumValueAllFiles));
+          //   Int_t mDigitsToRound = TMath::Min(nDigitsM1Outer, orderDiff);
+          //   // Previous merging error is caused by
+          //   // mistakenly exchanging of TMath::Floor and TMath::Ceilling
+          //   // causing valueOuter to be equal to valueInner when mDigitsToRound
+          //   // == nDigitsM1Outer e.g. When minimumAllFile is 20 and
+          //   // maximumAllFile is 1016 lowerCorrect and upperCorrect were
+          //   // mistakenly assigned to be 1000 and 1000
+          //   valueOuter =
+          //       intpow(10, mDigitsToRound,
+          //              TMath::Ceil(intpow(10, -mDigitsToRound, valueOuter)));
+          //   valueInner =
+          //       intpow(10, mDigitsToRound,
+          //              TMath::Floor(intpow(10, -mDigitsToRound, valueInner)));
+          //   if (valueInner == valueOuter) {
+          //     valueOuter += TMath::Min(valueOuter,
+          //                              static_cast<Double_t>(__FLT_EPSILON__));
+          //     valueInner -= TMath::Min(valueInner,
+          //                              static_cast<Double_t>(__FLT_EPSILON__));
+          //   }
+          //   if (isPositive) {
+          //     lowerCorrect = valueInner;
+          //     upperCorrect = valueOuter;
+          //   } else {
+          //     lowerCorrect = -valueOuter;
+          //     upperCorrect = -valueInner;
+          //   }
+          // }
+          Int_t significantDigitLower = 0;
+          Int_t significantDigitUpper = 0;
+          Int_t nDigitsM1Common = 0;
+          Bool_t isOnlyOneValue = false;
+          if (minimumValueAllFiles == maximumValueAllFiles) {
+            isOnlyOneValue = true;
+            lowerCorrect = minimumValueAllFiles - static_cast<Double_t>(__FLT_EPSILON__);
+            upperCorrect = maximumValueAllFiles + static_cast<Double_t>(__FLT_EPSILON__);
+          } else if (minimumValueAllFiles == 0) {
+            significantDigitLower  = 0;
+            nDigitsM1Common = getNDigitsM1(maximumValueAllFiles);
+            significantDigitUpper = TMath::Ceil(intpow(10, -nDigitsM1Common, maximumValueAllFiles));
+            if (significantDigitUpper == 2) {
+              nDigitsM1Common -= 1;
+              significantDigitUpper = TMath::Ceil(intpow(10, -nDigitsM1Common, maximumValueAllFiles));
+            }
+            if (!significantDigitUpper) {
+              significantDigitUpper = 1;
+            }
+          } else if (maximumValueAllFiles == 0) {
+            significantDigitUpper = 0;
+            nDigitsM1Common = getNDigitsM1(minimumValueAllFiles);
+            significantDigitLower = TMath::Floor(intpow(10, -nDigitsM1Common, minimumValueAllFiles));
+            if (significantDigitLower == -2) {
+              nDigitsM1Common -= 1;
+              significantDigitLower = TMath::Floor(intpow(10, -nDigitsM1Common, minimumValueAllFiles));
+            }
+            if (!significantDigitLower) {
+              significantDigitLower = -1;
+            }
+          } else if (minimumValueAllFiles < 0 && maximumValueAllFiles > 0) {
+            const Int_t nDigitsM1Minimum = getNDigitsM1(minimumValueAllFiles);
+            const Int_t nDigitsM1Maximum = getNDigitsM1(maximumValueAllFiles);
+            if (nDigitsM1Minimum == nDigitsM1Maximum) {
+              nDigitsM1Common = nDigitsM1Maximum;
+              significantDigitLower = TMath::Floor(intpow(10, -nDigitsM1Common, minimumValueAllFiles));
+              significantDigitUpper = TMath::Ceil(intpow(10, -nDigitsM1Common, maximumValueAllFiles));
+              if (TMath::Max(-significantDigitLower, significantDigitUpper) == 2) {
+                nDigitsM1Common -= 1;
+                significantDigitLower = TMath::Floor(intpow(10, -nDigitsM1Common, minimumValueAllFiles));
+                significantDigitUpper = TMath::Ceil(intpow(10, -nDigitsM1Common, maximumValueAllFiles));
+              }
             } else {
-              lowerCorrect = 0.;
+              nDigitsM1Common = TMath::Max(nDigitsM1Minimum, nDigitsM1Maximum) - 1;
+              significantDigitLower = TMath::Floor(intpow(10, -nDigitsM1Common, minimumValueAllFiles));
+              significantDigitUpper = TMath::Ceil(intpow(10, -nDigitsM1Common, maximumValueAllFiles));
             }
-            if (maximumValueAllFiles != 0) {
-              Int_t nDigitsM1Maximum = getNDigitsM1(maximumValueAllFiles);
-              upperCorrect = intpow(10, nDigitsM1Maximum,
-                                    TMath::Ceil(intpow(10, -nDigitsM1Maximum,
-                                                       maximumValueAllFiles)));
-            } else {
-              upperCorrect = 0.;
+            if (!significantDigitLower) {
+              significantDigitLower = -1;
             }
-            if (lowerCorrect == 0 && upperCorrect == 0) {
-              lowerCorrect -= static_cast<Double_t>(__FLT_EPSILON__);
-              upperCorrect += static_cast<Double_t>(__FLT_EPSILON__);
+            if (!significantDigitUpper) {
+              significantDigitUpper = 1;
             }
-            // } else if (minimumValueAllFiles == 0) {
-            //   lowerCorrect = minimumValueAllFiles;
-            //   upperCorrect = maximumValueAllFiles;
-            //   if (lowerCorrect == upperCorrect) {
-            //     upperCorrect += __FLT_EPSILON__;
-            //   }
-            // } else if (maximumValueAllFiles == 0) {
-            //   lowerCorrect = minimumValueAllFiles;
-            //   upperCorrect = maximumValueAllFiles;
-            //   if (lowerCorrect == upperCorrect) {
-            //     lowerCorrect -= __FLT_EPSILON__;
-            //   }
-          } else if (minimumValueAllFiles == maximumValueAllFiles) {
-            lowerCorrect = minimumValueAllFiles - TMath::Min(TMath::Abs(minimumValueAllFiles),
-                                       static_cast<Double_t>(__FLT_EPSILON__));
-            upperCorrect += maximumValueAllFiles + TMath::Min(TMath::Abs(maximumValueAllFiles),
-                                       static_cast<Double_t>(__FLT_EPSILON__));
           } else {
-            Bool_t isPositive = maximumValueAllFiles > 0;
-            Double_t valueOuter =
-                isPositive ? maximumValueAllFiles : -minimumValueAllFiles;
-            Double_t valueInner =
-                isPositive ? minimumValueAllFiles : -maximumValueAllFiles;
-            Int_t nDigitsM1Outer = getNDigitsM1(valueOuter);
-            Int_t orderDiff = TMath::Nint(
-                TMath::Log10(maximumValueAllFiles - minimumValueAllFiles));
-            Int_t mDigitsToRound = TMath::Min(nDigitsM1Outer, orderDiff);
-            // Previous merging error is caused by
-            // mistakenly exchanging of TMath::Floor and TMath::Ceilling
-            // causing valueOuter to be equal to valueInner when mDigitsToRound
-            // == nDigitsM1Outer e.g. When minimumAllFile is 20 and
-            // maximumAllFile is 1016 lowerCorrect and upperCorrect were
-            // mistakenly assigned to be 1000 and 1000
-            valueOuter =
-                intpow(10, mDigitsToRound,
-                       TMath::Ceil(intpow(10, -mDigitsToRound, valueOuter)));
-            valueInner =
-                intpow(10, mDigitsToRound,
-                       TMath::Floor(intpow(10, -mDigitsToRound, valueInner)));
-            if (valueInner == valueOuter) {
-              valueOuter += TMath::Min(valueOuter,
-                                       static_cast<Double_t>(__FLT_EPSILON__));
-              valueInner -= TMath::Min(valueInner,
-                                       static_cast<Double_t>(__FLT_EPSILON__));
+            const Double_t range = maximumValueAllFiles - minimumValueAllFiles;
+            nDigitsM1Common = getNDigitsM1(range);
+            if (intpow(10, -nDigitsM1Common, range) < 2) {
+              nDigitsM1Common -= 1;
             }
-            if (isPositive) {
-              lowerCorrect = valueInner;
-              upperCorrect = valueOuter;
-            } else {
-              lowerCorrect = -valueOuter;
-              upperCorrect = -valueInner;
+            significantDigitLower = TMath::Floor(intpow(10, -nDigitsM1Common, minimumValueAllFiles));
+            significantDigitUpper = TMath::Ceil(intpow(10, -nDigitsM1Common, maximumValueAllFiles));
+            if (significantDigitLower == significantDigitUpper) {
+              if (maximumValueAllFiles > 0) {
+                significantDigitUpper += 1;
+              } else {
+                significantDigitLower -= 1;
+              }
             }
           }
-          nBinsCorrect = TMath::Max(nBinsCorrect, TMath::Min(TMath::Nint((upperCorrect - lowerCorrect) * 100), std::accumulate(vNBinsFile.cbegin(), vNBinsFile.cend(), static_cast<decltype(vNBinsFile)::value_type>(0)) / 10));
+          if (debug) std::cout << "nDigitsM1Common: " << nDigitsM1Common << ", significantDigitLower: " << significantDigitLower << ", significantDigitUpper: " << significantDigitUpper << std::flush;
+          if (!isOnlyOneValue) {
+            lowerCorrect = intpow(10, nDigitsM1Common, static_cast<Double_t>(significantDigitLower));
+            upperCorrect = intpow(10, nDigitsM1Common, static_cast<Double_t>(significantDigitUpper));
+            const Int_t significantDigitRange = significantDigitUpper - significantDigitLower;
+            const Long64_t nEntriesTot = std::accumulate(vNBinsFile.cbegin(), vNBinsFile.cend(), static_cast<Long64_t>(0));
+            if (debug) std::cout << ", nEntriesTot: " << nEntriesTot << std::flush;
+            const Int_t nDigitsM1NBinsCorrect = TMath::Max(TMath::Max(nDigitsM1Common, 0) + 1, TMath::Min(nDigitsM1Common + 2, TMath::Nint(TMath::Log10(nEntriesTot / significantDigitRange)) - 1));
+            nBinsCorrect = intpow(10, nDigitsM1NBinsCorrect, static_cast<decltype(nBinsCorrect)>(significantDigitRange));
+            if (!nBinsCorrect) {
+              nBinsCorrect = 1;
+            }
+          } else {
+            nBinsCorrect = 1;
+          }
+          if (debug) std::cout << std::endl;
           // tstrHistSetting = TString::Format("(%d,%F,%F)", nBinsCorrect,
           //                                   lowerCorrect, upperCorrect);
         }
