@@ -150,15 +150,16 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
 
   std::function<void(Int_t&, Double_t&, Double_t&, TString, TString, TString,
                      TString)>
-      adjustHistSetting = [debug, nameCondorPack](Int_t& nBinCorrect, Double_t& lowerCorrect,
+      adjustHistSetting = [debug, nameCondorPack](Int_t& nBinsCorrect, Double_t& lowerCorrect,
                                   Double_t& upperCorrect, TString nameTT,
                                   TString nameLeafModified,
                                   TString typeNameLeaf, TString titleLeaf) {
         if (typeNameLeaf.Contains("loat") || typeNameLeaf.Contains("ouble")) {
           if (nameLeafModified.EndsWith("_phi")) {
             if (debug) std::cout << "Found _phi" << std::endl;
-            lowerCorrect = -TMath::Pi();
-            upperCorrect = TMath::Pi();
+            lowerCorrect = TMath::Floor(-TMath::Pi() * 100) / 100;
+            upperCorrect = TMath::Ceil(TMath::Pi() * 100) / 100;
+            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * 100);
             return;
           }
           if (nameLeafModified.Contains("_btag")) {
@@ -167,10 +168,12 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
               if (debug) std::cout << "Found _btagCMVA" << std::endl;
               lowerCorrect = -1;
               upperCorrect = 1;
+              nBinsCorrect = 200;
             } else {
               if (debug) std::cout << "Found _btag" << std::endl;
               lowerCorrect = 0;
               upperCorrect = 1;
+              nBinsCorrect = 100;
             }
             return;
           }
@@ -178,17 +181,20 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (debug) std::cout << "Found _deepTag" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
+            nBinsCorrect = 200;
           }
           if (nameLeafModified.Contains("_ch")) {
             if (debug) std::cout << "Found _ch" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
+            nBinsCorrect = 200;
             return;
           }
           if (nameLeafModified.Contains("_qgl")) {
             if (debug) std::cout << "Found _qgl" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
+            nBinsCorrect = 200;
             return;
           }
           if (nameLeafModified.Contains("_puIdDisc")) {
@@ -196,18 +202,21 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (debug) std::cout << "Found _puIdDisc" << std::endl;
             lowerCorrect = -1;
             upperCorrect = 1;
+            nBinsCorrect = 200;
           }
           if (nameLeafModified.Contains("_lsf")) {
             //
             if (debug) std::cout << "Found _lsf" << std::endl;
             lowerCorrect = -1;
             upperCorrect = 1;
+            nBinsCorrect = 200;
           }
           if (titleLeaf.EndsWith("Energy Fraction") ||
               titleLeaf.EndsWith("energy fraction")) {
             if (debug) std::cout << "Found Energy Fraction" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
+            nBinsCorrect = 100;
             return;
           }
         }
@@ -218,7 +227,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (upperCorrect <= lowerCorrect) {
               upperCorrect = lowerCorrect + 1;
             }
-            nBinCorrect = upperCorrect - lowerCorrect;
+            nBinsCorrect = upperCorrect - lowerCorrect;
             return;
           }
           if (nameLeafModified.Contains("_rank")) {
@@ -227,7 +236,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (upperCorrect <= lowerCorrect) {
               upperCorrect = lowerCorrect + 1;
             }
-            nBinCorrect = upperCorrect - lowerCorrect;
+            nBinsCorrect = upperCorrect - lowerCorrect;
             return;
           }
         }
@@ -412,6 +421,41 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
               analyzer->SetHasTarget({nameLeafModified, "nFatJetPassed"});
               pushbackNewAnalyzer(analyzer);
             }
+          }
+        }
+        if (nameLeafModified.BeginsWith("Electron_") && nameLeafModified.Contains("_WP")) {
+          {
+            auto analyzer = new HistMerger::LeafAnalyzerDefault;
+            analyzer->SetExpressionCustom(
+                TString("n") + nameLeafModified,
+                "Int_t",
+                "Number of electron passing " + (*citerVAnalyzerLeaf)->GetTitleLeaf(),
+                "Sum$(" + nameLeafModified + ")"
+            );
+            analyzer->SetHasTarget({nameLeafModified});
+            pushbackNewAnalyzer(analyzer);
+          }
+          {
+            auto analyzer = new HistMerger::LeafAnalyzerDefault;
+            analyzer->SetExpressionCustom(
+                TString("have2More") + nameLeafModified,
+                "Bool_t",
+                "Whether there are more than 2 electron passing " + (*citerVAnalyzerLeaf)->GetTitleLeaf(),
+                "Sum$(" + nameLeafModified + ")>=2"
+            );
+            analyzer->SetHasTarget({nameLeafModified});
+            pushbackNewAnalyzer(analyzer);
+          }
+          {
+            auto analyzer = new HistMerger::LeafAnalyzerDefault;
+            analyzer->SetExpressionCustom(
+                TString("have2") + nameLeafModified,
+                "Bool_t",
+                "Whether there are 2 electron passing " + (*citerVAnalyzerLeaf)->GetTitleLeaf(),
+                "Sum$(" + nameLeafModified + ")==2"
+            );
+            analyzer->SetHasTarget({nameLeafModified});
+            pushbackNewAnalyzer(analyzer);
           }
         }
         if (nameLeafModified.BeginsWith("Electron_") || nameLeafModified.BeginsWith("Muon_")) {

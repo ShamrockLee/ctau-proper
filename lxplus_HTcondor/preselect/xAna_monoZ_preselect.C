@@ -917,6 +917,7 @@ void xAna_monoZ_preselect(
   DescriptionCollectorForUntuplizer collectorMET;
   BranchDescription descriptionNMETJet;
   DescriptionCollectorForUntuplizer collectorMETJet;
+  DescriptionCollectorForUntuplizer collectorElectronCut;
   DescriptionCollectorForUntuplizer collectorJet;
   DescriptionCollectorForUntuplizer collectorFatJet;
   UInt_t nLeafOriginal;
@@ -965,6 +966,9 @@ void xAna_monoZ_preselect(
       if (descriptionCurrent.name.EqualTo("nCorrT1METJet")) {
         descriptionNMETJet = descriptionCurrent;
       }
+      if (descriptionCurrent.name.BeginsWith("Electron_") && descriptionCurrent.name.Contains("_WP")) {
+        collectorElectronCut.BranchFor(descriptionCurrent);
+      }
       if (descriptionCurrent.name.BeginsWith("GenPart_") &&
           !descriptionCurrent.name.EndsWith("_pt") &&
           !descriptionCurrent.name.EndsWith("_eta") &&
@@ -979,6 +983,7 @@ void xAna_monoZ_preselect(
   collectorHT.Prepare();
   collectorMET.Prepare();
   collectorMETJet.Prepare();
+  collectorElectronCut.Prepare();
   collectorJet.Prepare();
   collectorFatJet.Prepare();
   BranchMounterIterableForUntuplizer mounterGenDMatching(
@@ -996,14 +1001,16 @@ void xAna_monoZ_preselect(
   BranchMounterScalarForUntuplizer mounterMET(collectorMET, data);
   BranchMounterScalarSingle<Int_t> mounterNMETJet(std::vector<BranchDescription>({descriptionNMETJet}), [&data](BranchDescription description){return data.GetInt(description.name);});
   BranchMounterIterableForUntuplizer mounterMETJet(collectorMETJet, data);
+  BranchMounterIterableForUntuplizer mounterElectronCut(collectorElectronCut, data);
   BranchMounterIterableForUntuplizer mounterJet(collectorJet, data);
   BranchMounterIterableForUntuplizer mounterFatJet(collectorFatJet, data);
   {
-    auto funDoIntersection = [&mounterHT, &mounterMET, &mounterNMETJet, &mounterMETJet](TTree* tree) {
+    auto funDoIntersection = [&mounterHT, &mounterMET, &mounterNMETJet, &mounterMETJet, &mounterElectronCut](TTree* tree) {
       mounterHT.BranchOn(tree);
       mounterMET.BranchOn(tree);
       mounterNMETJet.BranchOn(tree);
       mounterMETJet.BranchOn(tree);
+      mounterElectronCut.BranchOn(tree);
     };
     auto funDoJet = [&mounterGenDMatching, &mounterJet](TTree* tree) {
       if (!TString(tree->GetName()).BeginsWith("NumCorrect")) {
@@ -1218,12 +1225,14 @@ void xAna_monoZ_preselect(
     for (Byte_t i=0; i<2; i++) {
       Int_t nLepton = i ? arrNLepton[1] : arrNLepton[0];
       vMounterLeptonChained[i].PrepareForPushing(nLepton);
+      if (i == 0) mounterElectronCut.PrepareForPushing(nLepton);
       if (debug) std::cout << (i ? "arrNLepton[1]: " : "arrNLepton[0]: ") << (i ? arrNLepton[1] : arrNLepton[0]) << std::endl;
       for (Byte_t j=0; j<nLepton; j++) {
-        // Pt > 20 and |Eta| < 4.5
-        vMounterLeptonChained[i].PushOrSkip(
-            vMounterLeptonDynamics[i].Peek(0) > 20 &&
-            TMath::Abs(vMounterLeptonDynamics[i].Peek(1)) < 4.5);
+        // Pt > 20 and |Eta| < 2.5
+        const bool isPassedPtEta = vMounterLeptonDynamics[i].Peek(0) > 20 &&
+            TMath::Abs(vMounterLeptonDynamics[i].Peek(1)) < 2.5;
+        vMounterLeptonChained[i].PushOrSkip(isPassedPtEta);
+        mounterElectronCut.PushOrSkip(isPassedPtEta);
       }
     }
     arrNLeptonPassedPtEta[0] = vMounterLeptonDynamics[0].vvE.back().size();
