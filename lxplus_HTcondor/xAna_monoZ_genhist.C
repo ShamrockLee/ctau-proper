@@ -155,11 +155,12 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
                                   TString nameLeafModified,
                                   TString typeNameLeaf, TString titleLeaf) {
         if (typeNameLeaf.Contains("loat") || typeNameLeaf.Contains("ouble")) {
+          const Int_t binDensity = 100;
           if (nameLeafModified.EndsWith("_phi")) {
             if (debug) std::cout << "Found _phi" << std::endl;
-            lowerCorrect = TMath::Floor(-TMath::Pi() * 100) / 100;
-            upperCorrect = TMath::Ceil(TMath::Pi() * 100) / 100;
-            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * 100);
+            lowerCorrect = TMath::Floor(-TMath::Pi() * binDensity) / binDensity;
+            upperCorrect = TMath::Ceil(TMath::Pi() * binDensity) / binDensity;
+            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensity);
             return;
           }
           if (nameLeafModified.Contains("_btag")) {
@@ -168,12 +169,12 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
               if (debug) std::cout << "Found _btagCMVA" << std::endl;
               lowerCorrect = -1;
               upperCorrect = 1;
-              nBinsCorrect = 200;
+              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
             } else {
               if (debug) std::cout << "Found _btag" << std::endl;
               lowerCorrect = 0;
               upperCorrect = 1;
-              nBinsCorrect = 100;
+              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
             }
             return;
           }
@@ -181,20 +182,20 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (debug) std::cout << "Found _deepTag" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = 200;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
           }
           if (nameLeafModified.Contains("_ch")) {
             if (debug) std::cout << "Found _ch" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = 200;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
             return;
           }
           if (nameLeafModified.Contains("_qgl")) {
             if (debug) std::cout << "Found _qgl" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = 200;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
             return;
           }
           if (nameLeafModified.Contains("_puIdDisc")) {
@@ -202,28 +203,28 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (debug) std::cout << "Found _puIdDisc" << std::endl;
             lowerCorrect = -1;
             upperCorrect = 1;
-            nBinsCorrect = 200;
+            nBinsCorrect = 2000;
           }
           if (nameLeafModified.Contains("_lsf")) {
             //
             if (debug) std::cout << "Found _lsf" << std::endl;
             lowerCorrect = -1;
             upperCorrect = 1;
-            nBinsCorrect = 200;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
           }
           if (titleLeaf.EndsWith("Energy Fraction") ||
               titleLeaf.EndsWith("energy fraction")) {
             if (debug) std::cout << "Found Energy Fraction" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = 100;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
             return;
           }
         }
         if (typeNameLeaf.Contains("Int") || typeNameLeaf.Contains("int")) {
           if (nameLeafModified.EndsWith("idxJet") || nameLeafModified.EndsWith("idxFatJet")) {
             if (debug) std::cout << "Found idxJet" << std::endl;
-            lowerCorrect = 0;
+            lowerCorrect = -0.5;
             if (upperCorrect <= lowerCorrect) {
               upperCorrect = lowerCorrect + 1;
             }
@@ -232,7 +233,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
           }
           if (nameLeafModified.Contains("_rank")) {
             if (debug) std::cout << "Found rank" << std::endl;
-            lowerCorrect = 0;
+            lowerCorrect = -0.5;
             if (upperCorrect <= lowerCorrect) {
               upperCorrect = lowerCorrect + 1;
             }
@@ -240,7 +241,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             return;
           }
         }
-        if (nameCondorPack.EqualTo("preselect")) {
+        if (false && nameCondorPack.EqualTo("preselect")) {
           if (typeNameLeaf.Contains("loat") || typeNameLeaf.Contains("ouble")) {
             if (nameLeafModified.BeginsWith("Electron") && nameLeafModified.Contains("_pt")) {
               if (lowerCorrect < 200) {
