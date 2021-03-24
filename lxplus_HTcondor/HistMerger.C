@@ -1392,9 +1392,10 @@ void HistMerger::Run() {
     if (debug)
       std::cout << "vCrossSection[" << iDataset
                 << "]: " << vCrossSection[iDataset] << std::endl;
+    const Double_t luminosityCollider = 36000;
     Double_t weight =
         (nEntryOriginalDatasetCurrent > 0)
-            ? vCrossSection[iDataset] / nEntryOriginalDatasetCurrent
+            ? vCrossSection[iDataset] / nEntryOriginalDatasetCurrent * luminosityCollider
             : 0;
     vWeightDataset.push_back(weight);
     if (debug)
