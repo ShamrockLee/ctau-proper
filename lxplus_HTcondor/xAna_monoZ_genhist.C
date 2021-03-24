@@ -155,12 +155,13 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
                                   TString nameLeafModified,
                                   TString typeNameLeaf, TString titleLeaf) {
         if (typeNameLeaf.Contains("loat") || typeNameLeaf.Contains("ouble")) {
-          const Int_t binDensity = 100;
+          const Int_t binDensityHigh = 100;
+          const Int_t binDensityUsual = 10;
           if (nameLeafModified.EndsWith("_phi")) {
             if (debug) std::cout << "Found _phi" << std::endl;
-            lowerCorrect = TMath::Floor(-TMath::Pi() * binDensity) / binDensity;
-            upperCorrect = TMath::Ceil(TMath::Pi() * binDensity) / binDensity;
-            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensity);
+            lowerCorrect = TMath::Floor(-TMath::Pi() * binDensityUsual) / binDensityUsual;
+            upperCorrect = TMath::Ceil(TMath::Pi() * binDensityUsual) / binDensityUsual;
+            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensityUsual);
             return;
           }
           if (nameLeafModified.Contains("_btag")) {
@@ -169,12 +170,12 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
               if (debug) std::cout << "Found _btagCMVA" << std::endl;
               lowerCorrect = -1;
               upperCorrect = 1;
-              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
+              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             } else {
               if (debug) std::cout << "Found _btag" << std::endl;
               lowerCorrect = 0;
               upperCorrect = 1;
-              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
+              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             }
             return;
           }
@@ -182,20 +183,20 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (debug) std::cout << "Found _deepTag" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
           }
           if (nameLeafModified.Contains("_ch")) {
             if (debug) std::cout << "Found _ch" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             return;
           }
           if (nameLeafModified.Contains("_qgl")) {
             if (debug) std::cout << "Found _qgl" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             return;
           }
           if (nameLeafModified.Contains("_puIdDisc")) {
@@ -203,21 +204,21 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
             if (debug) std::cout << "Found _puIdDisc" << std::endl;
             lowerCorrect = -1;
             upperCorrect = 1;
-            nBinsCorrect = 2000;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
           }
           if (nameLeafModified.Contains("_lsf")) {
             //
             if (debug) std::cout << "Found _lsf" << std::endl;
             lowerCorrect = -1;
             upperCorrect = 1;
-            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
           }
           if (titleLeaf.EndsWith("Energy Fraction") ||
               titleLeaf.EndsWith("energy fraction")) {
             if (debug) std::cout << "Found Energy Fraction" << std::endl;
             lowerCorrect = 0;
             upperCorrect = 1;
-            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensity;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             return;
           }
         }
