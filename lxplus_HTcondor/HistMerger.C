@@ -101,12 +101,12 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
  protected:
   Bool_t debug;
   TString nameTT;
-  std::function<Bool_t(Int_t &NBinCorrect, Double_t &lowerCorrect,
+  std::function<Bool_t(Int_t &NBinsCorrect, Double_t &lowerCorrect,
                        Double_t &upperCorrect, TString nameTT,
                        TString nameLeafModified, TString typeNameLeaf,
                        TString titleLeaf)>
       assignHistSettingPerLeafTreeExtra;
-  std::function<void(Int_t &NBinCorrect, Double_t &lowerCorrect,
+  std::function<void(Int_t &NBinsCorrect, Double_t &lowerCorrect,
                      Double_t &upperCorrect, TString nameTT,
                      TString nameLeafModified, TString typeNameLeaf,
                      TString titleLeaf)>
@@ -192,7 +192,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
   void SetNameTT(TString nameTT) { this->nameTT = nameTT; }
   TString GetNameTT() const { return this->nameTT; }
   void SetFunAssignHistSettingExtra(
-      std::function<Bool_t(Int_t &NBinCorrect, Double_t &lowerCorrect,
+      std::function<Bool_t(Int_t &NBinsCorrect, Double_t &lowerCorrect,
                            Double_t &upperCorrect, TString nameTT,
                            TString nameLeafModified, TString typeNameLeaf,
                            TString titleLeaf)>
@@ -200,7 +200,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
     this->assignHistSettingPerLeafTreeExtra = assignHistSettingPerLeafTreeExtra;
   }
   void SetFunAdjustHistSettingExtra(
-      std::function<void(Int_t &NBinCorrect, Double_t &lowerCorrect,
+      std::function<void(Int_t &NBinsCorrect, Double_t &lowerCorrect,
                          Double_t &upperCorrect, TString nameTT,
                          TString nameLeafModified, TString typeNameLeaf,
                          TString titleLeaf)>
@@ -685,9 +685,10 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
             lowerCorrect = intpow(10, nDigitsM1Common, static_cast<Double_t>(significantDigitLower));
             upperCorrect = intpow(10, nDigitsM1Common, static_cast<Double_t>(significantDigitUpper));
             const Int_t significantDigitRange = significantDigitUpper - significantDigitLower;
-            const Long64_t nEntriesTot = std::accumulate(vNBinsFile.cbegin(), vNBinsFile.cend(), static_cast<Long64_t>(0));
-            if (debug) std::cout << ", nEntriesTot: " << nEntriesTot << std::flush;
-            const Int_t nDigitsM1NBinsCorrect = TMath::Max(TMath::Max(nDigitsM1Common, 0) + 1, TMath::Min(nDigitsM1Common + 2, TMath::Nint(TMath::Log10(nEntriesTot / significantDigitRange)) - 1));
+            // const Long64_t nEntriesTot = std::accumulate(vNBinsFile.cbegin(), vNBinsFile.cend(), static_cast<Long64_t>(0));
+            // if (debug) std::cout << ", nEntriesTot: " << nEntriesTot << std::flush;
+            // const Int_t nDigitsM1NBinsCorrect = TMath::Max(TMath::Max(nDigitsM1Common, 0) + 1, TMath::Min(nDigitsM1Common + 2, TMath::Nint(TMath::Log10(nEntriesTot / significantDigitRange)) - 1));
+            const Int_t nDigitsM1NBinsCorrect = nDigitsM1Common + 1;
             nBinsCorrect = intpow(10, nDigitsM1NBinsCorrect, static_cast<decltype(nBinsCorrect)>(significantDigitRange));
             if (!nBinsCorrect) {
               nBinsCorrect = 1;
@@ -1060,7 +1061,7 @@ void HistMerger::Run() {
     return dirTFOut + seperatorPath + funNameTFOut(vNameTT[iTree]);
   };
   // const std::function<void(Int_t &, Double_t &, Double_t &, UInt_t, UInt_t)>
-  //     adjustHistSettingPerLeafTreeExtraIndex = [this](Int_t &nBinCorrect,
+  //     adjustHistSettingPerLeafTreeExtraIndex = [this](Int_t &nBinsCorrect,
   //                                                     Double_t &lowerCorrect,
   //                                                     Double_t &upperCorrect,
   //                                                     UInt_t iTree,
@@ -1073,7 +1074,7 @@ void HistMerger::Run() {
   //       vvAnalyzerLeafTree[iTree][indexName]; TString typeName =
   //       analyzer->GetTypeNameLeaf(); TString title =
   //       analyzer->GetTitleLeaf(); return adjustHistSettingPerLeafTreeExtra(
-  //           nBinCorrect, lowerCorrect, upperCorrect, nameTT,
+  //           nBinsCorrect, lowerCorrect, upperCorrect, nameTT,
   //           nameLeafModified, typeName, title);
   //     };
   // UInt_t iFile = 0;

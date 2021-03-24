@@ -131,7 +131,7 @@ class HistMerger {
   ///
   /// Default to "/" (the POSIX style)
   TString seperatorPath;
-  std::function<Bool_t(Int_t &NBinCorrect, Double_t &lowerCorrect,
+  std::function<Bool_t(Int_t &NBinsCorrect, Double_t &lowerCorrect,
                        Double_t &upperCorrect, TString nameTT,
                        TString nameLeafModified, TString typeNameLeaf,
                        TString titleLeaf)>
@@ -145,7 +145,7 @@ class HistMerger {
   /// Example:
   /// ~~~ {.C}
   /// adjustHistSettingPerLeafTreeExtra = [](
-  ///                Int_t& NBinCorrect, Double_t& lowerCorrect,
+  ///                Int_t& NBinsCorrect, Double_t& lowerCorrect,
   ///                Double_t& upperCorrect, TString nameTT,
   ///                TString nameLeafModified, TString typeNameLeaf,
   ///                TString titleLeaf)->TString{
@@ -157,7 +157,7 @@ class HistMerger {
   ///   }
   /// }
   /// ~~~
-  std::function<void(Int_t& NBinCorrect, Double_t& lowerCorrect,
+  std::function<void(Int_t& NBinsCorrect, Double_t& lowerCorrect,
                      Double_t& upperCorrect, TString nameTT,
                      TString nameLeafModified, TString typeNameLeaf,
                      TString titleLeaf)>
@@ -351,7 +351,7 @@ class HistMerger::LeafAnalyzerAbstract {
                                  Double_t upperCorrect,
                                  TString tstrHistSetting = "") {}
   virtual void SetFunAssignHistSettingExtra(
-      std::function<Bool_t(Int_t& NBinCorrect, Double_t& lowerCorrect,
+      std::function<Bool_t(Int_t& NBinsCorrect, Double_t& lowerCorrect,
                            Double_t& upperCorrect, TString nameTT,
                            TString nameLeafModified, TString typeNameLeaf,
                            TString titleLeaf)>
@@ -359,7 +359,7 @@ class HistMerger::LeafAnalyzerAbstract {
   virtual void SetDontCheckEmptyness(Bool_t dontCheckEmptyness) {}
   virtual Bool_t GetDontCheckEmptyness() const { return false; }
   virtual void SetFunAdjustHistSettingExtra(
-      std::function<void(Int_t& NBinCorrect, Double_t& lowerCorrect,
+      std::function<void(Int_t& NBinsCorrect, Double_t& lowerCorrect,
                          Double_t& upperCorrect, TString nameTT,
                          TString nameLeafModified, TString typeNameLeaf,
                          TString titleLeaf)>
