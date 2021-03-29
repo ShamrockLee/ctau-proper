@@ -1255,43 +1255,50 @@ void xAna_monoZ_preselect(
     Bool_t* ptrMuon_isSoft = ptrMuon_softId;
     Bool_t* ptrMuon_isTight = ptrMuon_tightId;
 
+    // At least two loose electron/muon
+    decltype(arrVLeptonIdxNumCorrect) arrVLeptonIdxPassedPtEtaNumCorrectAll;
+
     Bool_t isNumElectronCorrect = true;
-    for (Int_t iElectronPassed = 0, iiElectronNumCorrect = 0; iElectronPassed < arrNLeptonPassedPtEta[0]; iElectronPassed++) {
+    arrVLeptonIdxPassedPtEtaNumCorrectAll[0].clear();
+    for (Int_t iElectronPassed = 0; iElectronPassed < arrNLeptonPassedPtEta[0]; iElectronPassed++) {
       const Int_t iElectron = vMounterLeptonIdxPassedPtEta[0].vvE.back()[iElectronPassed];
       if (ptrElectron_isSoft[iElectron]) {
-        if (iiElectronNumCorrect == 2) {
-          isNumElectronCorrect = false;
-          std::fill(arrVLeptonIdxNumCorrect[0].begin(), arrVLeptonIdxNumCorrect[0].end(), -1);
-          break;
-        }
-        arrVLeptonIdxNumCorrect[0][iiElectronNumCorrect] = iElectron;
-        arrVLeptonIdxPassedPtEtaNumCorrect[0][iiElectronNumCorrect] = iElectronPassed;
-        iiElectronNumCorrect++;
+        arrVLeptonIdxPassedPtEtaNumCorrectAll[0].push_back(iElectronPassed);
       }
     }
-    if (arrVLeptonIdxNumCorrect[0].back() < 0) {
+    if (arrVLeptonIdxPassedPtEtaNumCorrectAll[0].size() < 2) {
       isNumElectronCorrect = false;
       std::fill(arrVLeptonIdxNumCorrect[0].begin(), arrVLeptonIdxNumCorrect[0].end(), -1);
+    } else {
+      for (Int_t ii=0; ii<2; ++ii) {
+        constexpr const Int_t iLeptonName = 0;
+        const Int_t iElectronPassed = arrVLeptonIdxPassedPtEtaNumCorrectAll[iLeptonName][ii];
+        const Int_t iElectron = vMounterLeptonIdxPassedPtEta[iLeptonName].vvE.back()[iElectronPassed];
+        arrVLeptonIdxNumCorrect[iLeptonName][ii] = iElectron;
+        arrVLeptonIdxPassedPtEtaNumCorrect[iLeptonName][ii] = iElectronPassed;
+      }
     }
     // nElectronPair = isNumElectronCorrect;
 
     Bool_t isNumMuonCorrect = true;
-    for (Int_t iMuonPassed = 0, iiMuonNumCorrect = 0; iMuonPassed < arrNLeptonPassedPtEta[1]; iMuonPassed++) {
+    arrVLeptonIdxPassedPtEtaNumCorrectAll[1].clear();
+    for (Int_t iMuonPassed = 0; iMuonPassed < arrNLeptonPassedPtEta[1]; iMuonPassed++) {
       const Int_t iMuon = vMounterLeptonIdxPassedPtEta[1].vvE.back()[iMuonPassed];
       if (ptrMuon_isSoft[iMuon]) {
-        if (iiMuonNumCorrect == 2) {
-          isNumMuonCorrect = false;
-          std::fill(arrVLeptonIdxNumCorrect[1].begin(), arrVLeptonIdxNumCorrect[1].end(), -1);
-          break;
-        }
-        arrVLeptonIdxNumCorrect[1][iiMuonNumCorrect] = iMuon;
-        arrVLeptonIdxPassedPtEtaNumCorrect[1][iiMuonNumCorrect] = iMuonPassed;
-        iiMuonNumCorrect++;
+        arrVLeptonIdxPassedPtEtaNumCorrectAll[1].push_back(iMuonPassed);
       }
     }
-    if (arrVLeptonIdxNumCorrect[1].back() < 0) {
+    if (arrVLeptonIdxPassedPtEtaNumCorrectAll[1].size() < 2) {
       isNumMuonCorrect = false;
       std::fill(arrVLeptonIdxNumCorrect[1].begin(), arrVLeptonIdxNumCorrect[1].end(), -1);
+    } else {
+      for (Int_t ii=0; ii<2; ++ii) {
+        constexpr const Int_t iLeptonName = 1;
+        const Int_t iMuonPassed = arrVLeptonIdxPassedPtEtaNumCorrectAll[iLeptonName][ii];
+        const Int_t iMuon = vMounterLeptonIdxPassedPtEta[iLeptonName].vvE.back()[iMuonPassed];
+        arrVLeptonIdxNumCorrect[iLeptonName][ii] = iMuon;
+        arrVLeptonIdxPassedPtEtaNumCorrect[iLeptonName][ii] = iMuonPassed;
+      }
     }
 
     Bool_t isNumCorrect = (isNumElectronCorrect != isNumMuonCorrect);
