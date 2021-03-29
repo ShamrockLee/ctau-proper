@@ -688,7 +688,8 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
             // const Long64_t nEntriesTot = std::accumulate(vNBinsFile.cbegin(), vNBinsFile.cend(), static_cast<Long64_t>(0));
             // if (debug) std::cout << ", nEntriesTot: " << nEntriesTot << std::flush;
             // const Int_t nDigitsM1NBinsCorrect = TMath::Max(TMath::Max(nDigitsM1Common, 0) + 1, TMath::Min(nDigitsM1Common + 2, TMath::Nint(TMath::Log10(nEntriesTot / significantDigitRange)) - 1));
-            const Int_t nDigitsM1NBinsCorrect = nDigitsM1Common + 1;
+            constexpr const Int_t nDigitsM1BinDensity = 0;
+            const Int_t nDigitsM1NBinsCorrect = nDigitsM1Common + nDigitsM1BinDensity;
             nBinsCorrect = intpow(10, nDigitsM1NBinsCorrect, static_cast<decltype(nBinsCorrect)>(significantDigitRange));
             if (!nBinsCorrect) {
               nBinsCorrect = 1;
