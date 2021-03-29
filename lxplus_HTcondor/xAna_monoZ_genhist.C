@@ -155,13 +155,19 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
                                   TString nameLeafModified,
                                   TString typeNameLeaf, TString titleLeaf) {
         if (typeNameLeaf.Contains("loat") || typeNameLeaf.Contains("ouble")) {
+          const Int_t binDensityUsual = 1;
           const Int_t binDensityHigh = 100;
-          const Int_t binDensityUsual = 10;
+          const Int_t binDensityMedium = 10;
+          if (nameLeafModified.EndsWith("_eta")) {
+            if (debug) std::cout << "Found _eta" << std::endl;
+            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensityMedium);
+            return;
+          }
           if (nameLeafModified.EndsWith("_phi")) {
             if (debug) std::cout << "Found _phi" << std::endl;
-            lowerCorrect = TMath::Floor(-TMath::Pi() * binDensityUsual) / binDensityUsual;
-            upperCorrect = TMath::Ceil(TMath::Pi() * binDensityUsual) / binDensityUsual;
-            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensityUsual);
+            lowerCorrect = TMath::Floor(-TMath::Pi() * binDensityMedium) / binDensityMedium;
+            upperCorrect = TMath::Ceil(TMath::Pi() * binDensityMedium) / binDensityMedium;
+            nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensityMedium);
             return;
           }
           if (nameLeafModified.Contains("_btag")) {
