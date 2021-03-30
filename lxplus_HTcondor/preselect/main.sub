@@ -11,7 +11,8 @@ datagroupName         = DYJets
 listFile              = dataTest_$(datagroupName).txt
 exeMacro              = xAna_monoZ_preselect.C
 
-+JobFlavour           = "longlunch"
+# +JobFlavour           = "longlunch"
++JobFlavour           = "workday"
 
 # Name          Duration
 # espresso      20min   
