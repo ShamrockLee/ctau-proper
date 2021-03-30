@@ -15,7 +15,7 @@
 #include <array>
 #include <iostream>
 
-void punzi_20210318(const Bool_t debug=false) {
+void punzi_20210401(const Bool_t debug=false) {
   const TString namesLepton[] = {"Electron", "Muon", "Tau"};  //< the name of the leptons (Xxx)
   const TString namesLeptonLower[] = {"electron", "muon", "tau"};  //< the name of the leptons (xxx)
   const TString namesLeptonNota[] = {"e", "mu", "tau"};
@@ -24,14 +24,14 @@ void punzi_20210318(const Bool_t debug=false) {
   const TString nameCondorPack = "preselect";
 
   const TString pathOutImages = "/home/shamrock/Documents/Project_HEP/ROOT_assignment_20191210/out_images";
-  const TString nameFolderToday = "output_" + nameCondorPack + "_20210318";
+  const TString nameFolderToday = "output_" + nameCondorPack + "_20210401";
 
   auto funOpenFile = [pathCondorPacks, nameCondorPack](const TString nameDatagroup, const TString nameClusterID, const TString nameTT)->TFile*{
     return TFile::Open(pathCondorPacks + "/" + nameCondorPack + "/" + "output_" + nameDatagroup + "_" + nameTT + "_" + nameClusterID + "_hist.root");
   };
 
   const TString nameDatagroupSignalHeavy = "signal_Mx2-150_Mv-500_Mx1-1_ctau-1";
-  const TString nameClusterIDSignalHeavy = "20210318";
+  const TString nameClusterIDSignalHeavy = "20210401";
 
   const TString nameDatagroupDYJets = "DYJets";
   const TString nameClusterIDDYJets = "1325718";
@@ -115,7 +115,7 @@ void punzi_20210318(const Bool_t debug=false) {
         } else if (nameLeaf.BeginsWith("is") || nameLeaf.BeginsWith("are") || nameLeaf.BeginsWith("have") || nameLeaf.BeginsWith("has")) {
           continue;
         } else if (nameLeaf.Contains("MET_") || nameLeaf.BeginsWith("SoftActivityJetHT")) {
-          binDensity = 10;
+          binDensity = TMath::Power(10, TMath::Nint(-TMath::Log10(histSignal->GetBinWidth(1))));
         } else {
           continue;
         }
@@ -297,5 +297,5 @@ void punzi_20210318(const Bool_t debug=false) {
 
 
 int main(int argc, char* argv[]) {
-  punzi_20210318();
+  punzi_20210401();
 }

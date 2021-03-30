@@ -308,12 +308,12 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
   TString GetNameLeafModified() const { return this->nameLeafModified; }
   TString GetTitleLeaf() const { return this->titleLeaf; }
   TString GetTypeNameLeaf() const { return this->typeNameLeaf; }
-  static inline Int_t GetNBins(TH1 *hist) { return hist->GetNbinsX(); }
-  static inline Double_t GetMinimumValue(TH1 *hist) {
+  static inline Int_t GetNBins(const TH1 *const hist) { return hist->GetNbinsX(); }
+  static inline Double_t GetMinimumValue(const TH1 *const hist) {
     return hist->GetBinCenter(hist->FindFirstBinAbove()) -
            hist->GetBinWidth(1) / 2;
   }
-  static inline Double_t GetMaximumValue(TH1 *hist) {
+  static inline Double_t GetMaximumValue(const TH1 *const hist) {
     return hist->GetBinCenter(hist->FindLastBinAbove()) +
            hist->GetBinWidth(1) / 2;
   }
@@ -376,6 +376,8 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
                optionDraw, nEntriesToDrawMax, firstEntryToDraw);
     TH1 *histAutogen = (TH1 *)gDirectory->Get(nameHistAutogen);
     AnalyzeHist(histAutogen);
+    histAutogen->Delete();
+    delete histAutogen;
   }
 
  protected:
@@ -396,7 +398,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
     this->tstrHistSetting = GetTStrHistSetting(nBinsCorrect, lowerCorrect,
                                                upperCorrect, histTypeFlavor);
   }
-  void AnalyzeHist(TH1 *histAutogen) {
+  void AnalyzeHist(const TH1 *const histAutogen) {
     if (debug) {
       if (histAutogen == nullptr) {
         Fatal("HistMerger::LeafAnalyzerDefault::AnalyzeHist",
@@ -461,7 +463,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
       }
     }
     // histAutogen->Delete();
-    delete histAutogen;
+    // delete histAutogen;
   }
 
  public:
@@ -688,7 +690,8 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
             // const Long64_t nEntriesTot = std::accumulate(vNBinsFile.cbegin(), vNBinsFile.cend(), static_cast<Long64_t>(0));
             // if (debug) std::cout << ", nEntriesTot: " << nEntriesTot << std::flush;
             // const Int_t nDigitsM1NBinsCorrect = TMath::Max(TMath::Max(nDigitsM1Common, 0) + 1, TMath::Min(nDigitsM1Common + 2, TMath::Nint(TMath::Log10(nEntriesTot / significantDigitRange)) - 1));
-            const Int_t nDigitsM1NBinsCorrect = nDigitsM1Common + 1;
+            constexpr const Int_t nDigitsM1BinDensity = 0;
+            const Int_t nDigitsM1NBinsCorrect = nDigitsM1Common + nDigitsM1BinDensity;
             nBinsCorrect = intpow(10, nDigitsM1NBinsCorrect, static_cast<decltype(nBinsCorrect)>(significantDigitRange));
             if (!nBinsCorrect) {
               nBinsCorrect = 1;
@@ -1385,6 +1388,21 @@ void HistMerger::Run() {
         closeTFilesIn(iFile + nFileMissingTot, [&areSomeInfilesClosed]() {
           areSomeInfilesClosed = true;
         });
+        // if (gDirectory && !gDirectory->IsZombie()) {
+        //   for (const auto keyRaw: *gDirectory->GetListOfKeys()) {
+        //     if (!keyRaw || keyRaw->IsZombie()) {
+        //       continue;
+        //     }
+        //     TObject *const histRaw = static_cast<TKey*>(keyRaw)->ReadObj();
+        //     if (!histRaw || histRaw->IsZombie() || !histRaw->InheritsFrom("TH1")) {
+        //       continue;
+        //     }
+        //     TH1 *const hist = static_cast<TH1*>(histRaw);
+        //     if (TString(hist->GetName()).Contains("Autogen")) {
+        //       hist->Delete();
+        //     }
+        //   }
+        // }
       }
     }
     if (debug)
@@ -1629,6 +1647,9 @@ void HistMerger::Run() {
               histCorrected->SetName(nameHistCorrected);
               histCorrected->Write(nameHistCorrected);
               if (debug) std::cout << " Done." << std::endl;
+              if ((indexNameBoth + 1) % nLeavesToUseCorrectedTempFileMin == 0) {
+                tfCorrectedHist->ReOpen("update");
+              }
             } else {
               processHistResult(histCorrected, analyzer, vTFOut[iTree]);
               vvHistResultLeafTree[iTree][indexNameBoth] = histCorrected;
