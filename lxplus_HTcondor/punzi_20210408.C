@@ -15,7 +15,7 @@
 #include <array>
 #include <iostream>
 
-void punzi_20210401(const Bool_t debug=false) {
+void punzi_20210408(const Bool_t debug=false) {
   const TString namesLepton[] = {"Electron", "Muon", "Tau"};  //< the name of the leptons (Xxx)
   const TString namesLeptonLower[] = {"electron", "muon", "tau"};  //< the name of the leptons (xxx)
   const TString namesLeptonNota[] = {"e", "mu", "tau"};
@@ -24,7 +24,7 @@ void punzi_20210401(const Bool_t debug=false) {
   const TString nameCondorPack = "preselect";
 
   const TString pathOutImages = "/home/shamrock/Documents/Project_HEP/ROOT_assignment_20191210/out_images";
-  const TString nameFolderToday = "output_" + nameCondorPack + "_20210401";
+  const TString nameFolderToday = "output_" + nameCondorPack + "_20210408";
 
   auto funOpenFile = [pathCondorPacks, nameCondorPack](const TString nameDatagroup, const TString nameClusterID, const TString nameTT)->TFile*{
     return TFile::Open(pathCondorPacks + "/" + nameCondorPack + "/" + "output_" + nameDatagroup + "_" + nameTT + "_" + nameClusterID + "_hist.root");
@@ -145,7 +145,7 @@ void punzi_20210401(const Bool_t debug=false) {
           // }
           Double_t efficiencySignal = histSignal->Integral(i, nBinsSignal) / sumSignal;
           Double_t nBackground = 0.;
-          Int_t iTT = TMath::Nint((histSignal->GetBinCenter(i) - histTT->GetBinCenter(1)) * binDensity) + 1;
+          Int_t iTT = TMath::Nint((histSignal->GetBinCenter(1) - histTT->GetBinCenter(1)) * binDensity) + i;
           // if (debug) std::cout << iTT << "\t" << jTT << std::endl;
           if (iTT >= 1 && iTT <= jTT)
             nBackground += histTT->Integral(iTT, jTT);
@@ -297,5 +297,5 @@ void punzi_20210401(const Bool_t debug=false) {
 
 
 int main(int argc, char* argv[]) {
-  punzi_20210401();
+  punzi_20210408();
 }
