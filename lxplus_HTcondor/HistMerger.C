@@ -963,15 +963,27 @@ void HistMerger::Run() {
   //   return nameLeafNew;
   // };
 
-  Long64_t nEntryOriginal;
+  Long64_t nEntryOriginal = 0;
 
   TTree *arrTT[nTT];
 
-  auto mountVarsFromTDir = [this, &nEntryOriginal, &arrTT](TDirectory *tdir) {
-    nEntryOriginal = (*((TVectorD *)tdir->Get("tvdNEntryOriginal")))[0];
+  auto mountVarsFromTDir = [this, &nEntryOriginal, &arrTT](TDirectory *tdir)->Int_t {
+    {
+      TObject* tvdRaw = tdir->Get("tvdNEntryOriginal");
+      if (!tvdRaw || tvdRaw->IsZombie()) {
+        return 1;
+      }
+      TVectorD* tvd = static_cast<TVectorD *>(tvdRaw);
+      if (tvd->IsZombie() || tvd->GetNoElements() < 1) {
+        nEntryOriginal = 0;
+        return 1;
+      }
+      nEntryOriginal = (*((TVectorD *)tdir->Get("tvdNEntryOriginal")))[0];
+    }
     for (UInt_t i = 0; i < nTT; i++) {
       arrTT[i] = (TTree *)tdir->Get(this->vNameTT[i]);
     }
+    return 0;
   };
 
   UInt_t nDataset = vNumberFile.size();
@@ -1113,6 +1125,9 @@ void HistMerger::Run() {
       } else {
         std::cerr << "File not exists!" << std::endl;
       }
+      if (debug && isFileOpenable)
+        std::cout << "Mounting variables from the file ..." << std::endl;
+      isFileOpenable = isFileOpenable && !(mountVarsFromTDir(tfCurrent));
       arrIsOpenableFile[iFile + nFileMissingTot] = isFileOpenable;
       arrFile[iFile + nFileMissingTot] = tfCurrent;
       if (!isFileOpenable) {
@@ -1126,9 +1141,6 @@ void HistMerger::Run() {
       }
       nInfileOpen++;
       if (debug) std::cout << "Done." << std::endl;
-      if (debug)
-        std::cout << "Mounting variables from the file ..." << std::endl;
-      mountVarsFromTDir(tfCurrent);
       if (debug) std::cout << "Done." << std::endl;
       if (debug) std::cout << "nEntryOriginal: " << nEntryOriginal << std::endl;
       nEntryOriginalDatasetCurrent += nEntryOriginal;
