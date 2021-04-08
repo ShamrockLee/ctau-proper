@@ -377,7 +377,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
     TH1 *histAutogen = (TH1 *)gDirectory->Get(nameHistAutogen);
     AnalyzeHist(histAutogen);
     histAutogen->Delete();
-    delete histAutogen;
+    // delete histAutogen;
   }
 
  protected:
