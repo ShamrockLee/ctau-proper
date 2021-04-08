@@ -282,7 +282,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   merger->debug = debug;
   merger->allowMissingInputFiles = allowMissing;
   // merger->nLeavesToUseCorrectedTempFileMin = 0;
-  // merger->nLeavesToUseCorrectedTempFileMin = 1;
+  // merger->nLeavesToUseCorrectedTempFileMin = 30;
   merger->funIsToVetoLeaf = [](TString nameTT,
                                TString nameLeafModified) -> Bool_t {
     if (nameLeafModified.Contains("jEntr")) {
