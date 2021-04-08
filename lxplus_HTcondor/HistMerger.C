@@ -287,7 +287,7 @@ class HistMerger::LeafAnalyzerDefault : public LeafAnalyzerAbstract {
       histTypeFlavor = HistTypeFlavor::Integer;
     }
     if (histTypeFlavor == HistTypeFlavor::Boolean) {
-      AssignHistSetting(2, -0.5, 0.5);
+      AssignHistSetting(2, -0.5, 1.5);
       // tstrHistSetting = TString::Format("(%d,%d,%d)", nBinsCorrect,
       // (Int_t)lowerCorrect, (Int_t)upperCorrect);
     }
