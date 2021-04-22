@@ -1448,7 +1448,7 @@ void HistMerger::Run() {
                               TFile *tfOutHist) {
         histResult->SetName(getNameHistResultFromNames(
             analyzer->GetNameTT(), analyzer->GetNameLeafModified()));
-        histResult->SetDirectory(tfOutHist);
+        // histResult->SetDirectory(tfOutHist);
         histResult->SetTitle(analyzer->GetNameLeafModified());
         histResult->SetXTitle(analyzer->GetTitleLeaf());
       };
@@ -1648,7 +1648,7 @@ void HistMerger::Run() {
                   std::cout << "Writing " << nameHistCorrected << " ("
                             << histCorrected << ") to tfCorrectedHist ...";
                 tfCorrectedHist->cd();
-                histCorrected->SetDirectory(tfCorrectedHist);
+                // histCorrected->SetDirectory(tfCorrectedHist);
                 histCorrected->SetName(nameHistCorrected);
                 histCorrected->Write(nameHistCorrected);
                 if (debug) std::cout << " Done." << std::endl;
@@ -1693,7 +1693,7 @@ void HistMerger::Run() {
                 std::cout << "Writing to tfCorrectedHist (" << tfCorrectedHist
                           << ") ...";
               tfCorrectedHist->cd();
-              histCorrected->SetDirectory(tfCorrectedHist);
+              // histCorrected->SetDirectory(tfCorrectedHist);
               histCorrected->SetName(nameHistCorrected);
               histCorrected->Write(nameHistCorrected);
               if (debug) std::cout << " Done." << std::endl;
