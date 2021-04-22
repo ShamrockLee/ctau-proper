@@ -822,6 +822,9 @@ inline void HistMerger::ProcessAnalyzerNew(LeafAnalyzerAbstract *analyzer,
 }
 
 void HistMerger::InitializeWhenRun() {
+  if (updateCorrectedFile) {
+    nLeavesToUseCorrectedTempFileMin = 1;
+  }
   if (funPathTFIn == nullptr) {
     Fatal("HistMerger::InitializeWhenRun", "funPathTFIn is not specified.");
   }
@@ -951,8 +954,6 @@ void HistMerger::InitializeWhenRun() {
 void HistMerger::Run() {
   InitializeWhenRun();
 
-  Bool_t areSomeInfilesClosed = false;
-  UInt_t nInfileOpen = 0;
   // std::function<TString(TString)> modifyNameLeaf =
   //     [](TString nameLeaf) -> TString {
   //   TString nameLeafNew = TString(nameLeaf);
@@ -1010,25 +1011,6 @@ void HistMerger::Run() {
                                                // vectors cares only about
                                                // openable files).
 
-  auto closeTFilesIn = [this, &nInfileOpen, &arrIsOpenableFile, &arrFile](
-                           Int_t iFileOriginalToClose,
-                           std::function<void()> funDoBeforeClose = nullptr) {
-    // tfAutogenHist->Write();
-    // areSomeInfilesClosed = true;
-    if (funDoBeforeClose != nullptr) funDoBeforeClose();
-    while (nInfileOpen > 0 && iFileOriginalToClose >= 0) {
-      if (arrIsOpenableFile[iFileOriginalToClose]) {
-        arrFile[iFileOriginalToClose]->Close();
-        delete arrFile[iFileOriginalToClose];
-        nInfileOpen--;
-      }
-      iFileOriginalToClose--;
-    }
-    if (this->debug && nInfileOpen > 0) {
-      std::cerr << "Closing wrong number of files" << std::endl;
-    }
-  };
-
   UInt_t nLeavesAllTrees = 0;
   auto getNameHistOfFileFromAnalyzerAndIFile =
       [](LeafAnalyzerAbstract *analyzer, UInt_t iFile, TString suffixStage) {
@@ -1042,6 +1024,40 @@ void HistMerger::Run() {
   //          vvNameModifiedLeafTree[iTree][indexName] + suffixStage + iFile;
   // };
 
+  auto getIsFloatCloseEnough = [](const Double_t a, const Double_t b, const Double_t reference)->Bool_t {
+    constexpr const Double_t epsilonFloat = __FLT_EPSILON__ * 1024;
+    return abs(a - b) <= epsilonFloat * reference;
+  };
+  auto getIsHistCorrectedInFile =
+      [this, getIsFloatCloseEnough](const TDirectory *tfCorrectedHist, const LeafAnalyzerAbstract *analyzer, const TString nameHistCorrected)->Bool_t {
+        if (!updateCorrectedFile) {
+          return false;
+        }
+        TKey *const keyRaw = tfCorrectedHist->GetKey(nameHistCorrected);
+        if (!keyRaw || keyRaw->IsZombie()) {
+          return false;
+        }
+        TObject *const histRaw = static_cast<TKey*>(keyRaw)->ReadObj();
+        if (!histRaw || histRaw->IsZombie() || !(histRaw->IsA()->InheritsFrom("TH1"))) {
+          return false;
+        }
+        TH1 *const hist = static_cast<TH1*>(histRaw);
+        if (hist->IsZombie()) {
+          return false;
+        }
+        const Double_t binWidthCorrect = (analyzer->GetUpperCorrect() - analyzer->GetLowerCorrect()) / analyzer->GetNBinsCorrect();
+        if (hist->GetNbinsX() != analyzer->GetNBinsCorrect()) {
+          return false;
+        }
+        if (!getIsFloatCloseEnough(hist->GetBinCenter(1) - (1./2), analyzer->GetLowerCorrect(), binWidthCorrect)) {
+          return false;
+        }
+        if (!getIsFloatCloseEnough(hist->GetBinCenter(hist->GetNbinsX()) + 0.5, analyzer->GetUpperCorrect(), binWidthCorrect)) {
+          return true;
+        }
+        if (debug) std::cout << "Found histogram " + nameHistCorrected + " in old tfCorrected with correct settings" << std::endl;
+        return hist;
+      };
   if (dirTFTemp.Length() > 1 && dirTFTemp.EndsWith(seperatorPath)) {
     dirTFTemp.Resize(dirTFTemp.Length() - 1);
   }
@@ -1139,7 +1155,6 @@ void HistMerger::Run() {
           continue;
         }
       }
-      nInfileOpen++;
       if (debug) std::cout << "Done." << std::endl;
       if (debug) std::cout << "Done." << std::endl;
       if (debug) std::cout << "nEntryOriginal: " << nEntryOriginal << std::endl;
@@ -1396,26 +1411,7 @@ void HistMerger::Run() {
         }
       }
       if (debug) std::cout << "Done getting names." << std::endl;
-      if (nInfileOpenMax && nInfileOpen >= nInfileOpenMax) {
-        closeTFilesIn(iFile + nFileMissingTot, [&areSomeInfilesClosed]() {
-          areSomeInfilesClosed = true;
-        });
-        // if (gDirectory && !gDirectory->IsZombie()) {
-        //   for (const auto keyRaw: *gDirectory->GetListOfKeys()) {
-        //     if (!keyRaw || keyRaw->IsZombie()) {
-        //       continue;
-        //     }
-        //     TObject *const histRaw = static_cast<TKey*>(keyRaw)->ReadObj();
-        //     if (!histRaw || histRaw->IsZombie() || !histRaw->InheritsFrom("TH1")) {
-        //       continue;
-        //     }
-        //     TH1 *const hist = static_cast<TH1*>(histRaw);
-        //     if (TString(hist->GetName()).Contains("Autogen")) {
-        //       hist->Delete();
-        //     }
-        //   }
-        // }
-      }
+      if (!tfCurrent) tfCurrent->Close();
     }
     if (debug)
       std::cout << "nEntryOriginalDatasetCurrent: "
@@ -1446,12 +1442,6 @@ void HistMerger::Run() {
   }
   // tfAutogenHist->Write();
 
-  // Close all the input files if and only if the total number of opened input
-  // files are greater than nInfileOpenMax
-  if (areSomeInfilesClosed) {
-    closeTFilesIn(nFileTotOriginal - 1);
-  }
-
   const std::function<void(TH1 *, LeafAnalyzerAbstract *, TFile *)>
       processHistResult = [getNameHistResultFromNames](
                               TH1 *histResult, LeafAnalyzerAbstract *analyzer,
@@ -1481,7 +1471,7 @@ void HistMerger::Run() {
   if (isToUseCorrectedTempFile) {
     if (debug) std::cout << "Opening tfCorrectedHist ...";
     tfCorrectedHist = TFile::Open(pathTFCorrectedHist,
-                                  toRecreateOutFile ? "recreate" : "update");
+                                  (!updateCorrectedFile && toRecreateOutFile) ? "recreate" : "update");
     if (debug) std::cout << " Done." << std::endl;
   } else {
     vvHistResultLeafTree.clear();
@@ -1545,12 +1535,11 @@ void HistMerger::Run() {
       break;
     }
     if (debug) std::cout << " iFileOriginal: " << iFileOriginal << std::endl;
-    if (areSomeInfilesClosed) {
-      if (debug) std::cout << "Opening input rootfiles ...";
-      arrFile[iFileOriginal] = TFile::Open(funPathTFIn(iFileOriginal));
-      nInfileOpen++;
-      if (debug) std::cout << " Done." << std::endl;
-    }
+
+    if (debug) std::cout << "Opening input rootfiles ...";
+    arrFile[iFileOriginal] = TFile::Open(funPathTFIn(iFileOriginal));
+    if (debug) std::cout << " Done." << std::endl;
+
     tfInCurrent = arrFile[iFileOriginal];
     if (debug)
       std::cout << "tfInCurrent (" << tfInCurrent
@@ -1631,7 +1620,7 @@ void HistMerger::Run() {
             if (debug)
               std::cout << "Got " << analyzer->GetNameLeafModified()
                         << " (all-empty leaf)." << std::endl;
-            histCorrected = analyzer->GetHistEmptyPreferred();
+            Bool_t isHistCorrectedGotInFile = false;
             TString nameHistCorrected =
                 (isToUseCorrectedTempFile
                      ? getNameHistOfFileFromAnalyzerAndIFile(
@@ -1639,32 +1628,37 @@ void HistMerger::Run() {
                      : getNameHistResultFromNames(
                            analyzer->GetNameTT(),
                            analyzer->GetNameLeafModified()));
-            if (histCorrected == nullptr) {
-              // arrTT[iTree]->Draw(nameHistCorrected +
-              //                     (tstrHistSetting.Length() == 0
-              //                         ? ""
-              //                         : ">>" + tstrHistSetting));
-              // histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
-              histCorrected = analyzer->DrawHistCorrected(
-                  nameHistCorrected, arrTT[iTree],
-                  isCustom ? -1 : vvIHistLeafTree[iTree][indexNameBoth]);
-              histCorrected->Scale(vWeightFile[iFile]);
-            }
-            if (isToUseCorrectedTempFile) {
-              if (debug)
-                std::cout << "Writing " << nameHistCorrected << " ("
-                          << histCorrected << ") to tfCorrectedHist ...";
-              tfCorrectedHist->cd();
-              histCorrected->SetDirectory(tfCorrectedHist);
-              histCorrected->SetName(nameHistCorrected);
-              histCorrected->Write(nameHistCorrected);
-              if (debug) std::cout << " Done." << std::endl;
-              if ((indexNameBoth + 1) % nLeavesToUseCorrectedTempFileMin == 0) {
-                tfCorrectedHist->ReOpen("update");
-              }
+            if (updateCorrectedFile) {
+              isHistCorrectedGotInFile = getIsHistCorrectedInFile(tfCorrectedHist, analyzer, nameHistCorrected);
             } else {
-              processHistResult(histCorrected, analyzer, vTFOut[iTree]);
-              vvHistResultLeafTree[iTree][indexNameBoth] = histCorrected;
+              histCorrected = analyzer->GetHistEmptyPreferred();
+              if (histCorrected == nullptr) {
+                // arrTT[iTree]->Draw(nameHistCorrected +
+                //                     (tstrHistSetting.Length() == 0
+                //                         ? ""
+                //                         : ">>" + tstrHistSetting));
+                // histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
+                histCorrected = analyzer->DrawHistCorrected(
+                    nameHistCorrected, arrTT[iTree],
+                    isCustom ? -1 : vvIHistLeafTree[iTree][indexNameBoth]);
+                histCorrected->Scale(vWeightFile[iFile]);
+              }
+              if (isToUseCorrectedTempFile && !isHistCorrectedGotInFile) {
+                if (debug)
+                  std::cout << "Writing " << nameHistCorrected << " ("
+                            << histCorrected << ") to tfCorrectedHist ...";
+                tfCorrectedHist->cd();
+                histCorrected->SetDirectory(tfCorrectedHist);
+                histCorrected->SetName(nameHistCorrected);
+                histCorrected->Write(nameHistCorrected);
+                if (debug) std::cout << " Done." << std::endl;
+                if ((indexNameBoth + 1) % nLeavesToUseCorrectedTempFileMin == 0) {
+                  tfCorrectedHist->ReOpen("update");
+                }
+              } else {
+                processHistResult(histCorrected, analyzer, vTFOut[iTree]);
+                vvHistResultLeafTree[iTree][indexNameBoth] = histCorrected;
+              }
             }
             // break; // Lo the bug.
           }
@@ -1684,62 +1678,58 @@ void HistMerger::Run() {
           //                    tstrHistSetting);
           // if (debug) std::cout << " Getting ...";
           // histCorrected = (TH1 *)gDirectory->Get(nameHistCorrected);
-          histCorrected = analyzer->DrawHistCorrected(
-              nameHistCorrected, arrTT[iTree],
-              isCustom ? -1 : vvIHistLeafTree[iTree][indexNameBoth]);
-          if (debug) std::cout << " (" << histCorrected << ") ";
-          if (debug) std::cout << " Scaling ...";
-          histCorrected->Scale(vWeightFile[iFile]);
-          if (debug) std::cout << " Done." << std::endl;
-          if (isToUseCorrectedTempFile) {
-            if (debug)
-              std::cout << "Writing to tfCorrectedHist (" << tfCorrectedHist
-                        << ") ...";
-            tfCorrectedHist->cd();
-            histCorrected->SetDirectory(tfCorrectedHist);
-            histCorrected->SetName(nameHistCorrected);
-            histCorrected->Write(nameHistCorrected);
+          Bool_t isHistCorrectedInFile = false;
+          isHistCorrectedInFile = getIsHistCorrectedInFile(tfCorrectedHist, analyzer, nameHistCorrected);
+          if (!isHistCorrectedInFile) {
+            histCorrected = analyzer->DrawHistCorrected(
+                nameHistCorrected, arrTT[iTree],
+                isCustom ? -1 : vvIHistLeafTree[iTree][indexNameBoth]);
+            if (debug) std::cout << " (" << histCorrected << ") ";
+            if (debug) std::cout << " Scaling ...";
+            histCorrected->Scale(vWeightFile[iFile]);
             if (debug) std::cout << " Done." << std::endl;
-          } else {
-            if (vvHistResultLeafTree[iTree][indexNameBoth] == nullptr) {
+            if (isToUseCorrectedTempFile) {
               if (debug)
-                std::cout << "Storing to vvHistResultLeafTree[" << iTree << "]["
-                          << indexNameBoth << "]";
-              ;
-              TString nameHistResult = getNameHistResultFromNames(
-                  analyzer->GetNameTT(), analyzer->GetNameLeafModified());
-              vvHistResultLeafTree[iTree][indexNameBoth] =
-                  (TH1 *)histCorrected->Clone(nameHistResult);
-              processHistResult(vvHistResultLeafTree[iTree][indexNameBoth],
-                                analyzer, vTFOut[iTree]);
-              if (debug)
-                std::cout << " (" << vvHistResultLeafTree[iTree][indexNameBoth]
-                          << ")" << std::endl;
+                std::cout << "Writing to tfCorrectedHist (" << tfCorrectedHist
+                          << ") ...";
+              tfCorrectedHist->cd();
+              histCorrected->SetDirectory(tfCorrectedHist);
+              histCorrected->SetName(nameHistCorrected);
+              histCorrected->Write(nameHistCorrected);
               if (debug) std::cout << " Done." << std::endl;
             } else {
-              if (debug)
-                std::cout << "Adding to vvHistResultLeafTree[" << iTree << "]["
-                          << indexNameBoth << "]";
-              histCorrected->SetName(nameHistCorrected);
-              vTFOut[iTree]->cd();
-              vvHistResultLeafTree[iTree][indexNameBoth]->Add(
-                  (TH1 *)histCorrected->Clone(nameHistCorrected + "ToAdd"));
-              if (debug) std::cout << " Done." << std::endl;
+              if (vvHistResultLeafTree[iTree][indexNameBoth] == nullptr) {
+                if (debug)
+                  std::cout << "Storing to vvHistResultLeafTree[" << iTree << "]["
+                            << indexNameBoth << "]";
+                ;
+                TString nameHistResult = getNameHistResultFromNames(
+                    analyzer->GetNameTT(), analyzer->GetNameLeafModified());
+                vvHistResultLeafTree[iTree][indexNameBoth] =
+                    (TH1 *)histCorrected->Clone(nameHistResult);
+                processHistResult(vvHistResultLeafTree[iTree][indexNameBoth],
+                                  analyzer, vTFOut[iTree]);
+                if (debug)
+                  std::cout << " (" << vvHistResultLeafTree[iTree][indexNameBoth]
+                            << ")" << std::endl;
+                if (debug) std::cout << " Done." << std::endl;
+              } else {
+                if (debug)
+                  std::cout << "Adding to vvHistResultLeafTree[" << iTree << "]["
+                            << indexNameBoth << "]";
+                histCorrected->SetName(nameHistCorrected);
+                vTFOut[iTree]->cd();
+                vvHistResultLeafTree[iTree][indexNameBoth]->Add(
+                    (TH1 *)histCorrected->Clone(nameHistCorrected + "ToAdd"));
+                if (debug) std::cout << " Done." << std::endl;
+              }
             }
           }
         }
         vvIHistLeafTree[iTree][indexNameBoth]++;
       }
     }
-    if (areSomeInfilesClosed && nInfileOpen >= nInfileOpenMax) {
-      closeTFilesIn(iFileOriginal);
-    }
-  }
-  if (nInfileOpenMax) {
-    if (debug)
-      std::cout << "Closing openable input ROOT files ..." << std::endl;
-    closeTFilesIn(nFileTotOriginal - 1);
-    if (debug) std::cout << "Done." << std::endl;
+    tfInCurrent->Close();
   }
 
   if (isToUseCorrectedTempFile) {

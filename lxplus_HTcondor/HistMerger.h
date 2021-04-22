@@ -190,17 +190,24 @@ class HistMerger {
   /// and missing one or two files does not nessesarily influence
   /// the accuracy of the result.
   Bool_t allowMissingInputFiles;
-  /// The maximum number of input files to stay open when run.
-  /// When the number of opening input files reaches this number,
-  /// The then-opening files will be closed
-  /// To prevent too many input files opened simultaniously.
+  /// Whether to use current correct file instead of recreating a new one.
+  /// This opts in increment corrected histogram generation.
   ///
   /// Set directly
   ///
-  /// Default to 30
-  ///
-  /// Set to 0 to opt out all the input-file-closing operations.
-  UInt_t nInfileOpenMax;
+  /// Default to `false`
+  Bool_t updateCorrectedFile;
+  // /// The maximum number of input files to stay open when run.
+  // /// When the number of opening input files reaches this number,
+  // /// The then-opening files will be closed
+  // /// To prevent too many input files opened simultaniously.
+  // ///
+  // /// Set directly
+  // ///
+  // /// Default to 30
+  // ///
+  // /// Set to 0 to opt out all the input-file-closing operations.
+  // UInt_t nInfileOpenMax;
   /// The minimum number of leaves to use temporary files to store the
   /// histograms waiting for merging.
   /// This is to prevent too many output files being opened simultaniously.
@@ -315,7 +322,6 @@ HistMerger::HistMerger() {
   this->toRecreateOutFile = true;
   this->debug = false;
   this->allowMissingInputFiles = false;
-  this->nInfileOpenMax = 30;
   this->nLeavesToUseCorrectedTempFileMin = 100;
   this->vvAnalyzerLeafTreeCustom.clear();
   this->vAnalyzerCustomByName.clear();

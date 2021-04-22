@@ -29,7 +29,8 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
                         TString dirCondorPacks = ".",
                         const Bool_t toRecreateOutFile = true,
                         const Bool_t debug = false,
-                        const Bool_t allowMissing = false) {
+                        const Bool_t allowMissing = false,
+                        const Bool_t updateCorrectedFile = false) {
   const TString seperatorPath = "/";
   const TString namesLepton[] = {"Electron", "Muon",
                                  "Tau"};  //< the name of the leptons (Xxx)
@@ -281,6 +282,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   merger->toRecreateOutFile = toRecreateOutFile;
   merger->debug = debug;
   merger->allowMissingInputFiles = allowMissing;
+  merger->updateCorrectedFile = updateCorrectedFile;
   // merger->nLeavesToUseCorrectedTempFileMin = 0;
   merger->nLeavesToUseCorrectedTempFileMin = 30;
   merger->funIsToVetoLeaf = [](TString nameTT,
