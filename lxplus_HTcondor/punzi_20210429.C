@@ -15,15 +15,15 @@
 #include <array>
 #include <iostream>
 
-void punzi_20210408(const Bool_t debug=false) {
+void punzi_20210429(const Bool_t debug=false) {
   const TString namesLepton[] = {"Electron", "Muon", "Tau"};  //< the name of the leptons (Xxx)
   const TString namesLeptonLower[] = {"electron", "muon", "tau"};  //< the name of the leptons (xxx)
   const TString namesLeptonNota[] = {"e", "mu", "tau"};
 
-  const TString pathCondorPacks = "/home/shamrock/Documents/Project_HEP/ROOT_assignment_20191210/ctau-proper/lxplus_HTcondor";
+  const TString pathCondorPacks = ".";
   const TString nameCondorPack = "preselect";
 
-  const TString pathOutImages = "/home/shamrock/Documents/Project_HEP/ROOT_assignment_20191210/out_images";
+  const TString pathOutImages = pathCondorPacks + "/../../out_images";
   const TString nameFolderToday = "output_" + nameCondorPack + "_20210408";
 
   auto funOpenFile = [pathCondorPacks, nameCondorPack](const TString nameDatagroup, const TString nameClusterID, const TString nameTT)->TFile*{
@@ -31,13 +31,13 @@ void punzi_20210408(const Bool_t debug=false) {
   };
 
   const TString nameDatagroupSignalHeavy = "signal_Mx2-150_Mv-500_Mx1-1_ctau-1";
-  const TString nameClusterIDSignalHeavy = "20210401";
+  const TString nameClusterIDSignalHeavy = "20210429";
 
   const TString nameDatagroupDYJets = "DYJets";
-  const TString nameClusterIDDYJets = "1325718";
+  const TString nameClusterIDDYJets = "1400584";
 
   const TString nameDatagroupTT = "TT";
-  const TString nameClusterIDTT = "1345864";
+  const TString nameClusterIDTT = "1375491";
 
   const TString suffixImage = "svg";
 
@@ -99,7 +99,7 @@ void punzi_20210408(const Bool_t debug=false) {
         TH1 *histDYJets = static_cast<TH1*>(aaFileDYJetsPreselected[iLepton][iAK]->Get(nameHist));
         TH1 *histTT = static_cast<TH1*>(aaFileTTPreselected[iLepton][iAK]->Get(nameHist));
         if (histSignal->IsZombie() ||
-            // !histDYJets || histDYJets->IsZombie() ||
+            !histDYJets || histDYJets->IsZombie() ||
             !histTT || histTT->IsZombie()) {
           continue;
         }
@@ -129,26 +129,20 @@ void punzi_20210408(const Bool_t debug=false) {
         auto hPunzi = new TH1F(nameHistPunzi,  (TString)"Punzi significance of " + histSignal->GetTitle(),
             nBinsSignal, lowerCorrectSignal, lowerCorrectSignal + static_cast<Double_t>(nBinsSignal) / binDensity);
         hPunzi->SetXTitle( (TString)"Punzi significance of " + histSignal->GetXaxis()->GetTitle());
-        Int_t jTT = TMath::Min(histTT->GetNbinsX(), TMath::Nint((histSignal->GetBinCenter(nBinsSignal) - histTT->GetBinCenter(1)) * binDensity) + 1);
+        const Int_t nEntriesDYJets = histDYJets->GetNbinsX();
+        const Int_t i0DYJets = TMath::Nint((histSignal->GetBinCenter(1) - histDYJets->GetBinCenter(1)) * binDensity);
+        const Int_t nEntriesTT = histTT->GetNbinsX();
+        const Int_t i0TT = TMath::Nint((histSignal->GetBinCenter(1) - histTT->GetBinCenter(1)) * binDensity);
         for (Int_t i = 1; i <= nBinsSignal; i++) {
-          // for (Int_t j = i; j <= nBinsSignal; j++) {
-          //   Double_t efficiencySignal = histSignal->Integral(i, j) / sumSignal;
-          //   Double_t nBackground = 0.;
-          //   {
-          //     Int_t iTT = TMath::Nint((histSignal->GetBinCenter(i) - histTT->GetBinCenter(1)) * binDensity) + 1;
-          //     Int_t jTT = TMath::Nint((histSignal->GetBinCenter(j) - histTT->GetBinCenter(1)) * binDensity) + 1;
-          //     if (iTT >= 1 && jTT >= iTT) {
-          //       nBackground += histTT->Integral(iTT, jTT);
-          //     }
-          //   }
-          //   hhPunzi->SetBinContent(i, j, efficiencySignal / (1. + TMath::Sqrt(nBackground)));
-          // }
-          Double_t efficiencySignal = histSignal->Integral(i, nBinsSignal) / sumSignal;
+          const Double_t efficiencySignal = histSignal->Integral(i, nBinsSignal) / sumSignal;
           Double_t nBackground = 0.;
-          Int_t iTT = TMath::Nint((histSignal->GetBinCenter(1) - histTT->GetBinCenter(1)) * binDensity) + i;
+          const Int_t iDYJets = i0DYJets + i;
+          if (iDYJets >=1 && iDYJets <= nEntriesDYJets)
+            nBackground += histDYJets->Integral(iDYJets, nEntriesDYJets);
+          const Int_t iTT = i0TT + i;
           // if (debug) std::cout << iTT << "\t" << jTT << std::endl;
-          if (iTT >= 1 && iTT <= jTT)
-            nBackground += histTT->Integral(iTT, jTT);
+          if (iTT >= 1 && iTT <= nEntriesTT) 
+            nBackground += histTT->Integral(iTT, nEntriesTT);
           hPunzi->SetBinContent(i, efficiencySignal / (1. + TMath::Sqrt(nBackground)));
         }
         if (!gPad) gROOT->MakeDefCanvas();
@@ -297,5 +291,5 @@ void punzi_20210408(const Bool_t debug=false) {
 
 
 int main(int argc, char* argv[]) {
-  punzi_20210408();
+  punzi_20210429();
 }
