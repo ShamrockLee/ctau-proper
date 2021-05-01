@@ -125,6 +125,12 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
       } else if (nameDatagroup == "signal_Mx2-150_Mv-500_Mx1-1_ctau-1") {
         vNumberFile = {4};
         vCrossSection = {1};
+      } else if (nameDatagroup == "signal_Mx2-1_Mv-500_Mx1-0p1_ctau-1") {
+        vNumberFile = {3};
+        vCrossSection = {1};
+      } else if (nameDatagroup == "signal_Mx2-50_Mv-500_Mx1-1_ctau-10") {
+        vNumberFile = {4};
+        vCrossSection = {1};
       }
     }
   }

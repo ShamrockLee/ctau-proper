@@ -10,12 +10,14 @@
 #include <TSystem.h>
 #include <TROOT.h>
 #include <TMath.h>
+#include <TError.h>
 
 #include <vector>
 #include <array>
 #include <iostream>
+#include <utility>
 
-void punzi_20210429(const Bool_t debug=false) {
+void punzi_20210429(const Bool_t recreate=true, const Bool_t debug=false) {
   const TString namesLepton[] = {"Electron", "Muon", "Tau"};  //< the name of the leptons (Xxx)
   const TString namesLeptonLower[] = {"electron", "muon", "tau"};  //< the name of the leptons (xxx)
   const TString namesLeptonNota[] = {"e", "mu", "tau"};
@@ -23,23 +25,26 @@ void punzi_20210429(const Bool_t debug=false) {
   const TString pathCondorPacks = ".";
   const TString nameCondorPack = "preselect";
 
-  const TString pathOutImages = pathCondorPacks + "/../../out_images";
-  const TString nameFolderToday = "output_" + nameCondorPack + "_20210408";
+  const TString nameDate = "20210429";
 
   auto funOpenFile = [pathCondorPacks, nameCondorPack](const TString nameDatagroup, const TString nameClusterID, const TString nameTT)->TFile*{
     return TFile::Open(pathCondorPacks + "/" + nameCondorPack + "/" + "output_" + nameDatagroup + "_" + nameTT + "_" + nameClusterID + "_hist.root");
   };
 
-  const TString nameDatagroupSignalHeavy = "signal_Mx2-150_Mv-500_Mx1-1_ctau-1";
-  const TString nameClusterIDSignalHeavy = "20210429";
+  const std::vector<std::pair<TString, TString>> vNameDatagroupAndClusterIdSignal({
+      std::pair<TString, TString>("signal_Mx2-150_Mv-500_Mx1-1_ctau-1", nameDate),
+      std::pair<TString, TString>("signal_Mx2-1_Mv-500_Mx1-0p1_ctau-1", nameDate),
+      std::pair<TString, TString>("signal_Mx2-50_Mv-500_Mx1-1_ctau-10", nameDate),
+      });
 
-  const TString nameDatagroupDYJets = "DYJets";
-  const TString nameClusterIDDYJets = "1400584";
+  const Size_t nDatagroupsSignal = vNameDatagroupAndClusterIdSignal.size();
 
-  const TString nameDatagroupTT = "TT";
-  const TString nameClusterIDTT = "1375491";
+  const std::vector<std::pair<TString, TString>> vNameDatagroupAndClusterIdBackground({
+      std::pair<TString, TString>("DYJets", "1400584"),
+      std::pair<TString, TString>("TT", "1375491"),
+      });
 
-  const TString suffixImage = "svg";
+  const Size_t nDatagroupsBackground = vNameDatagroupAndClusterIdBackground.size();
 
   auto funRatioFromBoolHist = [](const TH1 *const hist)->Double_t {
     const Double_t valFalse =  static_cast<Double_t>(hist->GetBinContent(1));
@@ -50,243 +55,157 @@ void punzi_20210429(const Bool_t debug=false) {
     return valTrue / (valFalse + valTrue);
   };
 
-  std::array<std::array<TFile *, 2>, 2> aaFileSignalHeavyPreselected;
-  {
-    const TString nameDatagroup = nameDatagroupSignalHeavy;
-    const TString nameClusterID = nameClusterIDSignalHeavy;
+  std::vector<std::array<std::array<TFile *, 2>, 2>> vaaFilesSignal(nDatagroupsSignal, std::array<std::array<TFile *, 2>, 2>());
+
+  std::vector<std::array<std::array<TFile *, 2>, 2>> vaaFilesBackground(nDatagroupsBackground, std::array<std::array<TFile *, 2>, 2>());
+
+  for (Size_t iDatagroup = 0; iDatagroup < nDatagroupsSignal; ++iDatagroup) {
+    const TString& nameDatagroup = vNameDatagroupAndClusterIdSignal[iDatagroup].first;
+    const TString& nameClusterID = vNameDatagroupAndClusterIdSignal[iDatagroup].second;
     for (Byte_t iLepton=0; iLepton<2; iLepton++) {
       for (Byte_t iAK=0; iAK<2; iAK++) {
-        aaFileSignalHeavyPreselected[iLepton][iAK] = funOpenFile(nameDatagroup, nameClusterID, (TString)"PreselectedMatching" + (iAK ? "FatJet" : "Jet") + namesLepton[iLepton]);
-      }
-    }
-  }
-  std::array<std::array<TFile *, 2>, 2> aaFileDYJetsPreselected;
-  {
-    const TString nameDatagroup = nameDatagroupDYJets;
-    const TString nameClusterID = nameClusterIDDYJets;
-    for (Byte_t iLepton=0; iLepton<2; iLepton++) {
-      for (Byte_t iAK=0; iAK<2; iAK++) {
-        aaFileDYJetsPreselected[iLepton][iAK] = funOpenFile(nameDatagroup, nameClusterID, (TString)"PreselectedMatching" + (iAK ? "FatJet" : "Jet") + namesLepton[iLepton]);
-      }
-    }
-  }
-  std::array<std::array<TFile *, 2>, 2> aaFileTTPreselected;
-  {
-    const TString nameDatagroup = nameDatagroupTT;
-    const TString nameClusterID = nameClusterIDTT;
-    for (Byte_t iLepton=0; iLepton<2; iLepton++) {
-      for (Byte_t iAK=0; iAK<2; iAK++) {
-        aaFileTTPreselected[iLepton][iAK] = funOpenFile(nameDatagroup, nameClusterID, (TString)"PreselectedMatching" + (iAK ? "FatJet" : "Jet") + namesLepton[iLepton]);
+        vaaFilesSignal[iDatagroup][iLepton][iAK] = funOpenFile(
+            nameDatagroup,
+            nameClusterID,
+            (TString)"PreselectedMatching" + (iAK ? "FatJet" : "Jet") + namesLepton[iLepton]
+            );
       }
     }
   }
 
-  gSystem->mkdir(pathOutImages + "/" + nameFolderToday);
+  for (Size_t iDatagroup = 0; iDatagroup < nDatagroupsBackground; ++iDatagroup) {
+    const TString& nameDatagroup = vNameDatagroupAndClusterIdBackground[iDatagroup].first;
+    const TString& nameClusterID = vNameDatagroupAndClusterIdBackground[iDatagroup].second;
+    for (Byte_t iLepton=0; iLepton<2; iLepton++) {
+      for (Byte_t iAK=0; iAK<2; iAK++) {
+        vaaFilesBackground[iDatagroup][iLepton][iAK] = funOpenFile(
+            nameDatagroup,
+            nameClusterID,
+            (TString)"PreselectedMatching" + (iAK ? "FatJet" : "Jet") + namesLepton[iLepton]
+            );
+      }
+    }
+  }
 
   for (Byte_t iLepton = 0; iLepton < 2; iLepton++) {
     for (Byte_t iAK = 0; iAK < 2; iAK++) {
-      for (TObject *keyRawSignal: *aaFileSignalHeavyPreselected[iLepton][iAK]->GetListOfKeys()) {
-        TObject* histRawSignal = static_cast<TKey*>(keyRawSignal)->ReadObj();
-        if (!histRawSignal || histRawSignal->IsZombie()) {
+      const TString nameTT = TString("Preselected") + (iAK ? "FatJet" : "Jet") + namesLepton[iLepton];
+      if (recreate) {
+        for (Size_t iDatagroupSignal = 0; iDatagroupSignal < nDatagroupsSignal; ++iDatagroupSignal) {
+          const TString & nameDatagroupSignal = vNameDatagroupAndClusterIdSignal[iDatagroupSignal].first;
+          TFile *tfOut = TFile::Open(
+                pathCondorPacks + "/" + nameCondorPack
+                + "/" + "output_punzi" + "_" + nameDatagroupSignal + "_" + nameTT + "_" + nameDate + ".root",
+                "RECREATE");
+          tfOut->Close();
+        }
+      }
+      for (TObject *&& keyRawBackgroundFirst: *vaaFilesBackground[0][iLepton][iAK]->GetListOfKeys()) {
+        if (!keyRawBackgroundFirst || keyRawBackgroundFirst->IsZombie()) {
           continue;
         }
-        if (!histRawSignal->IsA()->InheritsFrom("TH1")) {
+        TObject *&& histRawBackgroundFirst = static_cast<TKey*>(keyRawBackgroundFirst)->ReadObj();
+        if (!histRawBackgroundFirst
+            || histRawBackgroundFirst->IsZombie()
+            || !histRawBackgroundFirst->IsA()->InheritsFrom("TH1")) {
+          if (debug) std::cout << keyRawBackgroundFirst->GetName() << " is not a readable histogram in " << vNameDatagroupAndClusterIdBackground[0].first << std::endl;
           continue;
         }
-        TString nameHist = histRawSignal->GetName();
-        TString nameLeaf = nameHist(1, nameHist.Length() - 1);
-        TH1 *histSignal = static_cast<TH1*>(histRawSignal);
-        TH1 *histDYJets = static_cast<TH1*>(aaFileDYJetsPreselected[iLepton][iAK]->Get(nameHist));
-        TH1 *histTT = static_cast<TH1*>(aaFileTTPreselected[iLepton][iAK]->Get(nameHist));
-        if (histSignal->IsZombie() ||
-            !histDYJets || histDYJets->IsZombie() ||
-            !histTT || histTT->IsZombie()) {
+        const TString nameHist = keyRawBackgroundFirst->GetName();
+        const TString nameLeaf(nameHist(1, nameHist.Length()));
+        std::vector<TH1 *> vHistBackgrounds(nDatagroupsBackground, nullptr);
+        vHistBackgrounds[0] = static_cast<TH1 *>(histRawBackgroundFirst);
+        Bool_t areKeysInAllBackgroundFiles = true;
+        for (Ssiz_t iDatagroupBackground = 1; iDatagroupBackground < nDatagroupsBackground; ++iDatagroupBackground) {
+          TObject *&& keyRaw = vaaFilesBackground[iDatagroupBackground][iLepton][iAK]->GetKey(nameHist);
+          if (!keyRaw || keyRaw->IsZombie()) {
+            areKeysInAllBackgroundFiles = false;
+            if (debug) std::cout << keyRawBackgroundFirst->GetName() << " not available in " << vNameDatagroupAndClusterIdBackground[iDatagroupBackground].first << std::endl;
+            break;
+          }
+          TObject *&& histRaw = static_cast<TKey*>(keyRaw)->ReadObj();
+          if (!histRaw || histRaw->IsZombie()
+              || !histRaw->IsA()->InheritsFrom("TH1")) {
+          if (debug) std::cout << keyRawBackgroundFirst->GetName() << " is not a readable histogram in " << vNameDatagroupAndClusterIdBackground[iDatagroupBackground].first << std::endl;
+            areKeysInAllBackgroundFiles = false;
+            break;
+          }
+          vHistBackgrounds[iDatagroupBackground] = static_cast<TH1 *>(histRaw);
+        }
+        if (!areKeysInAllBackgroundFiles) {
           continue;
         }
-        const Double_t sumSignal = histSignal->Integral();
-        if (sumSignal <= 0) {
-          continue;
-        }
-        const Double_t lowerCorrectSignal = histSignal->GetBinCenter(1) - 0.5;
-        const Int_t nBinsSignal = histSignal->GetNbinsX();
         Double_t binDensity = 0;
         if (nameLeaf.BeginsWith("n")) {
+          if (debug) std::cout << "Found n*" << std::endl;
           binDensity = 1;
         } else if (nameLeaf.BeginsWith("is") || nameLeaf.BeginsWith("are") || nameLeaf.BeginsWith("have") || nameLeaf.BeginsWith("has")) {
           continue;
         } else if (nameLeaf.Contains("MET_") || nameLeaf.BeginsWith("SoftActivityJetHT")) {
-          binDensity = TMath::Power(10, TMath::Nint(-TMath::Log10(histSignal->GetBinWidth(1))));
+          if (debug) std::cout << "Found *MET_*" << std::endl;
+          binDensity = TMath::Power(10, TMath::Nint(-TMath::Log10(vHistBackgrounds[0]->GetBinWidth(1))));
         } else {
           continue;
         }
-        if (debug) std::cout << "nameLeaf: " << nameLeaf << std::endl;
-        if (debug) std::cout << "nBinsSignal: " << nBinsSignal << std::endl;
-        // TH2F *hhPunzi = new TH2F("Punzi_" + nameLeaf, (TString)"Punzi significance of " + histSignal->GetTitle(),
-        // nBinsSignal, lowerCorrectSignal, lowerCorrectSignal + static_cast<Double_t>(nBinsSignal) / binDensity,
-        // nBinsSignal, lowerCorrectSignal, lowerCorrectSignal + static_cast<Double_t>(nBinsSignal) / binDensity);
-        const TString nameTT = TString("Preselected") + (iAK ? "FatJet" : "Jet") + namesLepton[iLepton];
-        const TString nameHistPunzi = nameTT + "_" + nameLeaf;
-        auto hPunzi = new TH1F(nameHistPunzi,  (TString)"Punzi significance of " + histSignal->GetTitle(),
-            nBinsSignal, lowerCorrectSignal, lowerCorrectSignal + static_cast<Double_t>(nBinsSignal) / binDensity);
-        hPunzi->SetXTitle( (TString)"Punzi significance of " + histSignal->GetXaxis()->GetTitle());
-        const Int_t nEntriesDYJets = histDYJets->GetNbinsX();
-        const Int_t i0DYJets = TMath::Nint((histSignal->GetBinCenter(1) - histDYJets->GetBinCenter(1)) * binDensity);
-        const Int_t nEntriesTT = histTT->GetNbinsX();
-        const Int_t i0TT = TMath::Nint((histSignal->GetBinCenter(1) - histTT->GetBinCenter(1)) * binDensity);
-        for (Int_t i = 1; i <= nBinsSignal; i++) {
-          const Double_t efficiencySignal = histSignal->Integral(i, nBinsSignal) / sumSignal;
-          Double_t nBackground = 0.;
-          const Int_t iDYJets = i0DYJets + i;
-          if (iDYJets >=1 && iDYJets <= nEntriesDYJets)
-            nBackground += histDYJets->Integral(iDYJets, nEntriesDYJets);
-          const Int_t iTT = i0TT + i;
-          // if (debug) std::cout << iTT << "\t" << jTT << std::endl;
-          if (iTT >= 1 && iTT <= nEntriesTT) 
-            nBackground += histTT->Integral(iTT, nEntriesTT);
-          hPunzi->SetBinContent(i, efficiencySignal / (1. + TMath::Sqrt(nBackground)));
+        std::vector<TH1 *> vHistCumuBackground(nDatagroupsBackground, nullptr);
+        for (Size_t iDatagroupBackground = 0; iDatagroupBackground < nDatagroupsBackground; ++iDatagroupBackground) {
+          vHistCumuBackground[iDatagroupBackground] = vHistBackgrounds[iDatagroupBackground]->GetCumulative(false);
         }
-        if (!gPad) gROOT->MakeDefCanvas();
-        gPad->SetLogy(false);
-        // hhPunzi->Draw();
-        hPunzi->Draw();
-        gPad->SetTitle(nameHistPunzi);
-        gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + nameHistPunzi + "." + suffixImage);
-        // gPad->SetLogy(true);
-        // gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + "Punzi_" + nameLeaf + "_logy." + suffixImage);
+        for (Size_t iDatagroupSignal = 0; iDatagroupSignal < nDatagroupsSignal; ++iDatagroupSignal) {
+          const TString nameDatagroupSignal = vNameDatagroupAndClusterIdSignal[iDatagroupSignal].first;
+          TObject *&& keyRawSignal = vaaFilesSignal[iDatagroupSignal][iLepton][iAK]->GetKey(nameHist);
+          if (!keyRawSignal || keyRawSignal->IsZombie()) {
+            if (debug) std::cout << keyRawBackgroundFirst->GetName() << " not available in " << vNameDatagroupAndClusterIdSignal[iDatagroupSignal].first << std::endl;
+            continue;
+          }
+          TObject *&& histRawSignal = static_cast<TKey *>(keyRawSignal)->ReadObj();
+          if (!histRawSignal || histRawSignal->IsZombie()
+              || !histRawSignal->IsA()->InheritsFrom("TH1")) {
+            if (debug) std::cout << keyRawBackgroundFirst->GetName() << " is not a readable histogram in " << vNameDatagroupAndClusterIdSignal[iDatagroupSignal].first << std::endl;
+            continue;
+          }
+          if (debug) std::cout << "Computing " << nameHist << std::endl;
+          TFile *tfOut = TFile::Open(
+              pathCondorPacks + "/" + nameCondorPack
+              + "/" + "output_punzi" + "_" + nameDatagroupSignal + "_" + nameTT + "_" + nameDate + ".root",
+              "UPDATE");
+          TH1 *histSignal = static_cast<TH1 *>(histRawSignal);
+          Double_t lowerSignal = histSignal->GetBinLowEdge(1);
+          Ssiz_t nBinsSignal = histSignal->GetNbinsX();
+          std::vector<Long64_t> vI0BinBackgrounds(nDatagroupsBackground, 0);
+          for (Size_t iDatagroupBackground = 0; iDatagroupBackground < nDatagroupsBackground; ++iDatagroupBackground) {
+            const Double_t lowerBackground = vHistBackgrounds[iDatagroupBackground]->GetBinLowEdge(1);
+            vI0BinBackgrounds[iDatagroupSignal] = static_cast<Long64_t>(TMath::Nint((lowerSignal - lowerBackground) * binDensity));
+          }
+          auto histPunzi = histSignal->GetCumulative(false);
+          histPunzi->SetName("hPunzi_" + nameLeaf);
+          histPunzi->SetTitle("Punzi_" + nameLeaf);
+          if (debug && histPunzi->GetNbinsX() != nBinsSignal) {
+            Fatal("punzi", "Binnumber between histPunzi and histSignal (%s) does not match", nameHist.Data());
+          }
+          histPunzi->SetXTitle((TString)"Punzi significance of " + histSignal->GetXaxis()->GetTitle());
+          Double_t sumSignal = histPunzi->GetBinContent(1);
+          if (sumSignal <= __FLT_EPSILON__ * 1024) {
+            sumSignal = 1;
+          }
+          for (Ssiz_t iBinSignal = 1; iBinSignal <= nBinsSignal; ++iBinSignal) {
+            Double_t sumBackgrounds = 0.;
+            for (Ssiz_t iDatagroupBackground = 0; iDatagroupBackground < nDatagroupsBackground; ++iDatagroupBackground) {
+              const Ssiz_t nBinsBackground = vHistBackgrounds[iDatagroupBackground]->GetNbinsX();
+              const Ssiz_t iBinBackground = vI0BinBackgrounds[iDatagroupBackground] + iBinSignal;
+              sumBackgrounds += (iBinBackground >= 1 && iBinBackground <= nBinsBackground)
+                                ? vHistCumuBackground[iDatagroupBackground]->GetBinContent(iBinBackground)
+                                : 0;
+            }
+            histPunzi->SetBinContent(iBinSignal, histPunzi->GetBinContent(iBinSignal) / (sumSignal * (TMath::Sqrt(sumBackgrounds) + 1)));
+          }
+          histPunzi->Write();
+          tfOut->Close();
+        }
       }
     }
   }
 
-  // for (Byte_t iAK = 0; iAK<2; iAK++) {
-  //   {
-  //     if (debug) Info("plotting", "Getting names from file %s", arrFileSignalHeavyPreselectedElectron[iAK]->GetName());
-  //     std::vector<TString> vName = {};
-  //     std::vector<UInt_t> vIdx = {};
-  //     refgetIdxHistOpenableRecent(arrFileSignalHeavyPreselectedElectron[iAK], vName, vIdx);
-  //     for (const auto& nameHist: vName) {
-  //       const TString nameLeaf = nameHist(1, nameHist.Length());
-  //       if (nameLeaf.BeginsWith(iAK ? "FatJet_" : "Jet_")) {
-  //         if (debug) Info("plotting", "Plotting %s", nameLeaf.Data());
-  //         const TString tstrUnderscoreAndSuffix = nameLeaf(iAK ? 6 : 3, nameLeaf.Length());
-  //         std::vector<Bool_t> vIsHist = {};
-  //         std::vector<TH1*> vHist = {};
-  //         std::vector<TString> vNameLeg = {};
-  //         TString tstrXTitle = "";
-  //         {
-  //           const TString nameDatagroupShorter = "SignalHeavy";
-  //           {
-  //             const TString nameLeafToGet = TString::Format("%sMatched%s", iAK ? "FatJet" : "Jet", tstrUnderscoreAndSuffix.Data());
-  //             vHist.push_back(static_cast<TH1*>(arrFileSignalHeavyAllMatchedElectron[iAK]->Get("h" + nameLeafToGet)));
-  //             if (debug && vHist.back() != nullptr) Info("plotting", "Plotting hist (%p) name %s", vHist.back(), vHist.back()->GetName());
-  //             vIsHist.push_back(vHist.back() != nullptr && !vHist.back()->IsZombie());
-  //             vNameLeg.push_back(Form("AllMatched%s_%s", iAK ? "FatJet" : "Jet", nameLeafToGet.Data()));
-  //           }
-  //           // for (Int_t nFirst=1; nFirst <= (iAK ? 6 : 8); nFirst++) {
-  //           {
-  //             Int_t nFirst = (iAK ? 2 : 6);
-  //             const TString nameLeafToGet = TString::Format("%sFirst%d%s", iAK ? "FatJet" : "Jet", nFirst, tstrUnderscoreAndSuffix.Data());
-  //             vHist.push_back(static_cast<TH1*>(arrFileSignalHeavyPreselectedElectron[iAK]->Get("h" + nameLeafToGet)));
-  //             if (debug && vHist.back() != nullptr) Info("plotting", "Plotting hist (%p) name %s", vHist.back(), vHist.back()->GetName());
-  //             vIsHist.push_back(vHist.back() != nullptr && !vHist.back()->IsZombie());
-  //             vNameLeg.push_back(Form("Preselected%s_%s", iAK ? "FatJet" : "Jet", nameLeafToGet.Data()));
-  //           }
-
-  //           {
-  //             const TString& nameLeafToGet = nameLeaf;
-  //             vHist.push_back(static_cast<TH1*>(arrFileSignalHeavyPreselectedElectron[iAK]->Get("h" + nameLeafToGet)));
-  //             if (debug && vHist.back() != nullptr) Info("plotting", "Plotting hist (%p) name %s", vHist.back(), vHist.back()->GetName());
-  //             vIsHist.push_back(vHist.back() != nullptr && !vHist.back()->IsZombie());
-  //             vNameLeg.push_back(Form("Preselected%s_%s", iAK ? "FatJet" : "Jet", nameLeafToGet.Data()));
-  //             if (vIsHist.back()) {
-  //               tstrXTitle = vHist.back()->GetXaxis()->GetTitle();
-  //             }
-  //           }
-  //         }
-  //         if (gPad) gPad->SetLogy(false);
-  //         drawHistsMultiple(vIsHist, vHist, vNameLeg, nameLeaf, nameLeaf, tstrXTitle);
-  //         gPad->SetTitle(nameLeaf);
-  //         gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + "PreselectedAndAllMatched_" + nameLeaf + "." + suffixImage);
-  //         gPad->SetLogy(true);
-  //         gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + "PreselectedAndAllMatched_" + nameLeaf + "_logy." + suffixImage);
-  //         {
-  //           const TString nameDatagroupShorter = nameDatagroupDYJets;
-            
-  //           // for (Int_t nFirst=1; nFirst <= (iAK ? 6 : 8); nFirst++) {
-  //           {
-  //             Int_t nFirst = (iAK ? 2 : 6);
-  //             const TString nameLeafToGet = TString::Format("%sFirst%d%s", iAK ? "FatJet" : "Jet", nFirst, tstrUnderscoreAndSuffix.Data());
-  //             vHist.push_back(static_cast<TH1*>(arrFileDYJetsPreselectedEletron[iAK]->Get("h" + nameLeafToGet)));
-  //             if (debug && vHist.back() != nullptr) Info("plotting", "Plotting hist (%p) name %s", vHist.back(), vHist.back()->GetName());
-  //             vIsHist.push_back(vHist.back() != nullptr && !vHist.back()->IsZombie());
-  //             vNameLeg.push_back(Form("%s_Preselected%s_%s", nameDatagroupShorter.Data(), iAK ? "FatJet" : "Jet", nameLeafToGet.Data()));
-  //           }
-
-  //           {
-  //             const TString nameLeafToGet = nameLeaf;
-  //             vHist.push_back(static_cast<TH1*>(arrFileDYJetsPreselectedEletron[iAK]->Get("h" + nameLeafToGet)));
-  //             if (debug && vHist.back() != nullptr) Info("plotting", "Plotting hist (%p) name %s", vHist.back(), vHist.back()->GetName());
-  //             vIsHist.push_back(vHist.back() != nullptr && !vHist.back()->IsZombie());
-  //             vNameLeg.push_back(Form("%s_Preselected%s_%s", nameDatagroupShorter.Data(), iAK ? "FatJet" : "Jet", nameLeafToGet.Data()));
-  //           }
-  //         }
-  //         if (gPad) gPad->SetLogy(false);
-  //         drawHistsMultiple(vIsHist, vHist, vNameLeg, nameLeaf, nameLeaf, tstrXTitle);
-  //         gPad->SetTitle(nameLeaf);
-  //         gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + "PreselectedAndAllMatched_" + nameLeaf + "vsDYJets" + "." + suffixImage);
-  //         gPad->SetLogy(true);
-  //         gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + "PreselectedAndAllMatched_" + nameLeaf + "vsDYJets" + "_logy." + suffixImage);
-  //       }
-  //       if (nameLeaf.EqualTo("SoftActivityJetHT")) {
-  //         for (auto cstrNumber: {"", "2", "5", "10"}) {
-  //           TString nameLeafToGet = nameLeaf + cstrNumber;
-  //           std::vector<Bool_t> vIsHist = {};
-  //           std::vector<TH1 *> vHist = {};
-  //           std::vector<TString> vNameLeg = {};
-  //           vHist.push_back(static_cast<TH1 *>(arrFileSignalHeavyPreselectedElectron[iAK]->Get("h" + nameLeafToGet)));
-  //           vIsHist.push_back(vHist.back() != nullptr &&
-  //                             !vHist.back()->IsZombie());
-  //           vNameLeg.push_back(TString::Format("SignalHeavy_Electron_%s",
-  //                                              iAK ? "FatJet" : "Jet"));
-  //           vHist.push_back(static_cast<TH1 *>(
-  //               arrFileDYJetsPreselectedEletron[iAK]->Get("h" + nameLeafToGet)));
-  //           vIsHist.push_back(vHist.back() != nullptr &&
-  //                             !vHist.back()->IsZombie());
-  //           vNameLeg.push_back(TString::Format("DYJets_Electron_%s",
-  //                                              iAK ? "FatJet" : "Jet"));
-  //           if (gPad) gPad->SetLogy(false);
-  //           drawHistsMultiple(vIsHist, vHist, vNameLeg, nameLeafToGet,
-  //                             nameLeafToGet + " (Preselected)",
-  //                             vHist.back()->GetXaxis()->GetTitle());
-  //           gPad->SetTitle(nameLeaf);
-  //           gPad->Print(pathOutImages + "/" + nameFolderToday + "/" +
-  //                       "PreselectedJetElectron_" + nameLeaf + "vsDYJets" +
-  //                       "." + suffixImage);
-  //           gPad->SetLogy(false);
-  //           gPad->Print(pathOutImages + "/" + nameFolderToday + "/" +
-  //                       "PreselectedJetElectron_" + nameLeaf + "vsDYJets" +
-  //                       "_logy." + suffixImage);
-  //         }
-  //       }
-  //       if (nameLeaf.Contains("MET_")) {
-  //         std::vector<Bool_t> vIsHist = {};
-  //         std::vector<TH1*> vHist = {};
-  //         std::vector<TString> vNameLeg = {};
-  //         vHist.push_back(static_cast<TH1*>(arrFileSignalHeavyPreselectedElectron[iAK]->Get(nameHist)));
-  //         vIsHist.push_back(vHist.back() != nullptr && !vHist.back()->IsZombie());
-  //         vNameLeg.push_back(TString::Format("SignalHeavy_Electron_%s", iAK ? "FatJet" : "Jet"));
-  //         vHist.push_back(static_cast<TH1*>(arrFileDYJetsPreselectedEletron[iAK]->Get(nameHist)));
-  //         vIsHist.push_back(vHist.back() != nullptr && !vHist.back()->IsZombie());
-  //         vNameLeg.push_back(TString::Format("DYJets_Electron_%s", iAK ? "FatJet" : "Jet"));
-  //         if (gPad) gPad->SetLogy(false);
-  //         drawHistsMultiple(vIsHist, vHist, vNameLeg, nameLeaf, nameLeaf + " (Preselected)", TString(vHist[0]->GetXaxis()->GetTitle()) + " (Pt > #)");
-  //         gPad->SetTitle(nameLeaf);
-  //         gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + "PreselectedJetElectron_" + nameLeaf + "vsDYJets" + "." + suffixImage);
-  //         gPad->SetLogy(false);
-  //         gPad->Print(pathOutImages + "/" + nameFolderToday + "/" + "PreselectedJetElectron_" + nameLeaf + "vsDYJets" + "_logy." + suffixImage);
-  //       }
-  //     }
-  //   }
-  // }
 }
 
 
