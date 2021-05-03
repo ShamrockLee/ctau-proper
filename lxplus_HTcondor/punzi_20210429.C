@@ -177,6 +177,8 @@ void punzi_20210429(const Bool_t recreate=true, const Bool_t debug=false) {
             const Double_t lowerBackground = vHistBackgrounds[iDatagroupBackground]->GetBinLowEdge(1);
             vI0BinBackgrounds[iDatagroupSignal] = static_cast<Long64_t>(TMath::Nint((lowerSignal - lowerBackground) * binDensity));
           }
+          // Use hist1Cumu = hist1->GetCumulative(false) to get unnormalized reversely cumulative histogram about hist1
+          // Use hist1Cumu->Scale(1./(hist1->GetBinContent(1))) to normalize
           auto histPunzi = histSignal->GetCumulative(false);
           histPunzi->SetName("hPunzi_" + nameLeaf);
           histPunzi->SetTitle("Punzi_" + nameLeaf);
