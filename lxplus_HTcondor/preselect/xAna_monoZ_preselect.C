@@ -107,8 +107,8 @@ class IotaIterator {
 
 /// Preselection
 void xAna_monoZ_preselect(
-    std::string inputFile,  //< Path of input file
-    TString outputFileTree,
+    const std::string inputFile,  //< Path of input file
+    const TString outputFileTree,
     // std::string outputFileHead,  //< Output filename head ex: "preselected"
     // std::string outputFileVar,   //< Variables of the data ex:
     //                              //"Mx2-150_Mv-500_Mx1-1_ctau-1"
@@ -133,7 +133,7 @@ void xAna_monoZ_preselect(
   //                          outputFileVar + "_" + outputFileTail + "_tree" +
   //                          ".root";
 
-  Bool_t isSignal = outputFileTree.Contains("ignal");
+  const Bool_t isSignal = outputFileTree.Contains("ignal");
 
   /// output fle to store the tree
   TFile* outFileTree = TFile::Open(outputFileTree.Data(),
@@ -157,7 +157,7 @@ void xAna_monoZ_preselect(
   tvdNEntry.Write("tvdNEntryOriginal");
 
   /// Tree for GEN-correct  electron/muon/tau
-  TTree* arrTTGen[3];
+  TTree* arrTTGen[isSignal ? 3 : 1];
 
   /// Tree for events with correct numbers of electron/muon
   TTree* arrTTNumCorrect[2];
@@ -176,10 +176,17 @@ void xAna_monoZ_preselect(
 
   /// Tree for the events whose two d-pairs are all matched to a fat jet.
   TTree* arrTTAllMatchedFatJet[2];
-  for (Byte_t i = 0; i < 3; i++) {
-    arrTTGen[i] =
-        new TTree((TString) "Gen" + namesLepton[i],
-                  (TString) "GEN-level " + namesLeptonLower[i] + " events");
+  if (isSignal) {
+    for (Byte_t i = 0; i < 3; i++) {
+      arrTTGen[i] =
+          new TTree(
+              (TString) "Gen" + namesLepton[i],
+              (TString) "GEN-level " + namesLeptonLower[i] + " events");
+    }
+  } else {
+    arrTTGen[0] = new TTree(
+        (TString) "Original",
+        (TString) "Unselected events");
   }
   for (Byte_t i = 0; i < 2; i++) {
     arrTTNumCorrect[i] = new TTree(
@@ -229,8 +236,12 @@ void xAna_monoZ_preselect(
   Long64_t jEntry;
   // ttNumCorrect->Branch("jEntryOriginal", &jEntry);
   // ttZMassCutted->Branch("jEntryOriginal", &jEntry);
-  for (Byte_t i = 0; i < 3; i++) {
-    arrTTGen[i]->Branch("jEntry", &jEntry);
+  if (isSignal) {
+    for (Byte_t i = 0; i < 3; i++) {
+      arrTTGen[i]->Branch("jEntry", &jEntry);
+    }
+  } else {
+    arrTTGen[0]->Branch("jEntry", &jEntry);
   }
   for (Byte_t i = 0; i < 2; i++) {
     arrTTNumCorrect[i]->Branch("jEntry", &jEntry);
@@ -240,12 +251,14 @@ void xAna_monoZ_preselect(
   }
 
   std::vector<Int_t> arrVGenLeptonIdx[3];
-  for (Byte_t i = 0; i < 3; i++) {
-    const TString name = "Gen" + namesLepton[i] + "_genPartIdx";
-    const TString title = "Indexes of the d quarks";
-    arrVGenLeptonIdx[i].clear();
-    arrVGenLeptonIdx[i].resize(2);
-    arrTTGen[i]->Branch(name, &(arrVGenLeptonIdx[i]))->SetTitle(title);
+  if (isSignal) {
+    for (Byte_t i = 0; i < 3; i++) {
+      const TString name = "Gen" + namesLepton[i] + "_genPartIdx";
+      const TString title = "Indexes of the d quarks";
+      arrVGenLeptonIdx[i].clear();
+      arrVGenLeptonIdx[i].resize(2);
+      arrTTGen[i]->Branch(name, &(arrVGenLeptonIdx[i]))->SetTitle(title);
+    }
   }
 
   // std::vector<Int_t> arrVGenLeptonPairPtEtaPhiMass[4][3];
@@ -270,7 +283,12 @@ void xAna_monoZ_preselect(
   Int_t arrNLepton[2];
   Int_t arrNLeptonPassedPtEta[2];
   for (Byte_t i=0; i<2; i++) {
-    for (TTree **ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+    const Byte_t iTTGen = (isSignal) ? i : 0;
+    arrTTGen[i]->Branch("n" + namesLepton[i], &(arrNLepton[i]))->SetTitle("Number of " + namesLepton[i]);
+    arrTTGen[i]->Branch("n" + namesLepton[i] + "PassedPtEta", &(arrNLeptonPassedPtEta[i]))->SetTitle("Number of " + namesLepton[i] + " passing Pt-Eta cut");
+  }
+  for (Byte_t i=0; i<2; i++) {
+    for (TTree **ppTT: {arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
       ppTT[i]->Branch("n" + namesLepton[i], &(arrNLepton[i]))->SetTitle("Number of " + namesLepton[i]);
       ppTT[i]->Branch("n" + namesLepton[i] + "PassedPtEta", &(arrNLeptonPassedPtEta[i]))->SetTitle("Number of " + namesLepton[i] + " passing Pt-Eta cut");
     }
@@ -342,7 +360,9 @@ void xAna_monoZ_preselect(
   // });
   {
     for (Byte_t i=0; i<2; i++) {
-      for (auto&& ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted}) {
+      const Byte_t iTTGen = (isSignal) ? i : 0;
+      vMounterLeptonChained[i].BranchOn(arrTTGen[iTTGen]);
+      for (auto&& ppTT: {arrTTNumCorrect, arrTTZMassCutted}) {
         vMounterLeptonChained[i].BranchOn(ppTT[i]);
       }
     }
@@ -350,25 +370,29 @@ void xAna_monoZ_preselect(
 
   std::vector<Int_t> arrVLeptonIdxNumCorrect[2];
   for (Byte_t i = 0; i < 2; i++) {
+    const Byte_t iTTGen = (isSignal) ? i : 0;
+    arrTTGen[iTTGen]->Branch(namesLepton[i] + "_idxNumCorrect", &(arrVLeptonIdxNumCorrect[i]));
     arrVLeptonIdxNumCorrect[i].resize(2);
-    for (TTree *const *const ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
+    for (TTree *const *const ppTT: {arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
       ppTT[i]->Branch(namesLepton[i] + "_idxNumCorrect", &(arrVLeptonIdxNumCorrect[i]));
     }
   }
 
   Bool_t haveAllGenDMatching;
-  for (Byte_t i = 0; i < 2; i++) {
-    TString name = "haveAllGenDMatching";
-    TString title = "Whether there are 4 d quarks generated by chi1";
-    arrTTGen[i]
-        ->Branch(name, &haveAllGenDMatching, name + "/O", 1)
-        ->SetTitle(title);
-  }
   std::vector<Int_t> vGenDMatchingIdx(4, 0);
-  for (Byte_t i = 0; i < 2; i++) {
-    const TString name = "GenDMatching_genPartIdx";
-    const TString title = "Indexes of the d quarks";
-    arrTTGen[i]->Branch(name, &vGenDMatchingIdx)->SetTitle(title);
+  if (isSignal) {
+    for (Byte_t i = 0; i < 2; i++) {
+      TString name = "haveAllGenDMatching";
+      TString title = "Whether there are 4 d quarks generated by chi1";
+      arrTTGen[i]
+          ->Branch(name, &haveAllGenDMatching, name + "/O", 1)
+          ->SetTitle(title);
+    }
+    for (Byte_t i = 0; i < 2; i++) {
+      const TString name = "GenDMatching_genPartIdx";
+      const TString title = "Indexes of the d quarks";
+      arrTTGen[i]->Branch(name, &vGenDMatchingIdx)->SetTitle(title);
+    }
   }
   std::vector<Float_t> vGenDMatchingPt(4, 0);
   std::vector<Float_t> vGenDMatchingEta(4, 0);
@@ -386,13 +410,13 @@ void xAna_monoZ_preselect(
     const char* nameTemplate = "GenD%sMatching_%s";
     const char* titleTemplate = "%s of each %s";
     constexpr const char* const arrCstrPtEtaPhi[] = {"Pt", "Eta", "Phi"};
-    for (Byte_t i = 0; i < 2; i++) {
+    if (isSignal) for (Byte_t i = 0; i < 2; i++) {
       for (Byte_t j = 0; j < 3; j++) {
         TString tstrVarLower(arrCstrPtEtaPhi[j]);
         tstrVarLower.ToLower();
         arrTTGen[i]
             ->Branch(TString::Format(nameTemplate, "", tstrVarLower.Data()),
-                     arrPVGenDMatchingP4Component[j])
+                    arrPVGenDMatchingP4Component[j])
             ->SetTitle(
                 TString::Format(titleTemplate, arrCstrPtEtaPhi[j], "d quark"));
         arrTTPreselectedMatchingJet[i]
@@ -407,7 +431,7 @@ void xAna_monoZ_preselect(
                 TString::Format(titleTemplate, arrCstrPtEtaPhi[i], "d quark"));
         arrTTGen[i]
             ->Branch(TString::Format(nameTemplate, "Pair", tstrVarLower.Data()),
-                     arrPVGenDPairMatchingP4Component[j])
+                    arrPVGenDPairMatchingP4Component[j])
             ->SetTitle(
                 TString::Format(titleTemplate, arrCstrPtEtaPhi[i], "d-pair"));
         arrTTPreselectedMatchingFatJet[i]
@@ -421,7 +445,7 @@ void xAna_monoZ_preselect(
             ->SetTitle(
                 TString::Format(titleTemplate, arrCstrPtEtaPhi[i], "d-pair"));
       }
-      arrTTGen[i]
+      if (isSignal) arrTTGen[i]
           ->Branch(TString::Format(nameTemplate, "Pair", "mass"),
                    &vGenDPairMatchingMass)
           ->SetTitle(TString::Format(titleTemplate, "Mass", "d-pair"));
@@ -437,8 +461,8 @@ void xAna_monoZ_preselect(
   std::vector<Bool_t> vGenDPairMatchingIdPassed(2, false);
   UInt_t nGenDPairMatchingPassed = 0;
   Bool_t areAllGenDPairMatchingPassed;
-  for (TTree *const *const ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted}) {
-  for (Byte_t i = 0; i < 2; i++) {
+  if (isSignal) for (TTree *const *const ppTT: {arrTTGen, arrTTNumCorrect, arrTTZMassCutted}) {
+    for (Byte_t i = 0; i < 2; i++) {
     const char* nameIdTemplate = "GenD%sMatching_idPassed";
     const char* titleIdTemplate =
         "Whether each of the %s pass the preselections";
@@ -473,10 +497,10 @@ void xAna_monoZ_preselect(
                  &areAllGenDPairMatchingPassed,
                  TString::Format(nameAreAllTemplate, "Pair") + "/O", 1)
         ->SetTitle(TString::Format(titleAreAllTemplate, "d-pair"));
-  }
+    }
   }
   Bool_t arrHasGenLepton[3];
-  for (Byte_t i = 0; i < 2; i++) {
+  if (isSignal) for (Byte_t i = 0; i < 2; i++) {
     TString name = "hasGen" + namesLepton[i] + "Pair";
     TString title = "Whether this is a Z-" + namesLeptonNota[i] +
                     namesLeptonNota[i] + " event";
@@ -539,7 +563,8 @@ void xAna_monoZ_preselect(
         TString::Format("is%sPairPassingZMassCut", namesLepton[i].Data());
     TString title = "Whether is the mass of the " + namesLeptonLower[i] +
                     " pair close to Z\'s";
-    arrTTGen[i]
+    const Byte_t iTTGen = (isSignal) ? i : 0;
+    arrTTGen[iTTGen]
         ->Branch(name, &(arrIsPassingZMassCut[i]), name + "/O", 1)
         ->SetTitle(title);
     arrTTNumCorrect[i]
@@ -609,18 +634,26 @@ void xAna_monoZ_preselect(
         ->SetTitle(title);
   }
   auto lambdaFillTheTrees = [&]() -> void {
-    const Bool_t toCollectGen = isSignal;
+    const Bool_t toCollectGen = true;
     const Bool_t toCollectNumCorrect = true;
     const Bool_t toCollectZMassCutted = true;
     const Bool_t toCollectJetMatching = true;
     const Bool_t toCollectAllMatched = true;
-    if (toCollectGen)
-      for (Byte_t i = 0; i < 3; i++) {
-        if (arrHasGenLepton[i]) {
-          arrTTGen[i]->Fill();
+    if (toCollectGen) {
+      if (isSignal) {
+        for (Byte_t i = 0; i < 3; i++) {
+          if (arrHasGenLepton[i]) {
+            arrTTGen[i]->Fill();
+          }
         }
+      } else {
+        arrTTGen[0]->Fill();
       }
+    }
     for (Byte_t i = 0; i < 2; i++) {
+      if (isSignal && (!arrHasGenLepton[i])) {
+        continue;
+      }
       if (toCollectNumCorrect && arrRecoIsLeptonNumCorrect[i]) {
         arrTTNumCorrect[i]->Fill();
       }
@@ -631,16 +664,14 @@ void xAna_monoZ_preselect(
           arrIsPassingZMassCut[i]) {
         arrTTPreselectedMatchingJet[i]->Fill();
       }
-      if (toCollectAllMatched && ((!isSignal) || areAllGenDMatchingPassed) &&
-          areAllGenDMatched && arrIsPassingZMassCut[i]) {
+      if (toCollectAllMatched && isSignal && areAllGenDMatched && arrIsPassingZMassCut[i]) {
         arrTTAllMatchedJet[i]->Fill();
       }
       if (toCollectJetMatching && ((!isSignal) || areAllGenDPairMatchingPassed) &&
           arrIsPassingZMassCut[i]) {
         arrTTPreselectedMatchingFatJet[i]->Fill();
       }
-      if (toCollectAllMatched && ((!isSignal) || areAllGenDPairMatchingPassed) &&
-          areAllGenDPairMatched &&
+      if (toCollectAllMatched && isSignal && areAllGenDPairMatched &&
           arrIsPassingZMassCut[i]) {
         arrTTAllMatchedFatJet[i]->Fill();
       }

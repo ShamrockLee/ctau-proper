@@ -1,6 +1,6 @@
 #include <Rtypes.h>
 #include <TCut.h>
-#include <TFile.h>
+#include <TDirectory.h>
 #include <TLeaf.h>
 #include <TString.h>
 #include <TTree.h>
@@ -75,6 +75,13 @@ class HistMerger {
   ///
   /// REQUIRED
   std::vector<Double_t> vCrossSection;
+  /// `std::function` object to get the original number of entries from the input TDirectory
+  /// and to return if it's successful (0 means successful)
+  ///
+  /// Set directly
+  ///
+  /// REQUIRED
+  std::function<Int_t(TDirectory *tdirIn, Long64_t &nEntriesOriginal)> funRefgetNEntriesOriginal;
   /// `std::function` object that decide the path of the inpum files according
   /// to their index.
   ///
@@ -312,6 +319,7 @@ protected:
 };
 
 HistMerger::HistMerger() {
+  this->funRefgetNEntriesOriginal = nullptr;
   this->funPathTFIn = nullptr;
   this->dirTFTemp = "";
   this->funNameTFTemp = nullptr;

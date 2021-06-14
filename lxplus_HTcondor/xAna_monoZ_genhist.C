@@ -42,15 +42,19 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
 
   std::vector<TString> vNameTT;
   vNameTT.clear();
+  Bool_t isSignal = nameDatagroup.BeginsWith("signal");
   {
-    Bool_t isSignal = nameDatagroup.BeginsWith("signal");
     for (Byte_t i = 0; i < 2; i++) {
       TString nameLeptonCurrent = namesLepton[i];
       vNameTT.push_back((TString) "NumCorrect" + nameLeptonCurrent);
       vNameTT.push_back((TString) "ZMassCutted" + nameLeptonCurrent);
     }
-    if (isSignal) for (Byte_t i = 0; i < 2; i++) {
-      vNameTT.push_back("Gen" + namesLepton[i]);
+    if (isSignal){
+      for (Byte_t i = 0; i < 2; i++) {
+        vNameTT.push_back("Gen" + namesLepton[i]);
+      }
+    } else {
+      vNameTT.push_back("Original");
     }
     for (const char* nameJetCamel : {"Jet", "FatJet"}) {
       for (Byte_t i = 0; i < 2; i++) {
@@ -68,6 +72,23 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   vNumberFile.clear();
   std::vector<Double_t> vCrossSection;
   vCrossSection.clear();
+
+  std::function<Int_t (TDirectory *tdirIn, Long64_t &nEntriesOriginal)> funRefgetNEntriesOriginal = [isSignal](TDirectory *tdirIn, Long64_t &nEntriesOriginal) {
+    TObject* tvdRaw = tdirIn->Get("tvdNEntryOriginal");
+    if (!tvdRaw || tvdRaw->IsZombie()) {
+      return 1;
+    }
+    TVectorD* tvd = static_cast<TVectorD *>(tvdRaw);
+    if (tvd->IsZombie() || tvd->GetNoElements() < 1) {
+      nEntriesOriginal = 0;
+      return 1;
+    }
+    nEntriesOriginal = (*((TVectorD *)tdirIn->Get("tvdNEntryOriginal")))[0];
+    if (isSignal) {
+      nEntriesOriginal /= 3;
+    }
+    return 0;
+  };
 
   TString dirCondorPackCurrent =
       dirCondorPacks + seperatorPath + nameCondorPack;
@@ -278,6 +299,7 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
   merger->vNameTT = vNameTT;
   merger->vNumberFile = vNumberFile;
   merger->vCrossSection = vCrossSection;
+  merger->funRefgetNEntriesOriginal = funRefgetNEntriesOriginal;
   merger->funPathTFIn = funPathTFIn;
   merger->dirTFTemp = dirCondorPackCurrent;
   merger->funNameTFTemp = funNameTFTemp;

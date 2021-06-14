@@ -825,6 +825,9 @@ void HistMerger::InitializeWhenRun() {
   if (updateCorrectedFile) {
     nLeavesToUseCorrectedTempFileMin = 1;
   }
+  if (funRefgetNEntriesOriginal == nullptr) {
+    Fatal("HistMerger::InitializeWhenRun", "funRefgetNEntriesOriginal is not specified.");
+  }
   if (funPathTFIn == nullptr) {
     Fatal("HistMerger::InitializeWhenRun", "funPathTFIn is not specified.");
   }
@@ -970,16 +973,10 @@ void HistMerger::Run() {
 
   auto mountVarsFromTDir = [this, &nEntryOriginal, &arrTT](TDirectory *tdir)->Int_t {
     {
-      TObject* tvdRaw = tdir->Get("tvdNEntryOriginal");
-      if (!tvdRaw || tvdRaw->IsZombie()) {
-        return 1;
+      Int_t ret = funRefgetNEntriesOriginal(tdir, nEntryOriginal);
+      if (ret) {
+        return ret;
       }
-      TVectorD* tvd = static_cast<TVectorD *>(tvdRaw);
-      if (tvd->IsZombie() || tvd->GetNoElements() < 1) {
-        nEntryOriginal = 0;
-        return 1;
-      }
-      nEntryOriginal = (*((TVectorD *)tdir->Get("tvdNEntryOriginal")))[0];
     }
     for (UInt_t i = 0; i < nTT; i++) {
       arrTT[i] = (TTree *)tdir->Get(this->vNameTT[i]);
