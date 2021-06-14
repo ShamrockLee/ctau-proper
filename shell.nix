@@ -1,7 +1,7 @@
 { pkgs ? import <nixpkgs> {}
 , mkShell ? pkgs.mkShell
-, clang ? pkgs.clang
+, gdb ? pkgs.gdb
 }:
 mkShell {
-  buildInputs = [ clang ];
+  buildInputs = [ gdb ];
 }
