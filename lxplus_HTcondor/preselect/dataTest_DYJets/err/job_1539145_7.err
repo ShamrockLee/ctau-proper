@@ -1,0 +1,170 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_16429/./xAna_monoZ_preselect_C.so
+In file included from /pool/condor/dir_16429/./xAna_monoZ_preselect.C:19:0,
+                 from /pool/condor/dir_16429/xAna_monoZ_preselect_C_ACLiC_dict.cxx:41:
+/pool/condor/dir_16429/./BranchMounter.h:118:8: warning: ‘void BranchMounterScalarSingle<E>::SetFunEIn(std::function<E(BranchDescription)>) [with E = char]’ was hidden [-Woverloaded-virtual]
+   void SetFunEIn(std::function<E(BranchDescription)> funEIn) {
+        ^
+/pool/condor/dir_16429/./BranchMounter.h:191:8: warning:   by ‘void BranchMounterScalarSingle<bool>::SetFunEIn(std::function<bool(BranchDescription)>)’ [-Woverloaded-virtual]
+   void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
+        ^
+In file included from /pool/condor/dir_16429/./xAna_monoZ_preselect.C:19:0,
+                 from /pool/condor/dir_16429/xAna_monoZ_preselect_C_ACLiC_dict.cxx:41:
+/pool/condor/dir_16429/./BranchMounter.h:118:8: warning: ‘void BranchMounterScalarSingle<E>::SetFunEIn(std::function<E(BranchDescription)>) [with E = char]’ was hidden [-Woverloaded-virtual]
+   void SetFunEIn(std::function<E(BranchDescription)> funEIn) {
+        ^
+/pool/condor/dir_16429/./BranchMounter.h:191:8: warning:   by ‘void BranchMounterScalarSingle<bool>::SetFunEIn(std::function<bool(BranchDescription)>)’ [-Woverloaded-virtual]
+   void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
+        ^
+Warning in <TClass::Init>: no dictionary for class edm::ProcessHistory is available
+Warning in <TClass::Init>: no dictionary for class edm::ProcessConfiguration is available
+Warning in <TClass::Init>: no dictionary for class edm::ParameterSetBlob is available
+Warning in <TClass::Init>: no dictionary for class edm::Hash<1> is available
+Warning in <TClass::Init>: no dictionary for class pair<edm::Hash<1>,edm::ParameterSetBlob> is available
+Error in <TFile::WriteBuffer>: error writing all requested bytes to file testOut.root, wrote 3237 of 134296
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+SysError in <TFile::WriteBuffer>: error writing to file testOut.root (-1) (No space left on device)
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranchElement::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranError in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nFatJetPassed, nbytes=-1, entry=1005379
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nFatJetPassed, nbytes=-1, entry=1005379
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nJetPassed, nbytes=-1, entry=1005380
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nJetPassed, nbytes=-1, entry=1005380
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nFatJet, nbytes=-1, entry=1005381
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nFatJet, nbytes=-1, entry=1005381
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nJet, nbytes=-1, entry=1005382
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:Original.nJet, nbytes=-1, entry=1005382
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>: basket's WriteBuffer failed.
+Error in <TBranch::TBranch::Fill>: Failed to write out basket.
+
+Error in <TTree::Fill>: Failed filling branch:PreselectedMatchingFatJetMuon.MuonPair_eta, nbytes=-1, entry=139407
+ This error is symptomatic of a Tree created as a memory-resident Tree
+ Instead of doing:
+    TTree *T = new TTree(...)
+    TFile *f = new TFile(...)
+ you should do:
+    TFile *f = new TFile(...)
+    TTree *T = new TTree(...)
+
+
+Error in <TBranch::WriteBasketImpl>:
