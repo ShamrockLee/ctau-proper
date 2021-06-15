@@ -1630,7 +1630,7 @@ void HistMerger::Run() {
               isHistCorrectedGotInFile = getIsHistCorrectedInFile(tfCorrectedHist, analyzer, nameHistCorrected);
             } else {
               if (isToUseCorrectedTempFile) {
-                std::cout << "cd to tfCorrectedHist ...\n";
+                if (debug) std::cout << "cd to tfCorrectedHist ...\n";
                 tfCorrectedHist->cd();
               }
               histCorrected = analyzer->GetHistEmptyPreferred();
@@ -1683,7 +1683,7 @@ void HistMerger::Run() {
           isHistCorrectedInFile = getIsHistCorrectedInFile(tfCorrectedHist, analyzer, nameHistCorrected);
           if (!isHistCorrectedInFile) {
             if (isToUseCorrectedTempFile) {
-              std::cout << "cd to tfCorrectedHist ...\n";
+              if (debug) std::cout << "cd to tfCorrectedHist ...\n";
               tfCorrectedHist->cd();
             }
             histCorrected = analyzer->DrawHistCorrected(
