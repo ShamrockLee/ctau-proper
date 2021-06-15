@@ -1628,6 +1628,10 @@ void HistMerger::Run() {
             if (updateCorrectedFile) {
               isHistCorrectedGotInFile = getIsHistCorrectedInFile(tfCorrectedHist, analyzer, nameHistCorrected);
             } else {
+              if (isToUseCorrectedTempFile) {
+                std::cout << "cd to tfCorrectedHist ...\n";
+                tfCorrectedHist->cd();
+              }
               histCorrected = analyzer->GetHistEmptyPreferred();
               if (histCorrected == nullptr) {
                 // arrTT[iTree]->Draw(nameHistCorrected +
@@ -1644,7 +1648,6 @@ void HistMerger::Run() {
                 if (debug)
                   std::cout << "Writing " << nameHistCorrected << " ("
                             << histCorrected << ") to tfCorrectedHist ...";
-                tfCorrectedHist->cd();
                 // histCorrected->SetDirectory(tfCorrectedHist);
                 histCorrected->SetName(nameHistCorrected);
                 histCorrected->Write(nameHistCorrected);
@@ -1678,6 +1681,10 @@ void HistMerger::Run() {
           Bool_t isHistCorrectedInFile = false;
           isHistCorrectedInFile = getIsHistCorrectedInFile(tfCorrectedHist, analyzer, nameHistCorrected);
           if (!isHistCorrectedInFile) {
+            if (isToUseCorrectedTempFile) {
+              std::cout << "cd to tfCorrectedHist ...\n";
+              tfCorrectedHist->cd();
+            }
             histCorrected = analyzer->DrawHistCorrected(
                 nameHistCorrected, arrTT[iTree],
                 isCustom ? -1 : vvIHistLeafTree[iTree][indexNameBoth]);
@@ -1689,7 +1696,6 @@ void HistMerger::Run() {
               if (debug)
                 std::cout << "Writing to tfCorrectedHist (" << tfCorrectedHist
                           << ") ...";
-              tfCorrectedHist->cd();
               // histCorrected->SetDirectory(tfCorrectedHist);
               histCorrected->SetName(nameHistCorrected);
               histCorrected->Write(nameHistCorrected);
@@ -1724,6 +1730,7 @@ void HistMerger::Run() {
           }
         }
         vvIHistLeafTree[iTree][indexNameBoth]++;
+        tfCorrectedHist->ReOpen("update");
       }
     }
     tfInCurrent->Close();
