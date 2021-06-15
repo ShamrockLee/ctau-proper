@@ -1470,7 +1470,7 @@ void xAna_monoZ_preselect(
       // auto ptrJet_mass_original_cloned = ptrJet_mass_original;
       for (UInt_t idxJet = 0; idxJet < nJet; idxJet++) {
         Bool_t result = *ptrJet_pt_original_cloned > 30 &&
-                        TMath::Abs(*ptrJet_eta_original_cloned) < 3;
+                        TMath::Abs(*ptrJet_eta_original_cloned) < 2.5;
         if (result) {
           vIdxJetPassed.push_back(idxJet);
         }
@@ -1541,7 +1541,7 @@ void xAna_monoZ_preselect(
           ptrGenPart_phi[vGenDMatchingIdx[iDMatching]];
       vGenDMatchingIdPassed[iDMatching] =
           vGenDMatchingPt[iDMatching] > 30 &&
-          TMath::Abs(vGenDMatchingEta[iDMatching]) < 3;
+          TMath::Abs(vGenDMatchingEta[iDMatching]) < 2.5;
       if (vGenDMatchingIdPassed[iDMatching]) {
         nGenDMatchingPassed++;
       }
@@ -1645,7 +1645,7 @@ void xAna_monoZ_preselect(
           p4DPairMatching[iDPairMatching]->M();
       vGenDPairMatchingIdPassed[iDPairMatching] =
           vGenDPairMatchingPt[iDPairMatching] > 200 &&
-          TMath::Abs(vGenDPairMatchingEta[iDPairMatching]) < 4.5;
+          TMath::Abs(vGenDPairMatchingEta[iDPairMatching]) < 2.5;
       if (vGenDPairMatchingIdPassed[iDPairMatching]) {
         nGenDPairMatchingPassed++;
       }
