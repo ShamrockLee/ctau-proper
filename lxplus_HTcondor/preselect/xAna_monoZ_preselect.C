@@ -284,8 +284,8 @@ void xAna_monoZ_preselect(
   Int_t arrNLeptonPassedPtEta[2];
   for (Byte_t i=0; i<2; i++) {
     const Byte_t iTTGen = (isSignal) ? i : 0;
-    arrTTGen[i]->Branch("n" + namesLepton[i], &(arrNLepton[i]))->SetTitle("Number of " + namesLepton[i]);
-    arrTTGen[i]->Branch("n" + namesLepton[i] + "PassedPtEta", &(arrNLeptonPassedPtEta[i]))->SetTitle("Number of " + namesLepton[i] + " passing Pt-Eta cut");
+    arrTTGen[iTTGen]->Branch("n" + namesLepton[i], &(arrNLepton[i]))->SetTitle("Number of " + namesLepton[i]);
+    arrTTGen[iTTGen]->Branch("n" + namesLepton[i] + "PassedPtEta", &(arrNLeptonPassedPtEta[i]))->SetTitle("Number of " + namesLepton[i] + " passing Pt-Eta cut");
   }
   for (Byte_t i=0; i<2; i++) {
     for (TTree **ppTT: {arrTTNumCorrect, arrTTZMassCutted, arrTTPreselectedMatchingJet, arrTTPreselectedMatchingFatJet, arrTTAllMatchedJet, arrTTAllMatchedFatJet}) {
@@ -510,10 +510,11 @@ void xAna_monoZ_preselect(
   }
   Bool_t arrRecoIsLeptonNumCorrect[2];
   for (Byte_t i = 0; i < 2; i++) {
+    const Byte_t iTTGen = isSignal ? i : 0;
     TString name = "is" + namesLepton[i] + "NumCorrect";
     TString title = "Whether there are the right number of " +
                     namesLeptonLower[i] + " in RECO-level";
-    arrTTGen[i]
+    arrTTGen[iTTGen]
         ->Branch(name, &(arrRecoIsLeptonNumCorrect[i]), name + "/O", 1)
         ->SetTitle(title);
   }
@@ -687,10 +688,11 @@ void xAna_monoZ_preselect(
     TString titleFatJetPrefix = "Number of fat jets";
     TString namePassSuffix = "Passed";
     TString titlePassSuffix = " passing preselections";
-    arrTTGen[i]
+    Byte_t iTTGen = isSignal ? i : 0;
+    arrTTGen[iTTGen]
         ->Branch(nameJetPrefix, &nJet, nameJetPrefix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleJetPrefix);
-    arrTTGen[i]
+    arrTTGen[iTTGen]
         ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
                  nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleJetPrefix + titlePassSuffix);
@@ -715,11 +717,11 @@ void xAna_monoZ_preselect(
         ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
                  nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleJetPrefix + titlePassSuffix);
-    arrTTGen[i]
+    arrTTGen[iTTGen]
         ->Branch(nameFatJetPrefix, &nFatJet, nameFatJetPrefix + "/I",
                  __SIZEOF_INT__)
         ->SetTitle(titleFatJetPrefix);
-    arrTTGen[i]
+    arrTTGen[iTTGen]
         ->Branch(nameFatJetPrefix + namePassSuffix, &nFatJetPassed,
                  nameFatJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleFatJetPrefix + titlePassSuffix);
@@ -758,8 +760,9 @@ void xAna_monoZ_preselect(
     TString nameRank = "Jet_rankJetPassedPt";
     TString titleRank = "Rank (0-indexed) of pt among passed jets";
     for (Byte_t i = 0; i < 2; i++) {
-      arrTTGen[i]->Branch(nameIdx, &vIdxJetPassed)->SetTitle(titleIdx);
-      // arrTTGen[i]->Branch(nameRank, &vRankJetPassedPt)->SetTitle(titleRank);
+      const Byte_t iTTGen = isSignal ? i : 0;
+      arrTTGen[iTTGen]->Branch(nameIdx, &vIdxJetPassed)->SetTitle(titleIdx);
+      // arrTTGen[iTTGen]->Branch(nameRank, &vRankJetPassedPt)->SetTitle(titleRank);
     }
     for (Byte_t i = 0; i < 2; i++) {
       arrTTNumCorrect[i]->Branch(nameIdx, &vIdxJetPassed)->SetTitle(titleIdx);
@@ -778,8 +781,9 @@ void xAna_monoZ_preselect(
     TString nameRank = "FatJet_rankJetPassedPt";
     TString titleRank = "Rank (0-indexed) of pt among passed fat jets";
     for (Byte_t i = 0; i < 2; i++) {
-      arrTTGen[i]->Branch(nameIdx, &vIdxFatJetPassed)->SetTitle(titleIdx);
-      // arrTTGen[i]->Branch(nameRank, &vRankJetPassedPt)->SetTitle(titleRank);
+      const Byte_t iTTGen = isSignal ? i : 0;
+      arrTTGen[iTTGen]->Branch(nameIdx, &vIdxFatJetPassed)->SetTitle(titleIdx);
+      // arrTTGen[iTTGen]->Branch(nameRank, &vRankJetPassedPt)->SetTitle(titleRank);
     }
     for (Byte_t i = 0; i < 2; i++) {
       arrTTNumCorrect[i]
