@@ -634,50 +634,6 @@ void xAna_monoZ_preselect(
         ->Branch(name, &nFatJetMatched, name + "/I", __SIZEOF_INT__)
         ->SetTitle(title);
   }
-  auto lambdaFillTheTrees = [&]() -> void {
-    const Bool_t toCollectGen = true;
-    const Bool_t toCollectNumCorrect = true;
-    const Bool_t toCollectZMassCutted = true;
-    const Bool_t toCollectJetMatching = true;
-    const Bool_t toCollectAllMatched = true;
-    if (toCollectGen) {
-      if (isSignal) {
-        for (Byte_t i = 0; i < 3; i++) {
-          if (arrHasGenLepton[i]) {
-            arrTTGen[i]->Fill();
-          }
-        }
-      } else {
-        arrTTGen[0]->Fill();
-      }
-    }
-    for (Byte_t i = 0; i < 2; i++) {
-      if (isSignal && (!arrHasGenLepton[i])) {
-        continue;
-      }
-      if (toCollectNumCorrect && arrRecoIsLeptonNumCorrect[i]) {
-        arrTTNumCorrect[i]->Fill();
-      }
-      if (toCollectZMassCutted && arrIsPassingZMassCut[i]) {
-        arrTTZMassCutted[i]->Fill();
-      }
-      if (toCollectJetMatching && ((!isSignal) || areAllGenDMatchingPassed) &&
-          arrIsPassingZMassCut[i]) {
-        arrTTPreselectedMatchingJet[i]->Fill();
-      }
-      if (toCollectAllMatched && isSignal && areAllGenDMatched && arrIsPassingZMassCut[i]) {
-        arrTTAllMatchedJet[i]->Fill();
-      }
-      if (toCollectJetMatching && ((!isSignal) || areAllGenDPairMatchingPassed) &&
-          arrIsPassingZMassCut[i]) {
-        arrTTPreselectedMatchingFatJet[i]->Fill();
-      }
-      if (toCollectAllMatched && isSignal && areAllGenDPairMatched &&
-          arrIsPassingZMassCut[i]) {
-        arrTTAllMatchedFatJet[i]->Fill();
-      }
-    }
-  };
 
   UInt_t nJet, nJetPassed;
   UInt_t nFatJet, nFatJetPassed;
@@ -750,6 +706,50 @@ void xAna_monoZ_preselect(
                  nameFatJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleFatJetPrefix + titlePassSuffix);
   }
+  auto lambdaFillTheTrees = [&]() -> void {
+    const Bool_t toCollectGen = true;
+    const Bool_t toCollectNumCorrect = true;
+    const Bool_t toCollectZMassCutted = true;
+    const Bool_t toCollectJetMatching = true;
+    const Bool_t toCollectAllMatched = true;
+    if (toCollectGen) {
+      if (isSignal) {
+        for (Byte_t i = 0; i < 3; i++) {
+          if (arrHasGenLepton[i]) {
+            arrTTGen[i]->Fill();
+          }
+        }
+      } else {
+        arrTTGen[0]->Fill();
+      }
+    }
+    for (Byte_t i = 0; i < 2; i++) {
+      if (isSignal && (!arrHasGenLepton[i])) {
+        continue;
+      }
+      if (toCollectNumCorrect && arrRecoIsLeptonNumCorrect[i]) {
+        arrTTNumCorrect[i]->Fill();
+      }
+      if (toCollectZMassCutted && arrIsPassingZMassCut[i]) {
+        arrTTZMassCutted[i]->Fill();
+      }
+      if (toCollectJetMatching && ((!isSignal) || areAllGenDMatchingPassed) &&
+          arrIsPassingZMassCut[i] && nJetPassed >= 2) {
+        arrTTPreselectedMatchingJet[i]->Fill();
+      }
+      if (toCollectAllMatched && isSignal && areAllGenDMatched && arrIsPassingZMassCut[i]) {
+        arrTTAllMatchedJet[i]->Fill();
+      }
+      if (toCollectJetMatching && ((!isSignal) || areAllGenDPairMatchingPassed) &&
+          arrIsPassingZMassCut[i] && nFatJetPassed >= 2) {
+        arrTTPreselectedMatchingFatJet[i]->Fill();
+      }
+      if (toCollectAllMatched && isSignal && areAllGenDPairMatched &&
+          arrIsPassingZMassCut[i]) {
+        arrTTAllMatchedFatJet[i]->Fill();
+      }
+    }
+  };
 
   std::vector<UInt_t> vIdxJetPassed;
   std::vector<UInt_t> vIdxFatJetPassed;
