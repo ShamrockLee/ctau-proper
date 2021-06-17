@@ -186,17 +186,47 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
           const Int_t binDensityUsual = 1;
           const Int_t binDensityHigh = 100;
           const Int_t binDensityMedium = 10;
-          if (nameLeafModified.EndsWith("_eta")) {
+          if (nameLeafModified.Contains("_eta")) {
             if (debug) std::cout << "Found _eta" << std::endl;
             nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensityMedium);
             return;
           }
-          if (nameLeafModified.EndsWith("_phi")) {
+          if (nameLeafModified.Contains("_phi")) {
             if (debug) std::cout << "Found _phi" << std::endl;
             lowerCorrect = TMath::Floor(-TMath::Pi() * binDensityMedium) / binDensityMedium;
             upperCorrect = TMath::Ceil(TMath::Pi() * binDensityMedium) / binDensityMedium;
             nBinsCorrect = TMath::Nint((upperCorrect - lowerCorrect) * binDensityMedium);
             return;
+          }
+          if (nameLeafModified.Contains("_deltaR")) {
+            if (debug) std::cout << "Found _deltaR" << std::endl;
+            lowerCorrect = 0.;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityMedium;
+            return;
+          }
+          if (nameLeafModified.Contains("_area")) {
+            if (debug) std::cout << "Found _area" << std::endl;
+            lowerCorrect = 0.;
+            upperCorrect = TMath::Min(1000., upperCorrect);
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
+            return;
+          }
+          if (nameLeafModified.Contains("_mass")) {
+            if (debug) std::cout << "Found _mass" << std::endl;
+            lowerCorrect = 0.;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityMedium;
+            return;
+          }
+          if (nameLeafModified.Contains("_significance")) {
+            if (debug) std::cout << "Found _significance" << std::endl;
+            lowerCorrect = 0.;
+            upperCorrect = TMath::Min(1000., upperCorrect);
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
+          }
+          if (nameLeafModified.Contains("_msoftdrop")) {
+            if (debug) std::cout << "Found _msoftdropt" << std::endl;
+            lowerCorrect = 0.;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityMedium;
           }
           if (nameLeafModified.Contains("_btag")) {
             if (nameLeafModified.Contains("_btagCMVA") ||
@@ -207,53 +237,69 @@ void xAna_monoZ_genhist(const TString nameCondorPack,
               nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             } else {
               if (debug) std::cout << "Found _btag" << std::endl;
-              lowerCorrect = 0;
-              upperCorrect = 1;
+              lowerCorrect = 0.;
+              upperCorrect = 1.;
               nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             }
             return;
           }
           if (nameLeafModified.Contains("_deepTag")) {
             if (debug) std::cout << "Found _deepTag" << std::endl;
-            lowerCorrect = 0;
-            upperCorrect = 1;
+            lowerCorrect = 0.;
+            upperCorrect = 1.;
             nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
+            return;
           }
           if (nameLeafModified.Contains("_ch")) {
             if (debug) std::cout << "Found _ch" << std::endl;
-            lowerCorrect = 0;
-            upperCorrect = 1;
+            lowerCorrect = 0.;
+            upperCorrect = 1.;
             nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             return;
           }
           if (nameLeafModified.Contains("_qgl")) {
             if (debug) std::cout << "Found _qgl" << std::endl;
-            lowerCorrect = 0;
-            upperCorrect = 1;
+            lowerCorrect = 0.;
+            upperCorrect = 1.;
             nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             return;
           }
           if (nameLeafModified.Contains("_puIdDisc")) {
             // Pileup ID discriminant
             if (debug) std::cout << "Found _puIdDisc" << std::endl;
-            lowerCorrect = -1;
-            upperCorrect = 1;
+            lowerCorrect = -1.;
+            upperCorrect = 1.;
             nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
+            return;
           }
           if (nameLeafModified.Contains("_lsf")) {
             //
             if (debug) std::cout << "Found _lsf" << std::endl;
-            lowerCorrect = -1;
-            upperCorrect = 1;
-            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
-          }
-          if (titleLeaf.EndsWith("Energy Fraction") ||
-              titleLeaf.EndsWith("energy fraction")) {
-            if (debug) std::cout << "Found Energy Fraction" << std::endl;
-            lowerCorrect = 0;
-            upperCorrect = 1;
+            lowerCorrect = -1.;
+            upperCorrect = 1.;
             nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
             return;
+          }
+          if (titleLeaf.Contains("Energy Fraction") ||
+              titleLeaf.Contains("Energy fraction") ||
+              titleLeaf.Contains("energy fraction")) {
+            if (debug) std::cout << "Found Energy Fraction" << std::endl;
+            lowerCorrect = 0.;
+            upperCorrect = 1.;
+            nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
+            return;
+          }
+          if (titleLeaf.Contains("regression")) {
+            if (titleLeaf.Contains("res ") || titleLeaf.EndsWith("res")
+                || titleLeaf.Contains("resolution")) {
+              lowerCorrect = 0.;
+              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
+              return;
+            }
+            if (titleLeaf.Contains("correction")) {
+              nBinsCorrect = (upperCorrect - lowerCorrect) * binDensityHigh;
+              return;
+            }
           }
         }
         if (typeNameLeaf.Contains("Int") || typeNameLeaf.Contains("int")) {
