@@ -1,7 +1,7 @@
 ##########################################################
 ## user setting area
 
-datagroupName         = DYJets
+datagroupName         = TT
 # signal_Mx2-150_Mv-500_Mx1-1_ctau-1
 # signal_Mx2-1_Mv-500_Mx1-0p1_ctau-1
 # signal_Mx2-50_Mv-500_Mx1-1_ctau-10

@@ -1,0 +1,20 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_27867/./xAna_monoZ_preselect_C.so
+In file included from /pool/condor/dir_27867/./xAna_monoZ_preselect.C:19:0,
+                 from /pool/condor/dir_27867/xAna_monoZ_preselect_C_ACLiC_dict.cxx:41:
+/pool/condor/dir_27867/./BranchMounter.h:118:8: warning: ‘void BranchMounterScalarSingle<E>::SetFunEIn(std::function<E(BranchDescription)>) [with E = char]’ was hidden [-Woverloaded-virtual]
+   void SetFunEIn(std::function<E(BranchDescription)> funEIn) {
+        ^
+/pool/condor/dir_27867/./BranchMounter.h:191:8: warning:   by ‘void BranchMounterScalarSingle<bool>::SetFunEIn(std::function<bool(BranchDescription)>)’ [-Woverloaded-virtual]
+   void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
+        ^
+In file included from /pool/condor/dir_27867/./xAna_monoZ_preselect.C:19:0,
+                 from /pool/condor/dir_27867/xAna_monoZ_preselect_C_ACLiC_dict.cxx:41:
+/pool/condor/dir_27867/./BranchMounter.h:118:8: warning: ‘void BranchMounterScalarSingle<E>::SetFunEIn(std::function<E(BranchDescription)>) [with E = char]’ was hidden [-Woverloaded-virtual]
+   void SetFunEIn(std::function<E(BranchDescription)> funEIn) {
+        ^
+/pool/condor/dir_27867/./BranchMounter.h:191:8: warning:   by ‘void BranchMounterScalarSingle<bool>::SetFunEIn(std::function<bool(BranchDescription)>)’ [-Woverloaded-virtual]
+   void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
+        ^
+Error in <TNetXNGFile::Open>: [ERROR] Server responded with an error: [3011] No servers have read access to the file
+
+FATAL: TFile::Open() failed
