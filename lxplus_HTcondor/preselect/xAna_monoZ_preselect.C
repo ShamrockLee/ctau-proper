@@ -659,6 +659,13 @@ void xAna_monoZ_preselect(
         ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
                  nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleJetPrefix + titlePassSuffix);
+    arrTTZMassCutted[i]
+        ->Branch(nameJetPrefix, &nJet, nameJetPrefix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix);
+    arrTTZMassCutted[i]
+        ->Branch(nameJetPrefix + namePassSuffix, &nJetPassed,
+                 nameJetPrefix + namePassSuffix + "/I", __SIZEOF_INT__)
+        ->SetTitle(titleJetPrefix + titlePassSuffix);
     arrTTPreselectedMatchingJet[i]
         ->Branch(nameJetPrefix, &nJet, nameJetPrefix + "/I", __SIZEOF_INT__)
         ->SetTitle(titleJetPrefix);
@@ -901,7 +908,7 @@ void xAna_monoZ_preselect(
           ->SetTitle(title);
     }
     for (Byte_t i = 0; i < 2; i++) {
-      arrTTAllMatchedJet[i]
+      arrTTAllMatchedFatJet[i]
           ->Branch(name, &areAllFatJetsMatchedLeading, name + "/O", 1)
           ->SetTitle(title);
     }
