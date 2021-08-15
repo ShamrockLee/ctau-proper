@@ -15,6 +15,8 @@
 #include <TLorentzVector.h>
 #include <TClonesArray.h>
 
+#include <string>
+#include <string_view>
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -79,45 +81,100 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     vNameColOriginal = {};
   std::vector<std::vector<std::string>> vvNameColPreselectedTHINjet = { {}, {} };
   ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void> &&dfOriginalTemp = std::move(dfIn);
-  for (const std::string prefNameCol: {"ele", "mu", "THINjet", "FATjet"}) {
-    const std::string nameColP4 = prefNameCol + "P4";
-    dfOriginalTemp = dfOriginalTemp
-    .Define(prefNameCol + "Pt", [](const TClonesArray tcaP4) {
-      ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-      for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-        vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Pt();
+  {
+    auto dfOriginalCurrent = dfOriginalTemp;
+    auto vNamesCol = dfOriginalCurrent.GetColumnNames();
+    std::vector<std::string> vTypenamesCol(vNamesCol.size(), "");
+    for (size_t iCol = 0; iCol < vNamesCol.size(); ++iCol) {
+      vTypenamesCol[iCol] = dfOriginalCurrent.GetColumnType(vNamesCol[iCol]);
+    }
+    dfOriginalTemp = std::move(dfOriginalCurrent);
+    for (const std::string nameCol: vNamesCol) {
+      const TString tstrNameCol(nameCol);
+      // if (debug) std::cerr << tstrNameCol << "\tLength: " << tstrNameCol.Length() << std::endl;
+      if (tstrNameCol.EndsWith("P4")) {
+        const TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
+        const std::string prefNameCol (tstrPrefNameCol.Data());
+        if (debug) std::cerr << "prefNameCol: " << prefNameCol << std::endl;
+        dfOriginalTemp = dfOriginalTemp
+        .Define(prefNameCol + "Pt", [](const TClonesArray tcaP4) {
+          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Pt();
+          }
+          return vResult;
+        }, {nameCol})
+        .Define(prefNameCol + "Eta", [](const TClonesArray tcaP4) {
+          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Eta();
+          }
+          return vResult;
+        }, {nameCol})
+        .Define(prefNameCol + "Phi", [](const TClonesArray tcaP4) {
+          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Phi();
+          }
+          return vResult;
+        }, {nameCol})
+        .Define(prefNameCol + "E", [](const TClonesArray tcaP4) {
+          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->E();
+          }
+          return vResult;
+        }, {nameCol})
+        .Define(prefNameCol + "M", [](const TClonesArray tcaP4) {
+          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->M();
+          }
+          return vResult;
+        }, {nameCol});
+        continue;
       }
-      return vResult;
-    }, {nameColP4})
-    .Define(prefNameCol + "Eta", [](const TClonesArray tcaP4) {
-      ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-      for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-        vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Eta();
-      }
-      return vResult;
-    }, {nameColP4})
-    .Define(prefNameCol + "Phi", [](const TClonesArray tcaP4) {
-      ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-      for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-        vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Phi();
-      }
-      return vResult;
-    }, {nameColP4})
-    .Define(prefNameCol + "E", [](const TClonesArray tcaP4) {
-      ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-      for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-        vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->E();
-      }
-      return vResult;
-    }, {nameColP4})
-    .Define(prefNameCol + "M", [](const TClonesArray tcaP4) {
-      ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-      for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-        vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->M();
-      }
-      return vResult;
-    }, {nameColP4});
+    }
   }
+  // for (const std::string prefNaRefgetE2DmeCol: {"ele", "mu", "THINjet", "FATjet"}) {
+  //   const std::string nameColP4 = prefNameCol + "P4";
+  //   dfOriginalTemp = dfOriginalTemp
+  //   .Define(prefNameCol + "Pt", [](const TClonesArray tcaP4) {
+  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Pt();
+  //     }
+  //     return vResult;
+  //   }, {nameColP4})
+  //   .Define(prefNameCol + "Eta", [](const TClonesArray tcaP4) {
+  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Eta();
+  //     }
+  //     return vResult;
+  //   }, {nameColP4})
+  //   .Define(prefNameCol + "Phi", [](const TClonesArray tcaP4) {
+  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Phi();
+  //     }
+  //     return vResult;
+  //   }, {nameColP4})
+  //   .Define(prefNameCol + "E", [](const TClonesArray tcaP4) {
+  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->E();
+  //     }
+  //     return vResult;
+  //   }, {nameColP4})
+  //   .Define(prefNameCol + "M", [](const TClonesArray tcaP4) {
+  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
+  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
+  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->M();
+  //     }
+  //     return vResult;
+  //   }, {nameColP4});
+  // }
   dfOriginalTemp = dfOriginalTemp
   .Define("eleIdxPassPtEta", [](const Int_t nEle, const ROOT::RVec<Float_t> elePt, const ROOT::RVec<Float_t> eleEta){
     ROOT::RVec<size_t> vResult(nEle);
@@ -269,3 +326,9 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   tfOut->Close();
   tfIn->Close();
 }
+
+#if false
+int main(int argc, char** argv) {
+  xAna_monoZ_preselect(argv[0], argv[1], true, true);
+}
+#endif
