@@ -187,6 +187,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     return vResult;
   }, {"nEle", "elePt", "eleEta"})
   .Define("nElePassPtEta", "static_cast<Int_t>(eleIdxPassPtEta.size())")
+  .Redefine("nEle", "nElePassPtEta")
   .Define("muIdxPassPtEta", [](const Int_t nMu, const ROOT::RVec<Float_t> muPt, const ROOT::RVec<Float_t> muEta) {
     ROOT::RVec<size_t> vResult(nMu);
     vResult.clear();
@@ -198,6 +199,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     return vResult;
   }, {"nMu", "muPt", "muEta"})
   .Define("nMuPassPtEta", "static_cast<Int_t>(muIdxPassPtEta.size())")
+  .Redefine("nMu", "nMuPassPtEta")
   .Define("THINjetIdxPassPtEta", [](const Int_t THINnJet, const ROOT::RVec<Float_t> THINjetPt, const ROOT::RVec<Float_t> THINjetEta) {
     ROOT::RVec<size_t> vResult(THINnJet);
     vResult.clear();
@@ -209,6 +211,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     return vResult;
   }, {"THINnJet", "THINjetPt", "THINjetEta"})
   .Define("THINnJetPassPtEta", "static_cast<Int_t>(THINjetIdxPassPtEta.size())")
+  .Redefine("THINnJet", "THINnJetPassPtEta")
   .Define("FATjetIdxPassPtEta", [](const Int_t FATnJet, const ROOT::RVec<Float_t> FATjetPt, const ROOT::RVec<Float_t> FATjetEta) {
     ROOT::RVec<size_t> vResult(FATnJet);
     vResult.clear();
@@ -219,7 +222,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     }
     return vResult;
   }, {"FATnJet", "FATjetPt", "FATjetEta"})
-  .Define("FATnJetPassPtEta", "static_cast<Int_t>(FATjetIdxPassPtEta.size())");
+  .Define("FATnJetPassPtEta", "static_cast<Int_t>(FATjetIdxPassPtEta.size())")
+  .Redefine("FATnJet", "FATnJetPassPtEta");
   for (std::string nameCol: {"nEle", "nMu", "THINnJet", "FATnJet"}) {
     vNameColOriginal.emplace_back(nameCol + "PassPtEta");
   }
@@ -266,15 +270,15 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
           tstrTypenameCol.Contains("TClonesArray")
         )) {
           if (debug) std::cerr << nameCol << ", " << typenameCol << std::endl;
-          // vNameColOriginal.emplace_back(nameCol + "PassPtEta");
+          // vNameColOriginal.emplace_back(nameCol);
           std::string typenameE = "";
           if (RefgetE2D(typenameE, typenameCol)) {
             if (debug) std::cerr << "Element type of the 2D vector: " << typenameE << std::endl;
             // // Doesn't work
             // dfOriginalTemp = dfOriginalTemp
-            // .Define(nameCol + "PassPtEta", Form("ROOT::VecOps::Map(ROOT::VecOps::Take(%s, %sIdxPassPtEta), [](const std::vector<%s> &vE){ROOT::VecOps::RVec<%s> result(vE); return result;})", nameCol.c_str(), pref.c_str(), typenameE.c_str(), typenameE.c_str()));
+            // .Redefine(nameCol, Form("ROOT::VecOps::Map(ROOT::VecOps::Take(%s, %sIdxPassPtEta), [](const std::vector<%s> &vE){ROOT::VecOps::RVec<%s> result(vE); return result;})", nameCol.c_str(), pref.c_str(), typenameE.c_str(), typenameE.c_str()));
             dfOriginalTemp = dfOriginalTemp
-            .Define(nameCol + "PassPtEta",
+            .Redefine(nameCol,
               "ROOT::VecOps::RVec<ROOT::VecOps::RVec<" + typenameE + ">> vvResult(" + nameCol + ".size());"
               "vvResult.clear();"
               "for (size_t iVE: " + pref + "IdxPassPtEta) {"
@@ -289,10 +293,10 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
               "return vvResult");
           } else {
             if (!(tstrTypenameCol.Contains("Bool") || tstrTypenameCol.Contains("bool"))){
-              vNameColOriginal.emplace_back(nameCol + "PassPtEta");
+              vNameColOriginal.emplace_back(nameCol);
             }
             dfOriginalTemp = dfOriginalTemp
-            .Define(nameCol + "PassPtEta", Form("ROOT::VecOps::Take(%s, %sIdxPassPtEta)", nameCol.c_str(), pref.c_str()));
+            .Redefine(nameCol, Form("ROOT::VecOps::Take(%s, %sIdxPassPtEta)", nameCol.c_str(), pref.c_str()));
           }
           break;
         } else {
@@ -305,7 +309,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   dfOriginalTemp = dfOriginalTemp
   .Define("leptonPairFlavor", [](const ROOT::RVec<Bool_t> eleIsLoose, const ROOT::RVec<Bool_t> eleIsMedium, const ROOT::RVec<Bool_t> eleIsTight, const ROOT::RVec<Bool_t> muIsLoose, const ROOT::RVec<Bool_t> muIsMedium, const ROOT::RVec<Bool_t> muIsTight)->Int_t{
     return -1;
-  },{"eleIsPassLoosePassPtEta", "eleIsPassMediumPassPtEta", "eleIsPassTightPassPtEta", "muIsPassLoosePassPtEta", "muIsPassMediumPassPtEta", "muIsPassTightPassPtEta"});
+  },{"eleIsPassLoose", "eleIsPassMedium", "eleIsPassTight", "muIsPassLoose", "muIsPassMedium", "muIsPassTight"});
   auto dfOriginal = dfOriginalTemp;
   std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal(vNameColOriginal.size());
   vHistViewOriginal.clear();
