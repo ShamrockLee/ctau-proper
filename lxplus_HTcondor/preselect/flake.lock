@@ -51,7 +51,25 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-root": "nixpkgs-root"
+        "nixpkgs-root": "nixpkgs-root",
+        "root-source": "root-source"
+      }
+    },
+    "root-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1629293709,
+        "narHash": "sha256-+blxCSBSr2mt7baeYR3iSLr7dk1pEhhfNsv7I3CDzhs=",
+        "owner": "root-project",
+        "repo": "root",
+        "rev": "eb7c9c44465ad3f8db90d83598e3116a45ca630e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "root-project",
+        "ref": "master",
+        "repo": "root",
+        "type": "github"
       }
     }
   },
