@@ -58,16 +58,16 @@
     "root-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1629293709,
-        "narHash": "sha256-+blxCSBSr2mt7baeYR3iSLr7dk1pEhhfNsv7I3CDzhs=",
-        "owner": "root-project",
+        "lastModified": 1629371942,
+        "narHash": "sha256-Ygjz3nMQzGgymwIQnBSnFSn7/NRKOvm+42xUTbHje/k=",
+        "owner": "eguiraud",
         "repo": "root",
-        "rev": "eb7c9c44465ad3f8db90d83598e3116a45ca630e",
+        "rev": "2b84957197f5b42e963bf2ec9c36eb1781012380",
         "type": "github"
       },
       "original": {
-        "owner": "root-project",
-        "ref": "master",
+        "owner": "eguiraud",
+        "ref": "redefine-fix",
         "repo": "root",
         "type": "github"
       }

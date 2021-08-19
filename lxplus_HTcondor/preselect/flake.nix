@@ -2,7 +2,8 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.05";
   inputs.nixpkgs-root.url = "github:ShamrockLee/nixpkgs/root-6-25";
   inputs.flake-utils.url = "github:numtide/flake-utils";
-  inputs.root-source.url = "github:root-project/root/master";
+  # root-project/root pr 8859, Fix Redefine
+  inputs.root-source.url = "github:eguiraud/root/redefine-fix";
   inputs.root-source.flake = false;
   outputs = inputs@{nixpkgs, nixpkgs-root, flake-utils, root-source, ...}: flake-utils.lib.eachDefaultSystem (system: let
     pkgs = nixpkgs.legacyPackages.${system};
@@ -11,6 +12,7 @@
       overlays = [
         (final: prev: {
           root = prev.root.overrideAttrs (oldAttrs: {
+            version = "2021-08-19";
             src = root-source;
           });
         })
