@@ -19,6 +19,7 @@
 #include <string_view>
 #include <iostream>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <regex>
 
@@ -54,6 +55,15 @@ Bool_t RefgetE2D(std::string &typenameE, const std::string typenameCol) {
   return result;
 }
 
+Bool_t RefgetE1D(std::string &typenameE, const std::string typenameCol) {
+  std::regex r ("^ROOT::VecOps::RVec<(.+)>$");
+  std::smatch m;
+  const Bool_t result = (std::regex_match(typenameCol, m, r));
+  if (result) {
+    typenameE = m[1];
+  }
+  return result;
+}
 void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const Bool_t recreate=true, const Bool_t debug=false) {
   ROOT::EnableImplicitMT();
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
@@ -136,45 +146,6 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
-  // for (const std::string prefNaRefgetE2DmeCol: {"ele", "mu", "THINjet", "FATjet"}) {
-  //   const std::string nameColP4 = prefNameCol + "P4";
-  //   dfOriginalTemp = dfOriginalTemp
-  //   .Define(prefNameCol + "Pt", [](const TClonesArray tcaP4) {
-  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Pt();
-  //     }
-  //     return vResult;
-  //   }, {nameColP4})
-  //   .Define(prefNameCol + "Eta", [](const TClonesArray tcaP4) {
-  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Eta();
-  //     }
-  //     return vResult;
-  //   }, {nameColP4})
-  //   .Define(prefNameCol + "Phi", [](const TClonesArray tcaP4) {
-  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Phi();
-  //     }
-  //     return vResult;
-  //   }, {nameColP4})
-  //   .Define(prefNameCol + "E", [](const TClonesArray tcaP4) {
-  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->E();
-  //     }
-  //     return vResult;
-  //   }, {nameColP4})
-  //   .Define(prefNameCol + "M", [](const TClonesArray tcaP4) {
-  //     ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-  //     for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-  //       vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->M();
-  //     }
-  //     return vResult;
-  //   }, {nameColP4});
-  // }
   dfOriginalTemp = dfOriginalTemp
   .Define("eleIdxPassPtEta", [](const Int_t nEle, const ROOT::RVec<Float_t> elePt, const ROOT::RVec<Float_t> eleEta){
     ROOT::RVec<size_t> vResult(nEle);
@@ -241,7 +212,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       std::smatch m;
       if (std::regex_match(nameCol, m, r)) {
         const std::string nameAlias = "muIsPass" + std::string(m[1]);
-        dfOriginalTemp = dfOriginalTemp.Alias(nameAlias, nameCol);
+        if (debug) std::cerr << "nameAlias: " << nameAlias << std::endl;
+        dfOriginalTemp = dfOriginalTemp.Define(nameAlias, nameCol);
         nameCol = nameAlias;
       }
     }
@@ -295,12 +267,12 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
             if (!(tstrTypenameCol.Contains("Bool") || tstrTypenameCol.Contains("bool"))){
               vNameColOriginal.emplace_back(nameCol);
             }
+            // See ROOT issue 8857 and pr 8859
+            if (debug) std::cerr << "Redefining .." << std::endl;
             dfOriginalTemp = dfOriginalTemp
             .Redefine(nameCol, Form("ROOT::VecOps::Take(%s, %sIdxPassPtEta)", nameCol.c_str(), pref.c_str()));
           }
           break;
-        } else {
-          continue;
         }
       }
     }
@@ -308,6 +280,24 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   // vNameColOriginal.emplace_back("eleIsPassLoose");
   dfOriginalTemp = dfOriginalTemp
   .Define("leptonPairFlavor", [](const ROOT::RVec<Bool_t> eleIsLoose, const ROOT::RVec<Bool_t> eleIsMedium, const ROOT::RVec<Bool_t> eleIsTight, const ROOT::RVec<Bool_t> muIsLoose, const ROOT::RVec<Bool_t> muIsMedium, const ROOT::RVec<Bool_t> muIsTight)->Int_t{
+    const size_t nEleLoose = ROOT::VecOps::Sum(eleIsLoose);
+    const size_t nEleMedium = ROOT::VecOps::Sum(eleIsMedium);
+    const size_t nEleTight = ROOT::VecOps::Sum(eleIsTight);
+    const size_t nMuLoose = ROOT::VecOps::Sum(muIsLoose);
+    const size_t nMuMedium = ROOT::VecOps::Sum(muIsMedium);
+    const size_t nMuTight = ROOT::VecOps::Sum(muIsTight);
+    if (nEleTight >= 4 || nMuTight >= 4) {
+      return -1;
+    }
+    const Bool_t isEleNumCorrect = nEleMedium >= 1 && nEleLoose >= 2;
+    const Bool_t isMuNumCorrect = nMuMedium >= 1 && nMuLoose >= 2;
+    if (isEleNumCorrect && isMuNumCorrect) {
+      return -1;
+    } else if (isEleNumCorrect) {
+      return 0;
+    } else if (isMuNumCorrect) {
+      return 1;
+    }
     return -1;
   },{"eleIsPassLoose", "eleIsPassMedium", "eleIsPassTight", "muIsPassLoose", "muIsPassMedium", "muIsPassTight"});
   auto dfOriginal = dfOriginalTemp;
@@ -316,7 +306,30 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   for (const TString &nameCol: vNameColOriginal) {
     vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol));
   }
-  decltype(dfOriginalTemp) dfNumCorrectTemp = std::move(dfOriginal);
+  std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = {dfOriginal, dfOriginal};
+  {
+    const std::array<std::string, 2> aPref{"Ele", "Mu"};
+    const std::array<std::string, 2> aPrefLower{"ele", "mu"};
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
+      .Filter(Form("leptonPairFlavor==%zu", iLepFlav))
+      .Define("idxLeptonNumCorrect", [](const Int_t nLep, const ROOT::RVec<Bool_t> isLoose, const ROOT::RVec<Bool_t> isMedium, const ROOT::RVec<Bool_t> isTight)->ROOT::RVec<Int_t>{
+        ROOT::RVec<Int_t> vResult(2, -1);
+        if (nLep < 2) {
+          return vResult;
+        }
+        for (vResult[0] = 0; vResult[0] < nLep - 1; ++(vResult[0])) {
+          for (vResult[1] = vResult[0] + 1; vResult[1] < nLep; ++(vResult[1])) {
+            if (ROOT::VecOps::All(ROOT::VecOps::Take(isLoose, vResult)) && ROOT::VecOps::Sum(ROOT::VecOps::Take(isMedium, vResult)) >= 1) {
+              return vResult;
+            }
+          }
+        }
+        std::fill(vResult.begin(), vResult.end(), -1);
+        return vResult;
+      }, {"n" + aPref[iLepFlav], aPrefLower[iLepFlav] + "IsPassLoose", aPrefLower[iLepFlav] + "IsPassMedium", aPrefLower[iLepFlav] + "IsPassTight"});
+    }
+  }
   TFile* tfOut = TFile::Open(fileOut.c_str(), recreate ? "recreate" : "update");
   tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle());
   tfOut->cd("allEventsCounter");
@@ -327,6 +340,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   for (auto &&histView: vHistViewOriginal) {
     histView->Write();
   }
+  if (debug) std::cerr << "Completed!" << std::endl;
   tfOut->Close();
   tfIn->Close();
 }
