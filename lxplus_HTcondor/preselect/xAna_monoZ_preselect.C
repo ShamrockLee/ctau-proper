@@ -84,12 +84,29 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   // const TString namesLeptonLower[] = {"electron", "muon",
   //                                     "tau"};  //< the name of the leptons (xxx)
   // const TString namesLeptonNota[] = {"e", "mu", "tau"};
+
+  const std::array<std::string, 2> aPrefLepFlav{"Ele", "Mu"};
+  const std::array<std::string, 2> aPrefLepFlavLower{"ele", "mu"};
+  const std::array<std::string, 2> aPrefAKShort{"THIN", "FAT"};
+
   TFile *tfIn = TFile::Open(fileIn.c_str());
   TTree *ttIn = tfIn->Get<TTree>("tree/treeMaker");
   ROOT::RDataFrame dfIn(*ttIn);
-  std::vector<std::string>
-    vNameColOriginal = {};
-  std::vector<std::vector<std::string>> vvNameColPreselectedTHINjet = { {}, {} };
+  std::vector<std::string> vNameColOriginal = {};
+  std::array<std::vector<std::string>, 2> avNameColNumCorrect, avNameColZMassCutted;
+  for (auto pav: {&avNameColNumCorrect, &avNameColZMassCutted}) {
+    for (auto &v: *pav) {
+      v.clear();
+    }
+  }
+  std::array<std::array<std::vector<std::string>, 2>, 2> aavNameColPreselected, aavNameColMatching, aavNameColAllMatched;
+  for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+    for (auto &av: *paav) {
+      for (auto &v: av) {
+        v.clear();
+      }
+    }
+  }
   ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void> &&dfOriginalTemp = std::move(dfIn);
   {
     auto dfOriginalCurrent = dfOriginalTemp;
@@ -308,12 +325,10 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = {dfOriginal, dfOriginal};
   {
-    const std::array<std::string, 2> aPref{"Ele", "Mu"};
-    const std::array<std::string, 2> aPrefLower{"ele", "mu"};
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
       .Filter(Form("leptonPairFlavor==%zu", iLepFlav))
-      .Define("idxLeptonNumCorrect", [](const Int_t nLep, const ROOT::RVec<Bool_t> isLoose, const ROOT::RVec<Bool_t> isMedium, const ROOT::RVec<Bool_t> isTight)->ROOT::RVec<Int_t>{
+      .Define(aPrefLepFlavLower[iLepFlav] + "PairedIdx", [](const Int_t nLep, const ROOT::RVec<Bool_t> isLoose, const ROOT::RVec<Bool_t> isMedium, const ROOT::RVec<Bool_t> isTight)->ROOT::RVec<Int_t>{
         ROOT::RVec<Int_t> vResult(2, -1);
         if (nLep < 2) {
           return vResult;
@@ -327,7 +342,46 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         }
         std::fill(vResult.begin(), vResult.end(), -1);
         return vResult;
-      }, {"n" + aPref[iLepFlav], aPrefLower[iLepFlav] + "IsPassLoose", aPrefLower[iLepFlav] + "IsPassMedium", aPrefLower[iLepFlav] + "IsPassTight"});
+      }, {"n" + aPrefLepFlav[iLepFlav], aPrefLepFlavLower[iLepFlav] + "IsPassLoose", aPrefLepFlavLower[iLepFlav] + "IsPassMedium", aPrefLepFlavLower[iLepFlav] + "IsPassTight"});
+      // if (debug) {
+      //   std::cerr << "Columns in dfNumCorrect[" << iLepFlav << "]: " << std::flush;
+      //   for (const auto nameCol: aDfNumCorrect[iLepFlav].GetColumnNames()) {
+      //     std::cerr << nameCol << ", " << std::flush;
+      //   }
+      //   std::cerr << "}" << std::endl;
+      // }
+      for (const auto nameCol : aDfNumCorrect[iLepFlav].GetColumnNames()) {        const TString tstrNameCol(nameCol);
+        const TString tstrTypenameCol(aDfNumCorrect[iLepFlav].GetColumnType(nameCol).c_str());
+        if (tstrNameCol.BeginsWith(aPrefLepFlavLower[iLepFlav].c_str()) && tstrTypenameCol.BeginsWith("ROOT::VecOps::RVec")) {
+          const std::string nameColNew = aPrefLepFlavLower[iLepFlav] + "Paired" + tstrNameCol(aPrefLepFlavLower[iLepFlav].length(), tstrNameCol.Length()).Data();
+          if (aDfNumCorrect[iLepFlav].HasColumn(nameColNew)) continue;
+          if (debug) std::cerr << "Defining " << nameColNew << std::endl;
+          avNameColNumCorrect[iLepFlav].emplace_back(nameColNew);
+          aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
+          .Define(nameColNew, "ROOT::VecOps::Take(" + nameCol + ", " + aPrefLepFlavLower[iLepFlav] + "PairedIdx)");
+        }
+      }
+      aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
+      .Define(
+        aPrefLepFlavLower[iLepFlav] + "PairM",
+        "static_cast<Float_t>(ROOT::VecOps::Sum(ROOT::VecOps::Construct<ROOT::Math::PtEtaPhiEVector>("
+        "  " + aPrefLepFlavLower[iLepFlav] + "PairedPt,"
+        "  " + aPrefLepFlavLower[iLepFlav] + "PairedEta,"
+        "  " + aPrefLepFlavLower[iLepFlav] + "PairedPhi,"
+        "  " + aPrefLepFlavLower[iLepFlav] + "PairedE"
+        ")).M())")
+      .Define(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ",
+        "TMath::Abs(" + aPrefLepFlavLower[iLepFlav] + "PairIsPassZ" + " - " + std::to_string(massZ) + ") < 20.");
+    }
+  }
+  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfNumCorrect;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aDfZMassCutted[iLepFlav] = aDfZMassCutted[iLepFlav].Filter(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
+  }
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfPreselected {aDfZMassCutted, aDfZMassCutted};
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      aaDfPreselected[iLepFlav][iAK] = aaDfPreselected[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " > 2");
     }
   }
   TFile* tfOut = TFile::Open(fileOut.c_str(), recreate ? "recreate" : "update");
@@ -340,6 +394,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   for (auto &&histView: vHistViewOriginal) {
     histView->Write();
   }
+  tfOut->mkdir("Preselected");
+  tfOut->cd("Preselected");
   if (debug) std::cerr << "Completed!" << std::endl;
   tfOut->Close();
   tfIn->Close();
