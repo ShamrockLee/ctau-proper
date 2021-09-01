@@ -37,7 +37,7 @@
 
 # ROOT compiled files
 *.pcm
-*_ACLiC_dict.cxx_tmp_????
+*_ACLiC_dict*
 
 # ROOT files
 *.root
