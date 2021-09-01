@@ -26,6 +26,8 @@
 template<typename V = ROOT::RDFDetail::RInferredType>
 ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void> &df, const TString nameColumn) {
   const TString typenameColumn = df.GetColumnType(nameColumn.Data());
+  Int_t binDensity = 1;
+  Int_t halfWidth = 10000;
   Int_t nBins;
   Double_t lowerLimit, upperLimit;
   if (typenameColumn.Contains("Bool") || typenameColumn.Contains("bool")) {
@@ -33,12 +35,12 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(ROOT::RDF::RInterface<ROOT::Detail
     lowerLimit = 0.;
     upperLimit = 2.;
   } else if (typenameColumn.Contains("int") || typenameColumn.Contains("Int")) {
-    nBins = 20001;
+    nBins = binDensity * halfWidth * 2 + 1;
     lowerLimit = - static_cast<Double_t>(nBins / 2) - 0.5;
     upperLimit = lowerLimit + nBins;
   // } else if (typenameColumn.Contains("float") || typenameColumn.Contains("Float") || typenameColumn.Contains("double") || typenameColumn.Contains("Double")) {
   } else {
-    nBins = 20000;
+    nBins = binDensity * halfWidth;
     lowerLimit = -static_cast<Double_t>(nBins) / 2;
     upperLimit = lowerLimit + nBins;
   }
@@ -64,6 +66,12 @@ Bool_t RefgetE1D(std::string &typenameE, const std::string typenameCol) {
   }
   return result;
 }
+
+template<typename E>
+E SumRVecWithInit(const ROOT::RVec<E> v, const E init) {
+  return std::accumulate(v.begin(), v.end(), init);
+}
+
 void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const Bool_t recreate=true, const Bool_t debug=false) {
   ROOT::EnableImplicitMT();
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
@@ -107,6 +115,23 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
+
+  std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal = {};
+  std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewNumCorrect, avHistViewZMassCutted;
+  for (auto pav: {&avHistViewNumCorrect, &avHistViewZMassCutted}) {
+    for (auto &v: *pav) {
+      v.clear();
+    }
+  }
+  std::array<std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2>, 2> aavHistViewPreselected, aavHistViewMatching, aavHistViewAllMatched;
+  for (auto paav: {&aavHistViewPreselected, &aavHistViewMatching, &aavHistViewAllMatched}) {
+    for (auto &av: *paav) {
+      for (auto &v: av) {
+        v.clear();
+      }
+    }
+  }
+
   ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void> &&dfOriginalTemp = std::move(dfIn);
   {
     auto dfOriginalCurrent = dfOriginalTemp;
@@ -318,7 +343,6 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     return -1;
   },{"eleIsPassLoose", "eleIsPassMedium", "eleIsPassTight", "muIsPassLoose", "muIsPassMedium", "muIsPassTight"});
   auto dfOriginal = dfOriginalTemp;
-  std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal(vNameColOriginal.size());
   vHistViewOriginal.clear();
   for (const TString &nameCol: vNameColOriginal) {
     vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol));
@@ -369,12 +393,11 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         "  " + aPrefLepFlavLower[iLepFlav] + "PairedEta,"
         "  " + aPrefLepFlavLower[iLepFlav] + "PairedPhi,"
         "  " + aPrefLepFlavLower[iLepFlav] + "PairedE"
-        ")).M())")
+        "), ROOT::Math::PtEtaPhiEVector()).M())")
       .Define(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ",
-        "TMath::Abs(" + aPrefLepFlavLower[iLepFlav] + "PairIsPassZ" + " - " + std::to_string(massZ) + ") < 20.");
+        "TMath::Abs(" + aPrefLepFlavLower[iLepFlav] + "PairM" + " - " + std::to_string(massZ) + ") < 20.");
     }
-  }
-  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfNumCorrect;
+  }  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfNumCorrect;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfZMassCutted[iLepFlav] = aDfZMassCutted[iLepFlav].Filter(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
   }
@@ -385,17 +408,36 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     }
   }
   TFile* tfOut = TFile::Open(fileOut.c_str(), recreate ? "recreate" : "update");
-  tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle());
-  tfOut->cd("allEventsCounter");
+  tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
   tfIn->Get<TH1>("allEventsCounter/totalEvents")->Write();
   tfOut->cd("/");
-  tfOut->mkdir("Original", "The distributions of unfiltered entries");
-  tfOut->cd("Original");
+  tfOut->mkdir("Original", "Unfiltered entries")->cd();
   for (auto &&histView: vHistViewOriginal) {
     histView->Write();
   }
-  tfOut->mkdir("Preselected");
-  tfOut->cd("Preselected");
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->cd("/");
+    tfOut->mkdir(("NumCorrect" + aPrefLepFlav[iLepFlav]).c_str(), ("Entries with correct " + aPrefLepFlavLower[iLepFlav] + " numbers").c_str())->cd();
+    for (auto &&histView: avHistViewNumCorrect[iLepFlav]) {
+      histView->Write();
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->cd("/");
+    tfOut->mkdir(("ZMassCutted" + aPrefLepFlav[iLepFlav]).c_str(), "Entries passing the Z mass cut")->cd();
+    for (auto &&histView: avHistViewZMassCutted[iLepFlav]) {
+      histView->Write();
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      tfOut->cd("/");
+      tfOut->mkdir(("Preselected" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), "Preselected entries")->cd();
+      for (auto &&histView: aavHistViewPreselected[iLepFlav][iAK]) {
+        histView->Write();
+      }
+    }
+  }
   if (debug) std::cerr << "Completed!" << std::endl;
   tfOut->Close();
   tfIn->Close();
