@@ -58,16 +58,16 @@
     "root-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1630066279,
-        "narHash": "sha256-ck1xehCVMwL0smkAx7XhMe4XQveOxf3UM95NMtbV0dY=",
-        "owner": "ShamrockLee",
+        "lastModified": 1630489941,
+        "narHash": "sha256-HCUYlIz479asnYAD9wwKtFXJILKn/PrbT4mro6DoRMo=",
+        "owner": "root-project",
         "repo": "root",
-        "rev": "a8185880cd0fa738bb74760a701f90645f1e5d2e",
+        "rev": "24ea49d4702ba0aa9b1ea5521950520154ee151c",
         "type": "github"
       },
       "original": {
-        "owner": "ShamrockLee",
-        "ref": "vecops-sum",
+        "owner": "root-project",
+        "ref": "master",
         "repo": "root",
         "type": "github"
       }
