@@ -14,6 +14,7 @@
 #include <TString.h>
 #include <TLorentzVector.h>
 #include <TClonesArray.h>
+#include <TError.h>
 
 #include <string>
 #include <string_view>
@@ -23,28 +24,123 @@
 #include <algorithm>
 #include <regex>
 
-template<typename V = ROOT::RDFDetail::RInferredType>
-ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void> &df, const TString nameColumn) {
-  const TString typenameColumn = df.GetColumnType(nameColumn.Data());
-  Int_t binDensity = 1;
+template<typename V = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
+ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(
+    D &df,
+    const std::string nameColumn,
+    const std::string typenameColumn,
+    const std::string expression,
+    const Int_t binDensityOrder,
+    const Double_t alignment,
+    const Bool_t isLowerAssigned,
+    const Int_t lowerLimitBins,
+    const Bool_t isUpperAssigned,
+    const Int_t upperLimitBins) {
+  const Int_t nBins = TMath::Nint((upperLimitBins - lowerLimitBins) * TMath::Power(10., binDensityOrder));
+  const Double_t binWidth = TMath::Power(10., -binDensityOrder);
+  const Double_t lowerLimit = alignment + binWidth * lowerLimitBins;
+  const Double_t upperLimit = alignment + binWidth * upperLimitBins;
+  return df.template Histo1D<V>({("h" + nameColumn).c_str(),
+      Form("{name: %s, typename: %s, expression: %s, binDensityOrder: %d, alignment: %F, isLowerAssigned: %s, lowerLimitBins: %d, isUpperAssigned: %s, upperLimitBins: %d}",
+          nameColumn.c_str(), typenameColumn.c_str(), expression.c_str(), binDensityOrder, alignment, isLowerAssigned ? "true" : "false", lowerLimitBins, isUpperAssigned ? "true" : "false", upperLimitBins),
+      nBins, lowerLimit, upperLimit}, expression);
+}
+
+template<typename V = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
+ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColumn, const std::string nameColumnStripped) {
+  const std::string typenameColumn = df.GetColumnType(nameColumn);
+  const TString tstrTypenameColumn = typenameColumn;
+  const TString tstrNameColumnStripped = nameColumnStripped;
+  Int_t binDensityOrder = 0;
+  Double_t alignment = 0.;
+  Bool_t isLowerAssigned = false;
+  Bool_t isUpperAssigned = false;
   Int_t halfWidth = 10000;
+  Int_t lowerLimitBins = -halfWidth;
+  Int_t upperLimitBins = halfWidth;
   Int_t nBins;
   Double_t lowerLimit, upperLimit;
-  if (typenameColumn.Contains("Bool") || typenameColumn.Contains("bool")) {
-    nBins = 2;
-    lowerLimit = 0.;
-    upperLimit = 2.;
-  } else if (typenameColumn.Contains("int") || typenameColumn.Contains("Int")) {
-    nBins = binDensity * halfWidth * 2 + 1;
-    lowerLimit = - static_cast<Double_t>(nBins / 2) - 0.5;
-    upperLimit = lowerLimit + nBins;
-  // } else if (typenameColumn.Contains("float") || typenameColumn.Contains("Float") || typenameColumn.Contains("double") || typenameColumn.Contains("Double")) {
+  if (tstrTypenameColumn.Contains("Bool") || tstrTypenameColumn.Contains("bool")) {
+    binDensityOrder = 0;
+    alignment = 0.;
+    isLowerAssigned = true;
+    lowerLimitBins = 0.;
+    isUpperAssigned = true;
+    upperLimitBins = 2.;
+  } else if (tstrTypenameColumn.Contains("Int") || tstrTypenameColumn.Contains("int")) {
+    binDensityOrder = 0;
+    alignment = -0.5;
+    if (tstrNameColumnStripped.Contains("Idx")
+      || tstrNameColumnStripped.Contains("Rank")) {
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.BeginsWith("n")
+      || tstrNameColumnStripped.Contains("nJet")
+      || tstrNameColumnStripped.Contains("nEle")
+      || tstrNameColumnStripped.Contains("nMu")
+      || tstrNameColumnStripped.Contains("nPho")
+      || tstrNameColumnStripped.Contains("_n")) {
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    }
   } else {
-    nBins = binDensity * halfWidth;
-    lowerLimit = -static_cast<Double_t>(nBins) / 2;
-    upperLimit = lowerLimit + nBins;
+    alignment = 0.;
+    if (tstrNameColumnStripped.EndsWith("Pt")) {
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("Eta")) {
+      binDensityOrder = 1;
+    } else if (tstrNameColumnStripped.EndsWith("Phi")) {
+      binDensityOrder = 2;
+      isUpperAssigned = true;
+      upperLimitBins = TMath::CeilNint(TMath::Pi() * TMath::Power(10., binDensityOrder));
+      isLowerAssigned = true;
+      lowerLimitBins = -upperLimitBins;
+    }  else if (tstrNameColumnStripped.EndsWith("E")) {
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("M")
+      || tstrNameColumnStripped.EndsWith("M2")
+      || tstrNameColumnStripped.EndsWith("Mt")
+      || tstrNameColumnStripped.EndsWith("Mt2")) {
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("Sig")) {
+      binDensityOrder = 2;
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("jetArea")) {
+      binDensityOrder = 2;
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("EF")) {
+      binDensityOrder = 2;
+      isLowerAssigned = 0;
+      lowerLimitBins = 0;
+      isUpperAssigned = 0;
+      upperLimitBins = TMath::Power(10, binDensityOrder);
+    } else if (tstrNameColumnStripped(0, tstrNameColumnStripped.Length() - 2).String().EndsWith("Cov")) {
+      binDensityOrder = 2;
+      isLowerAssigned = 0;
+      lowerLimitBins = 0;
+      isUpperAssigned = 0;
+      upperLimitBins = TMath::Power(10, binDensityOrder);
+    } else if (tstrNameColumnStripped.Contains("Btag")) {
+      binDensityOrder = 2;
+    } else if (tstrNameColumnStripped.Contains("Ctag")) {
+      binDensityOrder = 2;
+    }
   }
-  return df.Histo1D<V>({"h" + nameColumn, nameColumn, nBins, lowerLimit, upperLimit}, nameColumn.Data());
+  return GetHistFromColumn<V, D>(
+      df, nameColumn, typenameColumn, nameColumn,
+      binDensityOrder, alignment,
+      isLowerAssigned, lowerLimitBins,
+      isUpperAssigned, upperLimitBins);
+}
+
+template<typename V = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
+ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColumn) {
+  return GetHistFromColumn<V, D>(df, nameColumn, nameColumn);
 }
 
 Bool_t RefgetE2D(std::string &typenameE, const std::string typenameCol) {
@@ -132,15 +228,45 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     }
   }
 
-  ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void> &&dfOriginalTemp = std::move(dfIn);
+  ROOT::RDF::RNode dfOriginal(dfIn);
   {
-    auto dfOriginalCurrent = dfOriginalTemp;
-    auto vNamesCol = dfOriginalCurrent.GetColumnNames();
-    std::vector<std::string> vTypenamesCol(vNamesCol.size(), "");
-    for (size_t iCol = 0; iCol < vNamesCol.size(); ++iCol) {
-      vTypenamesCol[iCol] = dfOriginalCurrent.GetColumnType(vNamesCol[iCol]);
+    auto vNamesCol = dfOriginal.GetColumnNames();
+    for (const std::string nameCol: vNamesCol) {
+      const std::string typenameCol(dfOriginal.GetColumnType(nameCol));
+      const TString tstrTypenameCol(typenameCol.c_str());
+      std::string typenameE;
+      if (!RefgetE1D(typenameE, typenameCol)) {
+        if (!tstrTypenameCol.Contains("TClonesArray")
+          && !tstrTypenameCol.Contains("TObjArray")) {
+          // if (debug) std::cerr << "Working on " << nameCol << ", " << typenameCol << std::endl;
+          if (tstrTypenameCol.Contains("Double")
+            || tstrTypenameCol.Contains("double")
+            || tstrTypenameCol.Contains("Float")
+            || tstrTypenameCol.Contains("float")
+            || tstrTypenameCol.Contains("Long")
+            || tstrTypenameCol.Contains("long")
+            || tstrTypenameCol.Contains("Short")
+            || tstrTypenameCol.Contains("short")
+            || tstrTypenameCol.Contains("Int")
+            || tstrTypenameCol.Contains("int")
+            || tstrTypenameCol.Contains("Char")
+            || tstrTypenameCol.Contains("Byte")
+            || tstrTypenameCol.Contains("char")
+            || tstrTypenameCol.Contains("Bool")
+            || tstrTypenameCol.Contains("bool")
+          ) {
+            vNameColOriginal.emplace_back(nameCol);
+            for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+              for (auto &av: *paav) {
+                for (auto &v: av) {
+                  v.emplace_back(nameCol);
+                }
+              }
+            }
+          }
+        }
+      }
     }
-    dfOriginalTemp = std::move(dfOriginalCurrent);
     for (const std::string nameCol: vNamesCol) {
       const TString tstrNameCol(nameCol);
       // if (debug) std::cerr << tstrNameCol << "\tLength: " << tstrNameCol.Length() << std::endl;
@@ -148,7 +274,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         const TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
         const std::string prefNameCol (tstrPrefNameCol.Data());
         if (debug) std::cerr << "prefNameCol: " << prefNameCol << std::endl;
-        dfOriginalTemp = dfOriginalTemp
+        dfOriginal = dfOriginal
         .Define(prefNameCol + "Pt", [](const TClonesArray tcaP4) {
           ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
           for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
@@ -188,7 +314,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
-  dfOriginalTemp = dfOriginalTemp
+  dfOriginal = dfOriginal
   .Define("eleIdxPassPtEta", [](const Int_t nEle, const ROOT::RVec<Float_t> elePt, const ROOT::RVec<Float_t> eleEta){
     ROOT::RVec<size_t> vResult(nEle);
     vResult.clear();
@@ -241,57 +367,38 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     vNameColOriginal.emplace_back(nameCol + "PassPtEta");
   }
   {
-    auto dfOriginalCurrent = dfOriginalTemp;
-    auto vNamesCol = dfOriginalCurrent.GetColumnNames();
+    auto vNamesCol = dfOriginal.GetColumnNames();
     std::vector<std::string> vTypenamesCol(vNamesCol.size());
     vTypenamesCol.clear();
-    for (const std::string nameCol: vNamesCol) {
-      vTypenamesCol.emplace_back(dfOriginalCurrent.GetColumnType(nameCol));
+    for (const auto nameCol: vNamesCol){
+      vTypenamesCol.emplace_back(dfOriginal.GetColumnType(nameCol));
+      // if (debug) std::cerr << vTypenamesCol.back() << ",\tsize: " << vTypenamesCol.size() << std::endl;
     }
-    dfOriginalTemp = std::move(dfOriginalCurrent);
     for (std::string &nameCol: vNamesCol) {
       std::regex r("^is(.+)Muon$");
       std::smatch m;
       if (std::regex_match(nameCol, m, r)) {
         const std::string nameAlias = "muIsPass" + std::string(m[1]);
         if (debug) std::cerr << "nameAlias: " << nameAlias << std::endl;
-        dfOriginalTemp = dfOriginalTemp.Define(nameAlias, nameCol);
+        dfOriginal = dfOriginal.Define(nameAlias, nameCol);
         nameCol = nameAlias;
       }
     }
     for (size_t iCol = 0; iCol < vNamesCol.size(); ++iCol) {
       const std::string &nameCol = vNamesCol[iCol];
       const std::string &typenameCol = vTypenamesCol[iCol];
+      // if (debug) std::cerr << "Working on " << nameCol << ",\t" << typenameCol << std::endl;
       const TString tstrNameCol = nameCol;
       const TString tstrTypenameCol = typenameCol;
+      std::string typenameE = "";
+      const Int_t nDims = RefgetE2D(typenameE, typenameCol) ? 2 : (RefgetE1D(typenameE, typenameCol) ? 1 : 0);
+      // if (debug) std::cerr << "nDims: " << nDims << std::endl;
+      const TString tstrTypenameE = typenameE;
       for (const std::string pref: {"ele", "mu", "THINjet", "FATjet"}) {
-        if (tstrNameCol.BeginsWith(pref) &&
-          ! tstrNameCol.EndsWith("PassPtEta") && (
-          tstrTypenameCol.Contains("vector") ||
-          tstrTypenameCol.Contains("RVec") ||
-          tstrTypenameCol.Contains("array")
-        ) && (
-          tstrTypenameCol.Contains("ouble") ||
-          tstrTypenameCol.Contains("loat") ||
-          tstrTypenameCol.Contains("Long") ||
-          tstrTypenameCol.Contains("long") ||
-          tstrTypenameCol.Contains("Int") ||
-          tstrTypenameCol.Contains("int")||
-          tstrTypenameCol.Contains("Bool") ||
-          tstrTypenameCol.Contains("bool")
-        ) && ! (
-          tstrTypenameCol.Contains("TObjArray") ||
-          tstrTypenameCol.Contains("TClonesArray")
-        )) {
-          if (debug) std::cerr << nameCol << ", " << typenameCol << std::endl;
-          // vNameColOriginal.emplace_back(nameCol);
-          std::string typenameE = "";
-          if (RefgetE2D(typenameE, typenameCol)) {
-            if (debug) std::cerr << "Element type of the 2D vector: " << typenameE << std::endl;
-            // // Doesn't work
-            // dfOriginalTemp = dfOriginalTemp
-            // .Redefine(nameCol, Form("ROOT::VecOps::Map(ROOT::VecOps::Take(%s, %sIdxPassPtEta), [](const std::vector<%s> &vE){ROOT::VecOps::RVec<%s> result(vE); return result;})", nameCol.c_str(), pref.c_str(), typenameE.c_str(), typenameE.c_str()));
-            dfOriginalTemp = dfOriginalTemp
+        if (tstrNameCol.BeginsWith(pref)) {
+          if (nDims == 2) {
+            if (debug) std::cerr << "Redefining 2D: " << nameCol << std::endl;
+            dfOriginal = dfOriginal
             .Redefine(nameCol,
               "ROOT::VecOps::RVec<ROOT::VecOps::RVec<" + typenameE + ">> vvResult(" + nameCol + ".size());"
               "vvResult.clear();"
@@ -305,34 +412,74 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
               "  vvResult.push_back(resultSub);"
               "} "
               "return vvResult");
-          } else {
-            if (!(tstrTypenameCol.Contains("Bool") || tstrTypenameCol.Contains("bool"))){
-              vNameColOriginal.emplace_back(nameCol);
-            }
-            // See ROOT issue 8857 and pr 8859
-            if (debug) std::cerr << "Redefining .." << std::endl;
-            dfOriginalTemp = dfOriginalTemp
+          } else if (nDims == 1) {
+            if (debug) std::cerr << "Redefining 1D: " << nameCol << std::endl;
+            dfOriginal = dfOriginal
             .Redefine(nameCol, Form("ROOT::VecOps::Take(%s, %sIdxPassPtEta)", nameCol.c_str(), pref.c_str()));
+            if (tstrTypenameE.Contains("double")
+              || tstrTypenameE.Contains("float")
+              || tstrTypenameE.Contains("long")
+              || tstrTypenameE.Contains("int")
+              || tstrTypenameE.Contains("short")
+              || tstrTypenameE.Contains("char")
+              // || tstrTypenameE.Contains("bool")
+            ) {
+              if (debug) std::cerr << "Pick " << nameCol << std::endl;
+              vNameColOriginal.emplace_back(nameCol);
+              for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+                for (auto &av: *paav) {
+                  for (auto &v: av) {
+                    v.emplace_back(nameCol);
+                  }
+                }
+              }
+            }
           }
           break;
+        } else {
+          continue;
+        }
+      }
+    }
+    for (std::size_t iCol = 0; iCol < vNamesCol.size(); ++iCol) {
+      const std::string &nameCol = vNamesCol[iCol];
+      const std::string &typenameCol = vTypenamesCol[iCol];
+      const TString tstrNameCol = nameCol;
+      const TString tstrTypenameCol = typenameCol;
+      for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+        if (tstrNameCol.BeginsWith(aPrefLepFlavLower[iLepFlav])) {
+          if (tstrNameCol.BeginsWith((aPrefLepFlavLower[iLepFlav] + "Is"))) {
+            std::string nameColNew = "n" + aPrefLepFlav[iLepFlav] + tstrNameCol(aPrefLepFlavLower[iLepFlav].length() + 2, nameCol.length()).Data();
+            if (debug) std::cerr << "Defining " << nameColNew << std::endl;
+            dfOriginal = dfOriginal.Define(nameColNew,
+              [](const ROOT::RVec<Bool_t> rvId)->Int_t{
+                return ROOT::VecOps::Sum(rvId, 0);
+              }, {nameCol});
+            vNameColOriginal.emplace_back(nameColNew);
+            for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+              for (auto &av: *paav) {
+                for (auto &v: av) {
+                  v.emplace_back(nameCol);
+                }
+              }
+            }
+          }
+          break;
+        } else {
+          continue;
         }
       }
     }
   }
   // vNameColOriginal.emplace_back("eleIsPassLoose");
-  dfOriginalTemp = dfOriginalTemp
-  .Define("leptonPairFlavor", [](const ROOT::RVec<Bool_t> eleIsLoose, const ROOT::RVec<Bool_t> eleIsMedium, const ROOT::RVec<Bool_t> eleIsTight, const ROOT::RVec<Bool_t> muIsLoose, const ROOT::RVec<Bool_t> muIsMedium, const ROOT::RVec<Bool_t> muIsTight)->Int_t{
-    const size_t nEleLoose = ROOT::VecOps::Sum(eleIsLoose);
-    const size_t nEleMedium = ROOT::VecOps::Sum(eleIsMedium);
-    const size_t nEleTight = ROOT::VecOps::Sum(eleIsTight);
-    const size_t nMuLoose = ROOT::VecOps::Sum(muIsLoose);
-    const size_t nMuMedium = ROOT::VecOps::Sum(muIsMedium);
-    const size_t nMuTight = ROOT::VecOps::Sum(muIsTight);
-    if (nEleTight >= 4 || nMuTight >= 4) {
+  dfOriginal = dfOriginal
+  .Define("leptonPairFlavor", [&debug](const Int_t nElePassLoose, const Int_t nElePassMedium, const Int_t nElePassTight, const Int_t nMuPassLoose, const Int_t nMuPassMedium, const Int_t nMuPassTight)->Int_t{
+    // if (debug) Info("lambda:leptonPairFlavor", "%d, %d, %d, %d, %d, %d", nElePassLoose, nElePassMedium, nElePassTight, nMuPassLoose, nMuPassMedium, nMuPassTight);
+    if (nElePassTight >= 4 || nMuPassTight >= 4) {
       return -1;
     }
-    const Bool_t isEleNumCorrect = nEleMedium >= 1 && nEleLoose >= 2;
-    const Bool_t isMuNumCorrect = nMuMedium >= 1 && nMuLoose >= 2;
+    const Bool_t isEleNumCorrect = nElePassMedium >= 1 && nElePassLoose >= 2;
+    const Bool_t isMuNumCorrect = nMuPassMedium >= 1 && nMuPassLoose >= 2;
     if (isEleNumCorrect && isMuNumCorrect) {
       return -1;
     } else if (isEleNumCorrect) {
@@ -341,18 +488,14 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       return 1;
     }
     return -1;
-  },{"eleIsPassLoose", "eleIsPassMedium", "eleIsPassTight", "muIsPassLoose", "muIsPassMedium", "muIsPassTight"});
-  auto dfOriginal = dfOriginalTemp;
-  vHistViewOriginal.clear();
-  for (const TString &nameCol: vNameColOriginal) {
-    vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol));
-  }
-  std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = {dfOriginal, dfOriginal};
+  },{"nElePassLoose", "nElePassMedium", "nElePassTight", "nMuPassLoose", "nMuPassMedium", "nMuPassTight"});  std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = {dfOriginal, dfOriginal};
+  vNameColOriginal.emplace_back("leptonPairFlavor");
   {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
       .Filter(Form("leptonPairFlavor==%zu", iLepFlav))
-      .Define(aPrefLepFlavLower[iLepFlav] + "PairedIdx", [](const Int_t nLep, const ROOT::RVec<Bool_t> isLoose, const ROOT::RVec<Bool_t> isMedium, const ROOT::RVec<Bool_t> isTight)->ROOT::RVec<Int_t>{
+      .Define(aPrefLepFlavLower[iLepFlav] + "PairedIdx", [&debug](const Int_t nLep, const ROOT::RVec<Bool_t> isLoose, const ROOT::RVec<Bool_t> isMedium, const ROOT::RVec<Bool_t> isTight)->ROOT::RVec<Int_t>{
+        // if (debug) Info("lambda:PairedIdx", "nLep: %d, (%zu, %zu, %zu)", nLep, isLoose.size(), isMedium.size(), isTight.size());
         ROOT::RVec<Int_t> vResult(2, -1);
         if (nLep < 2) {
           return vResult;
@@ -374,13 +517,19 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       //   }
       //   std::cerr << "}" << std::endl;
       // }
-      for (const auto nameCol : aDfNumCorrect[iLepFlav].GetColumnNames()) {        const TString tstrNameCol(nameCol);
+      for (const auto nameCol : aDfNumCorrect[iLepFlav].GetColumnNames()) {
+        const TString tstrNameCol(nameCol);
         const TString tstrTypenameCol(aDfNumCorrect[iLepFlav].GetColumnType(nameCol).c_str());
-        if (tstrNameCol.BeginsWith(aPrefLepFlavLower[iLepFlav].c_str()) && tstrTypenameCol.BeginsWith("ROOT::VecOps::RVec")) {
+        if (tstrNameCol.BeginsWith(aPrefLepFlavLower[iLepFlav].c_str()) && tstrTypenameCol.BeginsWith("ROOT::VecOps::RVec") && ! tstrNameCol.BeginsWith(aPrefLepFlavLower[iLepFlav] + "PairedIdx")) {
           const std::string nameColNew = aPrefLepFlavLower[iLepFlav] + "Paired" + tstrNameCol(aPrefLepFlavLower[iLepFlav].length(), tstrNameCol.Length()).Data();
           if (aDfNumCorrect[iLepFlav].HasColumn(nameColNew)) continue;
           if (debug) std::cerr << "Defining " << nameColNew << std::endl;
           avNameColNumCorrect[iLepFlav].emplace_back(nameColNew);
+          for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+            for (auto &v: (*paav)[iLepFlav]) {
+              v.emplace_back(nameColNew);
+            }
+          }
           aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
           .Define(nameColNew, "ROOT::VecOps::Take(" + nameCol + ", " + aPrefLepFlavLower[iLepFlav] + "PairedIdx)");
         }
@@ -396,20 +545,62 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         "), ROOT::Math::PtEtaPhiEVector()).M())")
       .Define(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ",
         "TMath::Abs(" + aPrefLepFlavLower[iLepFlav] + "PairM" + " - " + std::to_string(massZ) + ") < 20.");
+      avNameColNumCorrect[iLepFlav].emplace_back(aPrefLepFlavLower[iLepFlav] + "PairM");
+      avNameColNumCorrect[iLepFlav].emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
+      for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+        for (auto &v: (*paav)[iLepFlav]) {
+          v.emplace_back(aPrefLepFlavLower[iLepFlav] + "PairM");
+        }
+      }
     }
   }  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfNumCorrect;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfZMassCutted[iLepFlav] = aDfZMassCutted[iLepFlav].Filter(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
   }
-  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfPreselected {aDfZMassCutted, aDfZMassCutted};
+  // https://stackoverflow.com/questions/28541488/nested-aggregate-initialization-of-stdarray
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfPreselected {{ {aDfZMassCutted[0], aDfZMassCutted[0]}, {aDfZMassCutted[1], aDfZMassCutted[1]} }};
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       aaDfPreselected[iLepFlav][iAK] = aaDfPreselected[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " > 2");
     }
   }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    const size_t nCol = avNameColNumCorrect[iLepFlav].size();
+    avHistViewNumCorrect[iLepFlav].clear();
+    avHistViewNumCorrect[iLepFlav].reserve(nCol);
+    for (const std::string &nameCol: avNameColNumCorrect[iLepFlav]) {
+      avHistViewNumCorrect[iLepFlav].emplace_back(GetHistFromColumn(aDfNumCorrect[iLepFlav],nameCol));
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    const size_t nCol = avNameColZMassCutted[iLepFlav].size();
+    avHistViewZMassCutted[iLepFlav].clear();
+    avHistViewZMassCutted[iLepFlav].reserve(nCol);
+    for (const std::string &nameCol: avNameColZMassCutted[iLepFlav]) {
+      avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], nameCol));
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      const size_t nCol = aavHistViewPreselected[iLepFlav][iAK].size();
+      aavHistViewPreselected[iLepFlav][iAK].clear();
+      aavHistViewPreselected[iLepFlav][iAK].reserve(nCol);
+      for (const std::string &nameCol: aavNameColPreselected[iLepFlav][iAK]) {
+        aavHistViewPreselected[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfPreselected[iLepFlav][iAK], nameCol));
+      }
+    }
+  }
   TFile* tfOut = TFile::Open(fileOut.c_str(), recreate ? "recreate" : "update");
   tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
   tfIn->Get<TH1>("allEventsCounter/totalEvents")->Write();
+  {
+    const size_t nCol = vNameColOriginal.size();
+    vHistViewOriginal.clear();
+    vHistViewOriginal.reserve(nCol);
+    for (const std::string &nameCol: vNameColOriginal) {
+      vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol));
+    }
+  }
   tfOut->cd("/");
   tfOut->mkdir("Original", "Unfiltered entries")->cd();
   for (auto &&histView: vHistViewOriginal) {
