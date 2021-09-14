@@ -1,0 +1,26 @@
+Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_27251/./xAna_monoZ_preselect_C.so
+In file included from /pool/condor/dir_27251/./xAna_monoZ_preselect.C:19:0,
+                 from /pool/condor/dir_27251/xAna_monoZ_preselect_C_ACLiC_dict.cxx:41:
+/pool/condor/dir_27251/./BranchMounter.h:118:8: warning: ‘void BranchMounterScalarSingle<E>::SetFunEIn(std::function<E(BranchDescription)>) [with E = char]’ was hidden [-Woverloaded-virtual]
+   void SetFunEIn(std::function<E(BranchDescription)> funEIn) {
+        ^
+/pool/condor/dir_27251/./BranchMounter.h:191:8: warning:   by ‘void BranchMounterScalarSingle<bool>::SetFunEIn(std::function<bool(BranchDescription)>)’ [-Woverloaded-virtual]
+   void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
+        ^
+In file included from /pool/condor/dir_27251/./xAna_monoZ_preselect.C:19:0,
+                 from /pool/condor/dir_27251/xAna_monoZ_preselect_C_ACLiC_dict.cxx:41:
+/pool/condor/dir_27251/./BranchMounter.h:118:8: warning: ‘void BranchMounterScalarSingle<E>::SetFunEIn(std::function<E(BranchDescription)>) [with E = char]’ was hidden [-Woverloaded-virtual]
+   void SetFunEIn(std::function<E(BranchDescription)> funEIn) {
+        ^
+/pool/condor/dir_27251/./BranchMounter.h:191:8: warning:   by ‘void BranchMounterScalarSingle<bool>::SetFunEIn(std::function<bool(BranchDescription)>)’ [-Woverloaded-virtual]
+   void SetFunEIn(std::function<Bool_t(BranchDescription)> funEIn) {
+        ^
+Warning in <TClass::Init>: no dictionary for class edm::ProcessHistory is available
+Warning in <TClass::Init>: no dictionary for class edm::ProcessConfiguration is available
+Warning in <TClass::Init>: no dictionary for class edm::ParameterSetBlob is available
+Warning in <TClass::Init>: no dictionary for class edm::Hash<1> is available
+Warning in <TClass::Init>: no dictionary for class pair<edm::Hash<1>,edm::ParameterSetBlob> is available
+Error in <TNetXNGFile::ReadBuffer>: [ERROR] Server responded with an error: [3010] Unable to read /store/mc/RunIISummer16NanoAODv7/TT_TuneCUETP8M2T4_13TeV-powheg-pythia8/NANOAODSIM/PUMoriond17_Nano02Apr2020_backup_102X_mcRun2_asymptotic_v8-v1/270000/ABFDE53F-0433-1844-A8FF-43DA174B681F.root; permission denied
+
+Error in <TBranch::GetBasket>: File: root://cms-xrd-global.cern.ch//store/mc/RunIISummer16NanoAODv7/TT_TuneCUETP8M2T4_13TeV-powheg-pythia8/NANOAODSIM/PUMoriond17_Nano02Apr2020_backup_102X_mcRun2_asymptotic_v8-v1/270000/ABFDE53F-0433-1844-A8FF-43DA174B681F.root at byte:612554906, branch:GenPart_statusFlags, entry:292578, badread=1, nerrors=1, basketnumber=296
+FATAL: TBranch::GetEntry() failed: GenPart_statusFlags
