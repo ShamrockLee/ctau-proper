@@ -3,6 +3,7 @@
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RResultPtr.hxx>
 #include <ROOT/RVec.hxx>
+#include <Math/Vector4D.h>
 #include <TFile.h>
 #include <TDirectory.h>
 #include <TKey.h>
@@ -24,6 +25,15 @@
 #include <algorithm>
 #include <regex>
 
+template<typename TypeVector1, typename TypeVector2>
+inline Double_t GetDeltaR2(TypeVector1 v1, TypeVector2 v2) {
+  return 
+    (static_cast<Double_t>(v1.Eta()) - static_cast<Double_t>(v2.Eta())) *
+    (static_cast<Double_t>(v1.Eta()) - static_cast<Double_t>(v2.Eta())) +
+    (static_cast<Double_t>(v1.Phi()) - static_cast<Double_t>(v2.Phi())) *
+    (static_cast<Double_t>(v1.Phi()) - static_cast<Double_t>(v2.Phi()));
+}
+
 template<typename V = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
 ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(
     D &df,
@@ -41,7 +51,7 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(
   const Double_t lowerLimit = alignment + binWidth * lowerLimitBins;
   const Double_t upperLimit = alignment + binWidth * upperLimitBins;
   return df.template Histo1D<V>({("h" + nameColumn).c_str(),
-      Form("{name: %s, typename: %s, expression: %s, binDensityOrder: %d, alignment: %F, isLowerAssigned: %s, lowerLimitBins: %d, isUpperAssigned: %s, upperLimitBins: %d}",
+      Form("{name:%s,typename:%s,expression:%s,binDensityOrder:%d,alignment:%F,isLowerAssigned:%s,lowerLimitBins:%d,isUpperAssigned:%s,upperLimitBins:%d}",
           nameColumn.c_str(), typenameColumn.c_str(), expression.c_str(), binDensityOrder, alignment, isLowerAssigned ? "true" : "false", lowerLimitBins, isUpperAssigned ? "true" : "false", upperLimitBins),
       nBins, lowerLimit, upperLimit}, expression);
 }
@@ -169,6 +179,8 @@ E SumRVecWithInit(const ROOT::RVec<E> v, const E init) {
 }
 
 void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const Bool_t recreate=true, const Bool_t debug=false) {
+  typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
+  const std::string typenameLorentzVector = "ROOT::Math::PtEtaPhiMVector";
   ROOT::EnableImplicitMT();
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
   constexpr Double_t massElectron =
@@ -238,7 +250,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       if (!RefgetE1D(typenameE, typenameCol)) {
         if (!tstrTypenameCol.Contains("TClonesArray")
           && !tstrTypenameCol.Contains("TObjArray")) {
-          // if (debug) std::cerr << "Working on " << nameCol << ", " << typenameCol << std::endl;
+          if (debug) std::cerr << "Working on " << nameCol << ", " << typenameCol << std::endl;
           if (tstrTypenameCol.Contains("Double")
             || tstrTypenameCol.Contains("double")
             || tstrTypenameCol.Contains("Float")
@@ -256,6 +268,11 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
             || tstrTypenameCol.Contains("bool")
           ) {
             vNameColOriginal.emplace_back(nameCol);
+            for (auto pav: {&avNameColNumCorrect, &avNameColZMassCutted}) {
+              for (auto v: *pav) {
+                v.emplace_back(nameCol);
+              }
+            }
             for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
               for (auto &av: *paav) {
                 for (auto &v: av) {
@@ -270,101 +287,146 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     for (const std::string nameCol: vNamesCol) {
       const TString tstrNameCol(nameCol);
       // if (debug) std::cerr << tstrNameCol << "\tLength: " << tstrNameCol.Length() << std::endl;
-      if (tstrNameCol.EndsWith("P4")) {
+      if (tstrNameCol.EndsWith("P4") ) {
         const TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
         const std::string prefNameCol (tstrPrefNameCol.Data());
+        const std::string typenameCol = dfOriginal.GetColumnType(nameCol);
         if (debug) std::cerr << "prefNameCol: " << prefNameCol << std::endl;
+        if (typenameCol == "TClonesArray") {
+          dfOriginal = dfOriginal
+          .Redefine(nameCol, [&prefNameCol, &massElectron](const TClonesArray tcaP4){
+            const size_t n = tcaP4.GetSize();
+            ROOT::RVec<TypeLorentzVector> vResult(n, TypeLorentzVector());
+            // Bool_t toCorrectM = true;
+            // Double_t mCorrect = 0.;
+            // if (prefNameCol == "ele") {
+            //   mCorrect = massElectron;
+            // } else if (prefNameCol == "pho") {
+            //   mCorrect = 0.;
+            // } else {
+            //   toCorrectM = false;
+            // }
+            for (size_t i = 0; i < n; ++i) {
+              const auto &tlvP4 = *static_cast<TLorentzVector *>(tcaP4[i]);
+              vResult[i].SetPxPyPzE(tlvP4.Px(), tlvP4.Py(), tlvP4.Pz(), tlvP4.E());
+            }
+            return vResult;
+          }, {{ nameCol }});
+        }
+        // // It does not work, but I don't know why
+        // for (const std::string suff: {"Pt", "Eta", "Phi", "E", "M"}) {
+        //   const std::string expression = "ROOT::VecOps::Map("
+        //       + nameCol + ", "
+        //       "[](const ROOT::Math::PtEtaPhiMVector p4)->Double_t{"
+        //       "return static_cast<Double_t>(p4." + suff + "());"
+        //       "})";
+        //   if (debug) std::cerr << expression << std::endl;
+        //   dfOriginal = dfOriginal
+        //   .Define(
+        //       prefNameCol + suff,
+        //       expression);
+        // }
         dfOriginal = dfOriginal
-        .Define(prefNameCol + "Pt", [](const TClonesArray tcaP4) {
-          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Pt();
-          }
-          return vResult;
-        }, {nameCol})
-        .Define(prefNameCol + "Eta", [](const TClonesArray tcaP4) {
-          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Eta();
-          }
-          return vResult;
-        }, {nameCol})
-        .Define(prefNameCol + "Phi", [](const TClonesArray tcaP4) {
-          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->Phi();
-          }
-          return vResult;
-        }, {nameCol})
-        .Define(prefNameCol + "E", [](const TClonesArray tcaP4) {
-          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->E();
-          }
-          return vResult;
-        }, {nameCol})
-        .Define(prefNameCol + "M", [](const TClonesArray tcaP4) {
-          ROOT::RVec<Float_t> vResult(tcaP4.GetSize(), 0.);
-          for (Int_t iJet = 0; iJet < tcaP4.GetSize(); ++iJet) {
-            vResult[iJet] = static_cast<TLorentzVector *>(tcaP4[iJet])->M();
-          }
-          return vResult;
-        }, {nameCol});
+        .Define(prefNameCol + "Pt", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+            return p4.Pt();
+          });
+        }, {{ nameCol }})
+        .Define(prefNameCol + "Eta", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+            return p4.Eta();
+          });
+        }, {{ nameCol }})
+        .Define(prefNameCol + "Phi", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+            return p4.Phi();
+          });
+        }, {{ nameCol }})
+        .Define(prefNameCol + "E", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+            return p4.E();
+          });
+        }, {{ nameCol }})
+        .Define(prefNameCol + "M", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+            return p4.M();
+          });
+        }, {{ nameCol }});
         continue;
       }
     }
   }
   dfOriginal = dfOriginal
-  .Define("eleIdxPassPtEta", [](const Int_t nEle, const ROOT::RVec<Float_t> elePt, const ROOT::RVec<Float_t> eleEta){
+  .Define("eleIdxPassBasicCuts", [](const Int_t nEle, const ROOT::RVec<TypeLorentzVector> &eleP4){
     ROOT::RVec<size_t> vResult(nEle);
     vResult.clear();
     for (Int_t iEle = 0; iEle < nEle; ++iEle) {
-      if (elePt[iEle] > 20 && TMath::Abs(eleEta[iEle]) < 2.5) {
+      if (eleP4[iEle].Pt() > 20. && TMath::Abs(eleP4[iEle].Eta()) < 2.5) {
         vResult.emplace_back(iEle);
       }
     }
     return vResult;
-  }, {"nEle", "elePt", "eleEta"})
-  .Define("nElePassPtEta", "static_cast<Int_t>(eleIdxPassPtEta.size())")
-  .Redefine("nEle", "nElePassPtEta")
-  .Define("muIdxPassPtEta", [](const Int_t nMu, const ROOT::RVec<Float_t> muPt, const ROOT::RVec<Float_t> muEta) {
+  }, {"nEle", "eleP4"})
+  .Define("nElePassBasicCuts", "static_cast<Int_t>(eleIdxPassBasicCuts.size())")
+  .Redefine("nEle", "nElePassBasicCuts")
+  .Define("muIdxPassBasicCuts", [](const Int_t nMu, const ROOT::RVec<TypeLorentzVector> &muP4) {
     ROOT::RVec<size_t> vResult(nMu);
     vResult.clear();
     for (Int_t iMu = 0; iMu < nMu; ++iMu) {
-      if (muPt[iMu] > 20 && TMath::Abs(muEta[iMu]) < 2.5) {
+      if (muP4[iMu].Pt() > 20. && TMath::Abs(muP4[iMu].Eta()) < 2.5) {
         vResult.emplace_back(iMu);
       }
     }
     return vResult;
-  }, {"nMu", "muPt", "muEta"})
-  .Define("nMuPassPtEta", "static_cast<Int_t>(muIdxPassPtEta.size())")
-  .Redefine("nMu", "nMuPassPtEta")
-  .Define("THINjetIdxPassPtEta", [](const Int_t THINnJet, const ROOT::RVec<Float_t> THINjetPt, const ROOT::RVec<Float_t> THINjetEta) {
+  }, {"nMu", "muP4"})
+  .Define("nMuPassBasicCuts", "static_cast<Int_t>(muIdxPassBasicCuts.size())")
+  .Redefine("nMu", "nMuPassBasicCuts")
+  .Define("THINjetIdxPassBasicCuts", [](const Int_t THINnJet, const ROOT::RVec<TypeLorentzVector> THINjetP4
+      , const ROOT::RVec<TypeLorentzVector> eleP4, const ROOT::RVec<TypeLorentzVector> muP4) {
+    const auto lepP4 = ROOT::VecOps::Concatenate(eleP4, muP4);
     ROOT::RVec<size_t> vResult(THINnJet);
     vResult.clear();
     for (Int_t iJet = 0; iJet < THINnJet; ++iJet) {
-      if (THINjetPt[iJet] > 30. && TMath::Abs(THINjetEta[iJet]) < 2.5) {
+      const auto &p4THIN = THINjetP4[iJet];
+      if (
+          p4THIN.Pt() > 30. && TMath::Abs(p4THIN.Eta()) < 2.5
+          && ROOT::VecOps::All(ROOT::VecOps::Map(
+              lepP4,
+              [&p4THIN](const TypeLorentzVector p4Lep) {
+                return GetDeltaR2(p4THIN, p4Lep) > 0.4 * 0.4;
+          }))
+      ) {
         vResult.emplace_back(iJet);
       }
     }
     return vResult;
-  }, {"THINnJet", "THINjetPt", "THINjetEta"})
-  .Define("THINnJetPassPtEta", "static_cast<Int_t>(THINjetIdxPassPtEta.size())")
-  .Redefine("THINnJet", "THINnJetPassPtEta")
-  .Define("FATjetIdxPassPtEta", [](const Int_t FATnJet, const ROOT::RVec<Float_t> FATjetPt, const ROOT::RVec<Float_t> FATjetEta) {
+  }, {"THINnJet", "THINjetP4", "eleP4", "muP4"})
+  .Define("THINnJetPassBasicCuts", "static_cast<Int_t>(THINjetIdxPassBasicCuts.size())")
+  .Redefine("THINnJet", "THINnJetPassBasicCuts")
+  .Define("FATjetIdxPassBasicCuts", [](const Int_t FATnJet, const ROOT::RVec<TypeLorentzVector> FATjetP4
+      , const ROOT::RVec<TypeLorentzVector> eleP4, const ROOT::RVec<TypeLorentzVector> muP4) {
+    const auto lepP4 = ROOT::VecOps::Concatenate(eleP4, muP4);
     ROOT::RVec<size_t> vResult(FATnJet);
     vResult.clear();
     for (Int_t iJet = 0; iJet < FATnJet; ++iJet) {
-      if (FATjetPt[iJet] > 200. && TMath::Abs(FATjetEta[iJet]) < 2.5) {
+      const auto &p4FAT = FATjetP4[iJet];
+      if (p4FAT.Pt() > 200. && TMath::Abs(p4FAT.Eta()) < 2.5
+          && ROOT::VecOps::All(ROOT::VecOps::Map(
+              lepP4,
+              [&p4FAT](const TypeLorentzVector p4Lep) {
+                return GetDeltaR2(p4FAT, p4Lep) > 0.8 * 0.8;
+          }))
+      ) {
         vResult.emplace_back(iJet);
       }
     }
     return vResult;
-  }, {"FATnJet", "FATjetPt", "FATjetEta"})
-  .Define("FATnJetPassPtEta", "static_cast<Int_t>(FATjetIdxPassPtEta.size())")
-  .Redefine("FATnJet", "FATnJetPassPtEta");
+  }, {"FATnJet", "FATjetP4", "eleP4", "muP4"})
+  .Define("FATnJetPassBasicCuts", "static_cast<Int_t>(FATjetIdxPassBasicCuts.size())")
+  .Redefine("FATnJet", "FATnJetPassBasicCuts")
+  ;
   for (std::string nameCol: {"nEle", "nMu", "THINnJet", "FATnJet"}) {
-    vNameColOriginal.emplace_back(nameCol + "PassPtEta");
+    vNameColOriginal.emplace_back(nameCol + "PassBasicCuts");
   }
   {
     auto vNamesCol = dfOriginal.GetColumnNames();
@@ -402,7 +464,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
             .Redefine(nameCol,
               "ROOT::VecOps::RVec<ROOT::VecOps::RVec<" + typenameE + ">> vvResult(" + nameCol + ".size());"
               "vvResult.clear();"
-              "for (size_t iVE: " + pref + "IdxPassPtEta) {"
+              "for (size_t iVE: " + pref + "IdxPassBasicCuts) {"
               "  const auto& vE = " + nameCol + "[iVE];"
               "  ROOT::VecOps::RVec<" + typenameE + "> resultSub(vE.size());"
               "  resultSub.clear();"
@@ -415,14 +477,16 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
           } else if (nDims == 1) {
             if (debug) std::cerr << "Redefining 1D: " << nameCol << std::endl;
             dfOriginal = dfOriginal
-            .Redefine(nameCol, Form("ROOT::VecOps::Take(%s, %sIdxPassPtEta)", nameCol.c_str(), pref.c_str()));
-            if (tstrTypenameE.Contains("double")
-              || tstrTypenameE.Contains("float")
-              || tstrTypenameE.Contains("long")
-              || tstrTypenameE.Contains("int")
-              || tstrTypenameE.Contains("short")
-              || tstrTypenameE.Contains("char")
-              // || tstrTypenameE.Contains("bool")
+            .Redefine(nameCol, Form("ROOT::VecOps::Take(%s, %sIdxPassBasicCuts)", nameCol.c_str(), pref.c_str()));
+            if (!tstrTypenameE.Contains("Vector") && !tstrTypenameE.Contains("4D") && !tstrTypenameE.Contains("3D") && !tstrTypenameE.Contains("2D")
+              && ( tstrTypenameE.Contains("double")
+                || tstrTypenameE.Contains("float")
+                || tstrTypenameE.Contains("long")
+                || tstrTypenameE.Contains("int")
+                || tstrTypenameE.Contains("short")
+                || tstrTypenameE.Contains("char")
+                // || tstrTypenameE.Contains("bool")
+              )
             ) {
               if (debug) std::cerr << "Pick " << nameCol << std::endl;
               vNameColOriginal.emplace_back(nameCol);
@@ -471,15 +535,43 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
-  // vNameColOriginal.emplace_back("eleIsPassLoose");
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    dfOriginal = dfOriginal
+    .Define(aPrefLepFlavLower[iLepFlav] + "PairedIdx", [&debug](
+        const Int_t nLep,
+        const ROOT::RVec<Bool_t> isLoose, const ROOT::RVec<Bool_t> isMedium, const ROOT::RVec<Bool_t> isTight,
+        const ROOT::RVec<TypeLorentzVector> &lepP4)->ROOT::RVec<Int_t>{
+        // if (debug) Info("lambda:PairedIdx", "nLep: %d, (%zu, %zu, %zu)", nLep, isLoose.size(), isMedium.size(), isTight.size());
+        ROOT::RVec<Int_t> vResult(2, -1);
+        if (nLep < 2) {
+          return vResult;
+        }
+        for (vResult[0] = 0; vResult[0] < nLep - 1; ++(vResult[0])) {
+          if (lepP4[vResult[0]].Pt() <= 25.) break;
+          for (vResult[1] = vResult[0] + 1; vResult[1] < nLep; ++(vResult[1])) {
+            if (lepP4[vResult[1]].Pt() <= 20.) break;
+            if (ROOT::VecOps::All(ROOT::VecOps::Take(isMedium, vResult))) {
+              return vResult;
+            }
+          }
+        }
+        std::fill(vResult.begin(), vResult.end(), -1);
+        return vResult;
+      }, {"n" + aPrefLepFlav[iLepFlav],
+          aPrefLepFlavLower[iLepFlav] + "IsPassLoose", aPrefLepFlavLower[iLepFlav] + "IsPassMedium", aPrefLepFlavLower[iLepFlav] + "IsPassTight",
+          aPrefLepFlavLower[iLepFlav] + "P4"});
+  }
   dfOriginal = dfOriginal
-  .Define("leptonPairFlavor", [&debug](const Int_t nElePassLoose, const Int_t nElePassMedium, const Int_t nElePassTight, const Int_t nMuPassLoose, const Int_t nMuPassMedium, const Int_t nMuPassTight)->Int_t{
+  .Define("leptonPairFlavor", [&debug](
+      const Int_t nElePassLoose, const Int_t nElePassMedium, const Int_t nElePassTight,
+      const Int_t nMuPassLoose, const Int_t nMuPassMedium, const Int_t nMuPassTight,
+      const ROOT::RVec<Int_t> elePairedIdx, const ROOT::RVec<Int_t> muPairedIdx)->Int_t{
     // if (debug) Info("lambda:leptonPairFlavor", "%d, %d, %d, %d, %d, %d", nElePassLoose, nElePassMedium, nElePassTight, nMuPassLoose, nMuPassMedium, nMuPassTight);
     if (nElePassTight >= 4 || nMuPassTight >= 4) {
       return -1;
     }
-    const Bool_t isEleNumCorrect = nElePassMedium >= 1 && nElePassLoose >= 2;
-    const Bool_t isMuNumCorrect = nMuPassMedium >= 1 && nMuPassLoose >= 2;
+    const Bool_t isEleNumCorrect = elePairedIdx.back() >= 0;
+    const Bool_t isMuNumCorrect = muPairedIdx.back() >= 0;
     if (isEleNumCorrect && isMuNumCorrect) {
       return -1;
     } else if (isEleNumCorrect) {
@@ -488,28 +580,14 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       return 1;
     }
     return -1;
-  },{"nElePassLoose", "nElePassMedium", "nElePassTight", "nMuPassLoose", "nMuPassMedium", "nMuPassTight"});  std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = {dfOriginal, dfOriginal};
+  },{"nElePassLoose", "nElePassMedium", "nElePassTight",
+      "nMuPassLoose", "nMuPassMedium", "nMuPassTight",
+      "elePairedIdx", "muPairedIdx"});  std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = {dfOriginal, dfOriginal};
   vNameColOriginal.emplace_back("leptonPairFlavor");
   {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
-      .Filter(Form("leptonPairFlavor==%zu", iLepFlav))
-      .Define(aPrefLepFlavLower[iLepFlav] + "PairedIdx", [&debug](const Int_t nLep, const ROOT::RVec<Bool_t> isLoose, const ROOT::RVec<Bool_t> isMedium, const ROOT::RVec<Bool_t> isTight)->ROOT::RVec<Int_t>{
-        // if (debug) Info("lambda:PairedIdx", "nLep: %d, (%zu, %zu, %zu)", nLep, isLoose.size(), isMedium.size(), isTight.size());
-        ROOT::RVec<Int_t> vResult(2, -1);
-        if (nLep < 2) {
-          return vResult;
-        }
-        for (vResult[0] = 0; vResult[0] < nLep - 1; ++(vResult[0])) {
-          for (vResult[1] = vResult[0] + 1; vResult[1] < nLep; ++(vResult[1])) {
-            if (ROOT::VecOps::All(ROOT::VecOps::Take(isLoose, vResult)) && ROOT::VecOps::Sum(ROOT::VecOps::Take(isMedium, vResult)) >= 1) {
-              return vResult;
-            }
-          }
-        }
-        std::fill(vResult.begin(), vResult.end(), -1);
-        return vResult;
-      }, {"n" + aPrefLepFlav[iLepFlav], aPrefLepFlavLower[iLepFlav] + "IsPassLoose", aPrefLepFlavLower[iLepFlav] + "IsPassMedium", aPrefLepFlavLower[iLepFlav] + "IsPassTight"});
+      .Filter(Form("leptonPairFlavor==%zu", iLepFlav));
       // if (debug) {
       //   std::cerr << "Columns in dfNumCorrect[" << iLepFlav << "]: " << std::flush;
       //   for (const auto nameCol: aDfNumCorrect[iLepFlav].GetColumnNames()) {
@@ -519,41 +597,76 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       // }
       for (const auto nameCol : aDfNumCorrect[iLepFlav].GetColumnNames()) {
         const TString tstrNameCol(nameCol);
-        const TString tstrTypenameCol(aDfNumCorrect[iLepFlav].GetColumnType(nameCol).c_str());
+        const std::string typenameCol = aDfNumCorrect[iLepFlav].GetColumnType(nameCol);
+        const TString tstrTypenameCol = typenameCol;
         if (tstrNameCol.BeginsWith(aPrefLepFlavLower[iLepFlav].c_str()) && tstrTypenameCol.BeginsWith("ROOT::VecOps::RVec") && ! tstrNameCol.BeginsWith(aPrefLepFlavLower[iLepFlav] + "PairedIdx")) {
           const std::string nameColNew = aPrefLepFlavLower[iLepFlav] + "Paired" + tstrNameCol(aPrefLepFlavLower[iLepFlav].length(), tstrNameCol.Length()).Data();
           if (aDfNumCorrect[iLepFlav].HasColumn(nameColNew)) continue;
-          if (debug) std::cerr << "Defining " << nameColNew << std::endl;
-          avNameColNumCorrect[iLepFlav].emplace_back(nameColNew);
-          for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
-            for (auto &v: (*paav)[iLepFlav]) {
-              v.emplace_back(nameColNew);
+          std::string typenameE = "";
+          const Int_t nDims = RefgetE2D(typenameE, typenameCol) ? 2 : (RefgetE1D(typenameE, typenameCol) ? 1 : 0);
+          const TString tstrTypenameE = typenameE;
+          if (nDims) {
+            if (debug) std::cerr << "Defining " << nameColNew << std::endl;
+            aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
+            .Define(nameColNew, "ROOT::VecOps::Take(" + nameCol + ", " + aPrefLepFlavLower[iLepFlav] + "PairedIdx)");
+          }
+          if (nDims == 1
+              && !tstrTypenameE.Contains("Vector") && !tstrTypenameE.Contains("4D") && !tstrTypenameE.Contains("3D") && !tstrTypenameE.Contains("2D")
+              && (tstrTypenameE.Contains("double")
+                  || tstrTypenameE.Contains("float")
+                  || tstrTypenameE.Contains("long")
+                  || tstrTypenameE.Contains("short")
+                  || tstrTypenameE.Contains("int")
+                  || tstrTypenameE.Contains("char")
+                  // || tstrTypenameE.Contains("bool")
+              )
+          ) {
+            avNameColNumCorrect[iLepFlav].emplace_back(nameColNew);
+            for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+              for (auto &v: (*paav)[iLepFlav]) {
+                v.emplace_back(nameColNew);
+              }
             }
           }
-          aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
-          .Define(nameColNew, "ROOT::VecOps::Take(" + nameCol + ", " + aPrefLepFlavLower[iLepFlav] + "PairedIdx)");
         }
       }
       aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
       .Define(
-        aPrefLepFlavLower[iLepFlav] + "PairM",
-        "static_cast<Float_t>(ROOT::VecOps::Sum(ROOT::VecOps::Construct<ROOT::Math::PtEtaPhiEVector>("
-        "  " + aPrefLepFlavLower[iLepFlav] + "PairedPt,"
-        "  " + aPrefLepFlavLower[iLepFlav] + "PairedEta,"
-        "  " + aPrefLepFlavLower[iLepFlav] + "PairedPhi,"
-        "  " + aPrefLepFlavLower[iLepFlav] + "PairedE"
-        "), ROOT::Math::PtEtaPhiEVector()).M())")
+        aPrefLepFlavLower[iLepFlav] + "PairP4",
+        "ROOT::VecOps::Sum("
+        + aPrefLepFlavLower[iLepFlav] + "PairedP4"
+        ", " + typenameLorentzVector + "())");
+      for (const std::string suff: {"Pt", "Eta", "Phi", "E", "M", "Mt2"}) {
+        const std::string nameColNew = aPrefLepFlavLower[iLepFlav] + "Pair" + suff;
+        if (debug) std::cerr << "Defining " << nameColNew << std::endl;
+        aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
+        .Define(
+          nameColNew,
+          aPrefLepFlavLower[iLepFlav] + "PairP4." + suff + "()");
+        for (auto pav: {&avNameColNumCorrect, &avNameColZMassCutted}) {
+          (*pav)[iLepFlav].emplace_back(nameColNew);
+        }
+        for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+          for (auto &v: (*paav)[iLepFlav]) {
+            v.emplace_back(nameColNew);
+          }
+        }
+      }
+      aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
       .Define(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ",
-        "TMath::Abs(" + aPrefLepFlavLower[iLepFlav] + "PairM" + " - " + std::to_string(massZ) + ") < 20.");
-      avNameColNumCorrect[iLepFlav].emplace_back(aPrefLepFlavLower[iLepFlav] + "PairM");
-      avNameColNumCorrect[iLepFlav].emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
+        "TMath::Abs(" + aPrefLepFlavLower[iLepFlav] + "PairM" + " - " + std::to_string(massZ) + ") < 15."
+        " && " + aPrefLepFlavLower[iLepFlav] + "PairPt > 130.");
+      for (auto pav: {&avNameColNumCorrect, &avNameColZMassCutted}) {
+        (*pav)[iLepFlav].emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
+      }
       for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
         for (auto &v: (*paav)[iLepFlav]) {
-          v.emplace_back(aPrefLepFlavLower[iLepFlav] + "PairM");
+          v.emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
         }
       }
     }
-  }  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfNumCorrect;
+  }
+  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfNumCorrect;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfZMassCutted[iLepFlav] = aDfZMassCutted[iLepFlav].Filter(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
   }
@@ -561,7 +674,15 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfPreselected {{ {aDfZMassCutted[0], aDfZMassCutted[0]}, {aDfZMassCutted[1], aDfZMassCutted[1]} }};
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
-      aaDfPreselected[iLepFlav][iAK] = aaDfPreselected[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " > 2");
+      aaDfPreselected[iLepFlav][iAK] = aaDfPreselected[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 1");
+    }
+  }
+  {
+    const size_t nCol = vNameColOriginal.size();
+    vHistViewOriginal.clear();
+    vHistViewOriginal.reserve(nCol);
+    for (const std::string &nameCol: vNameColOriginal) {
+      vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
@@ -593,14 +714,6 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   TFile* tfOut = TFile::Open(fileOut.c_str(), recreate ? "recreate" : "update");
   tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
   tfIn->Get<TH1>("allEventsCounter/totalEvents")->Write();
-  {
-    const size_t nCol = vNameColOriginal.size();
-    vHistViewOriginal.clear();
-    vHistViewOriginal.reserve(nCol);
-    for (const std::string &nameCol: vNameColOriginal) {
-      vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol));
-    }
-  }
   tfOut->cd("/");
   tfOut->mkdir("Original", "Unfiltered entries")->cd();
   for (auto &&histView: vHistViewOriginal) {
