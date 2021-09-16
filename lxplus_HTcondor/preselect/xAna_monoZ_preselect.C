@@ -209,8 +209,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   TTree *ttIn = tfIn->Get<TTree>("tree/treeMaker");
   ROOT::RDataFrame dfIn(*ttIn);
   std::vector<std::string> vNameColOriginal = {};
-  std::array<std::vector<std::string>, 2> avNameColNumCorrect, avNameColZMassCutted;
-  for (auto pav: {&avNameColNumCorrect, &avNameColZMassCutted}) {
+  std::array<std::vector<std::string>, 2> avNameColGen, avNameColNumCorrect, avNameColZMassCutted;
+  for (auto pav: {&avNameColGen, &avNameColNumCorrect, &avNameColZMassCutted}) {
     for (auto &v: *pav) {
       v.clear();
     }
@@ -225,8 +225,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
 
   std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal = {};
-  std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewNumCorrect, avHistViewZMassCutted;
-  for (auto pav: {&avHistViewNumCorrect, &avHistViewZMassCutted}) {
+  std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen, avHistViewNumCorrect, avHistViewZMassCutted;
+  for (auto pav: {&avHistViewGen, &avHistViewNumCorrect, &avHistViewZMassCutted}) {
     for (auto &v: *pav) {
       v.clear();
     }
@@ -436,10 +436,12 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       vTypenamesCol.emplace_back(dfOriginal.GetColumnType(nameCol));
       // if (debug) std::cerr << vTypenamesCol.back() << ",\tsize: " << vTypenamesCol.size() << std::endl;
     }
-    for (std::string &nameCol: vNamesCol) {
+    for (size_t iCol = 0; iCol < vNamesCol.size(); ++iCol) {
+      std::string &nameCol = vNamesCol[iCol];
+      std::string &typenameCol = vTypenamesCol[iCol];
       std::regex r("^is(.+)Muon$");
       std::smatch m;
-      if (std::regex_match(nameCol, m, r)) {
+      if (std::regex_match(nameCol, m, r) && typenameCol == "ROOT::VecOps::RVec<bool>") {
         const std::string nameAlias = "muIsPass" + std::string(m[1]);
         if (debug) std::cerr << "nameAlias: " << nameAlias << std::endl;
         dfOriginal = dfOriginal.Define(nameAlias, nameCol);
@@ -582,8 +584,20 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     return -1;
   },{"nElePassLoose", "nElePassMedium", "nElePassTight",
       "nMuPassLoose", "nMuPassMedium", "nMuPassTight",
-      "elePairedIdx", "muPairedIdx"});  std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = {dfOriginal, dfOriginal};
+      "elePairedIdx", "muPairedIdx"});
   vNameColOriginal.emplace_back("leptonPairFlavor");
+  std::array<ROOT::RDF::RNode, 2> aDfGen {dfOriginal, dfOriginal};
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      aDfGen[iLepFlav] = aDfGen[iLepFlav]
+      .Filter("ROOT::VecOps::Any("
+        "genParId==" + std::to_string(iLepFlav ? pdgMuon : pdgElectron) +
+        "&& genMomParId==" + std::to_string(pdgZ) +
+        ")");
+      avNameColGen[iLepFlav] = vNameColOriginal;
+    }
+  }
+  std::array<ROOT::RDF::RNode, 2> aDfNumCorrect = aDfGen;
   {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aDfNumCorrect[iLepFlav] = aDfNumCorrect[iLepFlav]
@@ -685,6 +699,16 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol));
     }
   }
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      const size_t nCol = avNameColGen[iLepFlav].size();
+      avHistViewGen[iLepFlav].clear();
+      avHistViewGen[iLepFlav].reserve(nCol);
+      for (const std::string &nameCol: avNameColGen[iLepFlav]) {
+        avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav],nameCol));
+      }
+    }
+  }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColNumCorrect[iLepFlav].size();
     avHistViewNumCorrect[iLepFlav].clear();
@@ -713,11 +737,24 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   TFile* tfOut = TFile::Open(fileOut.c_str(), recreate ? "recreate" : "update");
   tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
-  tfIn->Get<TH1>("allEventsCounter/totalEvents")->Write();
+  TH1 *histTotalEvents = tfIn->Get<TH1>("allEventsCounter/totalEvents");
+  if (isSignal) {
+    histTotalEvents->Scale(1. / 3);
+  }
+  histTotalEvents->Write();
   tfOut->cd("/");
   tfOut->mkdir("Original", "Unfiltered entries")->cd();
   for (auto &&histView: vHistViewOriginal) {
     histView->Write();
+  }
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      tfOut->cd("/");
+      tfOut->mkdir(("Gen" + aPrefLepFlav[iLepFlav]).c_str(), ("GEN-level " + aPrefLepFlavLower[iLepFlav] + " events").c_str())->cd();
+      for (auto &&histView: avHistViewGen[iLepFlav]) {
+        histView->Write();
+      }
+    }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
