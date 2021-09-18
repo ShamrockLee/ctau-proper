@@ -3,6 +3,7 @@
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RResultPtr.hxx>
 #include <ROOT/RVec.hxx>
+#include <ROOT/RDF/HistoModels.hxx>
 #include <Math/Vector4D.h>
 #include <TFile.h>
 #include <TDirectory.h>
@@ -34,31 +35,38 @@ inline Double_t GetDeltaR2(TypeVector1 v1, TypeVector2 v2) {
     (static_cast<Double_t>(v1.Phi()) - static_cast<Double_t>(v2.Phi()));
 }
 
-template<typename V = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
-ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(
+template<typename V = ROOT::RDFDetail::RInferredType, typename W = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
+ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(
     D &df,
     const std::string nameColumn,
     const std::string typenameColumn,
-    const std::string expression,
     const Int_t binDensityOrder,
     const Double_t alignment,
     const Bool_t isLowerAssigned,
     const Int_t lowerLimitBins,
     const Bool_t isUpperAssigned,
-    const Int_t upperLimitBins) {
+    const Int_t upperLimitBins,
+    const std::string expression = "",
+    const std::string exprWeight = "") {
   const Int_t nBins = TMath::Nint((upperLimitBins - lowerLimitBins) * TMath::Power(10., binDensityOrder));
   const Double_t binWidth = TMath::Power(10., -binDensityOrder);
   const Double_t lowerLimit = alignment + binWidth * lowerLimitBins;
   const Double_t upperLimit = alignment + binWidth * upperLimitBins;
-  return df.template Histo1D<V>({("h" + nameColumn).c_str(),
-      Form("{name:%s,typename:%s,expression:%s,binDensityOrder:%d,alignment:%F,isLowerAssigned:%s,lowerLimitBins:%d,isUpperAssigned:%s,upperLimitBins:%d}",
-          nameColumn.c_str(), typenameColumn.c_str(), expression.c_str(), binDensityOrder, alignment, isLowerAssigned ? "true" : "false", lowerLimitBins, isUpperAssigned ? "true" : "false", upperLimitBins),
-      nBins, lowerLimit, upperLimit}, expression);
+  const char*  &&cstrJSON = Form("{name:%s,typename:%s,expression:%s,%sbinDensityOrder:%d,alignment:%F,isLowerAssigned:%s,lowerLimitBins:%d,isUpperAssigned:%s,upperLimitBins:%d}",
+          nameColumn.c_str(), typenameColumn.c_str(), expression.c_str(), exprWeight.length() ? ("exprWeight:" + exprWeight + ",").c_str() : "",
+          binDensityOrder, alignment, isLowerAssigned ? "true" : "false", lowerLimitBins, isUpperAssigned ? "true" : "false", upperLimitBins);
+  const ROOT::RDF::TH1DModel model {("h" + nameColumn).c_str(), cstrJSON,
+      nBins, lowerLimit, upperLimit};
+  return exprWeight.length()
+    ? df.template Histo1D<V, W>(model, expression, exprWeight)
+    : df.template Histo1D<V>(model, expression);
 }
 
-template<typename V = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
-ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColumn, const std::string nameColumnStripped) {
-  const std::string typenameColumn = df.GetColumnType(nameColumn);
+template<typename V = ROOT::RDFDetail::RInferredType, typename W = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
+ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nameColumn, const std::string typenameColumn, const std::string expression, std::string exprWeight = "", const std::string nameColumnStripped = "") {
+  if (!nameColumnStripped.length()) {
+    return GetHistFromColumnCustom<V, W, D>(df, nameColumn, typenameColumn, expression, exprWeight, nameColumn);
+  }
   const TString tstrTypenameColumn = typenameColumn;
   const TString tstrNameColumnStripped = nameColumnStripped;
   Int_t binDensityOrder = 0;
@@ -141,16 +149,18 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColum
       binDensityOrder = 2;
     }
   }
-  return GetHistFromColumn<V, D>(
-      df, nameColumn, typenameColumn, nameColumn,
+  return GetHistFromColumnCustom<V, W, D>(
+      df, nameColumn, typenameColumn,
       binDensityOrder, alignment,
       isLowerAssigned, lowerLimitBins,
-      isUpperAssigned, upperLimitBins);
+      isUpperAssigned, upperLimitBins,
+      expression, exprWeight);
 }
 
-template<typename V = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
-ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColumn) {
-  return GetHistFromColumn<V, D>(df, nameColumn, nameColumn);
+template<typename V = ROOT::RDFDetail::RInferredType, typename W = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
+ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColumn, std::string exprWeight = "", const std::string nameColumnStripped = "") {
+  const std::string typenameColumn = df.GetColumnType(nameColumn);
+  return GetHistFromColumnCustom<V, W, D>(df, nameColumn, typenameColumn, nameColumn, exprWeight, nameColumnStripped);
 }
 
 Bool_t RefgetE2D(std::string &typenameE, const std::string typenameCol) {
