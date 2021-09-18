@@ -34,6 +34,7 @@
     packages = {
       inherit (pkgs-root) root gcc gnumake cmake;
       inherit (pkgs) gawk;
+      inherit (pkgs.gitAndTools) git gitFull;
     };
     defaultPackage = pkgs-root.root;
     devShell = pkgs.mkShell {
@@ -44,6 +45,9 @@
         gcc
         gnumake
         cmake
+      ]) ++ (with pkgs;[
+        gawk
+        gitAndTools.gitFull
       ]);
     };
   });
