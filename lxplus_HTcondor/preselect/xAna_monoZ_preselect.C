@@ -107,10 +107,17 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       || tstrNameColumnStripped.Contains("_n")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("Sgn")) {
+      isLowerAssigned = true;
+      lowerLimitBins = -1;
+      isUpperAssigned = true;
+      upperLimitBins = 2;
     }
   } else {
     alignment = 0.;
-    if (tstrNameColumnStripped.EndsWith("Pt")) {
+    if (nameColumn == "mcWeight") {
+      binDensityOrder = 2;
+    } else if (tstrNameColumnStripped.EndsWith("Pt")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
     } else if (tstrNameColumnStripped.EndsWith("Eta")) {
@@ -232,8 +239,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       v.clear();
     }
   }
-  std::array<std::array<std::vector<std::string>, 2>, 2> aavNameColPreselected, aavNameColMatching, aavNameColAllMatched;
-  for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+  std::array<std::array<std::vector<std::string>, 2>, 2> aavNameColHasJet, aavNameColLPairPassPt, aavNameColMatching, aavNameColAllMatched;
+  for (auto paav: {&aavNameColHasJet, &aavNameColMatching, &aavNameColAllMatched}) {
     for (auto &av: *paav) {
       for (auto &v: av) {
         v.clear();
@@ -248,8 +255,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       v.clear();
     }
   }
-  std::array<std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2>, 2> aavHistViewPreselected, aavHistViewMatching, aavHistViewAllMatched;
-  for (auto paav: {&aavHistViewPreselected, &aavHistViewMatching, &aavHistViewAllMatched}) {
+  std::array<std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2>, 2> aavHistViewHasJet, aavHistViewLPairPassPt, aavHistViewMatching, aavHistViewAllMatched;
+  for (auto paav: {&aavHistViewHasJet, &aavHistViewLPairPassPt, &aavHistViewMatching, &aavHistViewAllMatched}) {
     for (auto &av: *paav) {
       for (auto &v: av) {
         v.clear();
@@ -258,14 +265,22 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   ROOT::RDF::RNode dfOriginal(dfIn);
   dfOriginal = dfOriginal
-  .Define("Counter", [](){return 0.5;}, {});
+  .Define("Counter", [](){return 0.5;}, {})
+  // // Doesn't work
+  // // Error in <TClonesArray::operator=>: cannot copy TClonesArray's when classes are different
+  // // Causes segfault
+  // .Define("HPSTauP4", "HPSTau_4Momentum")
+  // A simple implementation of Sgn function
+  // https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c/1903975#1903975
+  .Define("mcWeightSgn", "static_cast<Int_t>((mcWeight > 0) - (0 > mcWeight))");
   {
     auto vNamesCol = dfOriginal.GetColumnNames();
     for (const std::string nameCol: vNamesCol) {
+      const TString tstrNameCol(nameCol);
       const std::string typenameCol(dfOriginal.GetColumnType(nameCol));
-      const TString tstrTypenameCol(typenameCol.c_str());
+      const TString tstrTypenameCol(typenameCol);
       std::string typenameE;
-      if (!RefgetE1D(typenameE, typenameCol)) {
+      if (!RefgetE1D(typenameE, typenameCol) && !tstrNameCol.BeginsWith("mcWeight")) {
         if (!tstrTypenameCol.Contains("TClonesArray")
           && !tstrTypenameCol.Contains("TObjArray")) {
           if (debug) std::cerr << "Working on " << nameCol << ", " << typenameCol << std::endl;
@@ -286,12 +301,12 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
             || tstrTypenameCol.Contains("bool")
           ) {
             vNameColOriginal.emplace_back(nameCol);
-            for (auto pav: {&avNameColHasLPair, &avNameColZMassCutted}) {
-              for (auto v: *pav) {
+            for (auto pav: {&avNameColHasLPair, &avNameColHasVtx, &avNameColNoTau, &avNameColLPairedPassPt, &avNameColZMassCutted, &avNameColNoExtraL}) {
+              for (auto &v: *pav) {
                 v.emplace_back(nameCol);
               }
             }
-            for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColMatching, &aavNameColAllMatched}) {
               for (auto &av: *paav) {
                 for (auto &v: av) {
                   v.emplace_back(nameCol);
@@ -302,28 +317,24 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         }
       }
     }
+    if (debug) std::cerr << "avNameColHasVtx[0].size(): " << avNameColHasVtx[0].size() << std::endl;
     for (const std::string nameCol: vNamesCol) {
       const TString tstrNameCol(nameCol);
       // if (debug) std::cerr << tstrNameCol << "\tLength: " << tstrNameCol.Length() << std::endl;
-      if (tstrNameCol.EndsWith("P4") ) {
-        const TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
+      if (tstrNameCol.EndsWith("P4") || nameCol == "HPSTau_4Momentum") {
+        TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
+        if (nameCol == "HPSTau_4Momentum") {
+          tstrPrefNameCol = "HPSTau";
+        }
         const std::string prefNameCol (tstrPrefNameCol.Data());
         const std::string typenameCol = dfOriginal.GetColumnType(nameCol);
         if (debug) std::cerr << "prefNameCol: " << prefNameCol << std::endl;
         if (typenameCol == "TClonesArray") {
           dfOriginal = dfOriginal
-          .Redefine(nameCol, [&prefNameCol, &massElectron](const TClonesArray tcaP4){
+          .Redefine(nameCol, [/*prefNameCol*/](const TClonesArray &tcaP4){
+            // Info("lambda:P4TcaTlzToRVecLz", "Working on %s, prefNameCol: %s", tcaP4.GetName(), prefNameCol.c_str());
             const size_t n = tcaP4.GetSize();
             ROOT::RVec<TypeLorentzVector> vResult(n, TypeLorentzVector());
-            // Bool_t toCorrectM = true;
-            // Double_t mCorrect = 0.;
-            // if (prefNameCol == "ele") {
-            //   mCorrect = massElectron;
-            // } else if (prefNameCol == "pho") {
-            //   mCorrect = 0.;
-            // } else {
-            //   toCorrectM = false;
-            // }
             for (size_t i = 0; i < n; ++i) {
               const auto &tlvP4 = *static_cast<TLorentzVector *>(tcaP4[i]);
               vResult[i].SetPxPyPzE(tlvP4.Px(), tlvP4.Py(), tlvP4.Pz(), tlvP4.E());
@@ -344,6 +355,9 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         //       prefNameCol + suff,
         //       expression);
         // }
+        if (nameCol == "HPSTau_4Momentum") {
+          dfOriginal = dfOriginal.Define("HPSTauP4", "HPSTau_4Momentum");
+        }
         dfOriginal = dfOriginal
         .Define(prefNameCol + "Pt", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
           return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
@@ -399,29 +413,6 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }, {"nMu", "muP4"})
   .Define("nMuPassBasicCuts", "static_cast<Int_t>(muIdxPassBasicCuts.size())")
   .Redefine("nMu", "nMuPassBasicCuts")
-  .Define("tauIdxPassBasicCuts", [](const ROOT::RVec<TypeLorentzVector> &tauP4, const ROOT::RVec<TypeLorentzVector> &eleP4, const ROOT::RVec<TypeLorentzVector> &muP4) {
-    const Int_t nTau = tauP4.size();
-    ROOT::RVec<size_t> vResult(nTau);
-    vResult.clear();
-    for (Int_t iTau = 0; iTau < nTau; ++iTau) {
-      if (tauP4[iTau].Pt() > 18. && TMath::Abs(tauP4[iTau].Eta()) < 2.5) {
-        for (const auto& p4Ele: eleP4) {
-          if (GetDeltaR2(tauP4[iTau], p4Ele) < 0.4 * 0.4) {
-            continue;
-          }
-        }
-        for (const auto& p4Mu: muP4) {
-          if (GetDeltaR2(tauP4[iTau], p4Mu) < 0.4 * 0.4) {
-            continue;
-          }
-        }
-        vResult.emplace_back(iTau);
-      }
-    }
-    return vResult;
-  }, {"tauP4", "eleP4", "muP4"})
-  .Define("nTauPassBasicCuts", "static_cast<Int_t>(tauIdxPassBasicCuts.size())")
-  .Redefine("nTau", "nTauPassBasicCuts")
   .Define("THINjetIdxPassBasicCuts", [](const Int_t THINnJet, const ROOT::RVec<TypeLorentzVector> THINjetP4
       , const ROOT::RVec<TypeLorentzVector> eleP4, const ROOT::RVec<TypeLorentzVector> muP4) {
     const auto lepP4 = ROOT::VecOps::Concatenate(eleP4, muP4);
@@ -516,7 +507,14 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
               "  } "
               "  vvResult.push_back(resultSub);"
               "} "
-              "return vvResult");
+              "return vvResult"
+              // // Doesn't work
+              // "ROOT::VecOps::Map("
+              // + nameCol +
+              // ", [" + pref + "IdxPassBasicCuts](ROOT::RVec<" + typenameE + "> vSub){"
+              // "  return ROOT::VecOps::Take(vSub, " + pref + "IdxPassBasicCuts);"
+              // "})"
+              );
           } else if (nDims == 1) {
             if (debug) std::cerr << "Redefining 1D: " << nameCol << std::endl;
             dfOriginal = dfOriginal
@@ -533,7 +531,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
             ) {
               if (debug) std::cerr << "Pick " << nameCol << std::endl;
               vNameColOriginal.emplace_back(nameCol);
-              for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+              for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColMatching, &aavNameColAllMatched}) {
                 for (auto &av: *paav) {
                   for (auto &v: av) {
                     v.emplace_back(nameCol);
@@ -563,10 +561,10 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
                 return ROOT::VecOps::Sum(rvId, 0);
               }, {nameCol});
             vNameColOriginal.emplace_back(nameColNew);
-            for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColMatching, &aavNameColAllMatched}) {
               for (auto &av: *paav) {
                 for (auto &v: av) {
-                  v.emplace_back(nameCol);
+                  v.emplace_back(nameColNew);
                 }
               }
             }
@@ -603,6 +601,9 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }, {"n" + aPrefLepFlav[iLepFlav],
           aPrefLepFlavLower[iLepFlav] + "IsPassLoose", aPrefLepFlavLower[iLepFlav] + "IsPassMedium", aPrefLepFlavLower[iLepFlav] + "IsPassTight",
           aPrefLepFlavLower[iLepFlav] + "P4"});
+  }
+  for (std::string nameCol: {"HPSTauP4"}) {
+
   }
   std::array<ROOT::RDF::RNode, 2> aDfGen {dfOriginal, dfOriginal};
   if (isSignal) {
@@ -653,7 +654,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
             )
         ) {
           avNameColHasLPair[iLepFlav].emplace_back(nameColNew);
-          for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+          for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColMatching, &aavNameColAllMatched}) {
             for (auto &v: (*paav)[iLepFlav]) {
               v.emplace_back(nameColNew);
             }
@@ -677,7 +678,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       for (auto pav: {&avNameColHasLPair, &avNameColZMassCutted}) {
         (*pav)[iLepFlav].emplace_back(nameColNew);
       }
-      for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+      for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColMatching, &aavNameColAllMatched}) {
         for (auto &v: (*paav)[iLepFlav]) {
           v.emplace_back(nameColNew);
         }
@@ -686,30 +687,50 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     aDfHasLPair[iLepFlav] = aDfHasLPair[iLepFlav]
     .Define(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ",
       "TMath::Abs(" + aPrefLepFlavLower[iLepFlav] + "PairM" + " - " + std::to_string(massZ) + ") < 15."
-      " && " + aPrefLepFlavLower[iLepFlav] + "PairPt > 130.");
+      // " && " + aPrefLepFlavLower[iLepFlav] + "PairPt > 130."
+    );
     for (auto pav: {&avNameColHasLPair, &avNameColZMassCutted}) {
       (*pav)[iLepFlav].emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
     }
-    for (auto paav: {&aavNameColPreselected, &aavNameColMatching, &aavNameColAllMatched}) {
+    for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColMatching, &aavNameColAllMatched}) {
       for (auto &v: (*paav)[iLepFlav]) {
         v.emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
       }
     }
+    aDfHasLPair[iLepFlav] = aDfHasLPair[iLepFlav]
+    .Define("HPSTauIdxPassBasicCuts", [](const ROOT::RVec<TypeLorentzVector> &HPSTauP4, const ROOT::RVec<TypeLorentzVector> &lepPairedP4) {
+      const Int_t nHPSTau = HPSTauP4.size();
+      ROOT::RVec<size_t> vResult(nHPSTau);
+      vResult.clear();
+      for (Int_t iHPSTau = 0; iHPSTau < nHPSTau; ++iHPSTau) {
+        if (HPSTauP4[iHPSTau].Pt() > 18. && TMath::Abs(HPSTauP4[iHPSTau].Eta()) < 2.5) {
+          for (const auto& p4Lep: lepPairedP4) {
+            if (GetDeltaR2(HPSTauP4[iHPSTau], p4Lep) < 0.4 * 0.4) {
+              continue;
+            }
+          }
+          vResult.emplace_back(iHPSTau);
+        }
+      }
+      return vResult;
+    }, {"HPSTauP4", aPrefLepFlavLower[iLepFlav] + "PairedP4"})
+    .Define("nHPSTauPassBasicCuts", "static_cast<Int_t>(HPSTauIdxPassBasicCuts.size())")
+    .Define("nHPSTau", "nHPSTauPassBasicCuts");
   }
   std::array<ROOT::RDF::RNode, 2> aDfHasVtx = aDfHasLPair;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfHasVtx[iLepFlav] =
-    aDfHasVtx[iLepFlav].Filter("nVtx");
+    aDfHasVtx[iLepFlav] = aDfHasVtx[iLepFlav]
+    .Filter("nVtx>0");
   }
   std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfHasVtx;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfNoTau[iLepFlav] =
-    aDfNoTau[iLepFlav].Filter("!nTau");
+    aDfNoTau[iLepFlav] = aDfNoTau[iLepFlav]
+    .Filter("nHPSTau==0");
   }
-  std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfHasVtx;
+  std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfNoTau;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfLPairedPassPt[iLepFlav] =
-    aDfLPairedPassPt[iLepFlav].Filter([](const ROOT::RVec<TypeLorentzVector> &lepPairedP4) {
+    aDfLPairedPassPt[iLepFlav] = aDfLPairedPassPt[iLepFlav]
+    .Filter([](const ROOT::RVec<TypeLorentzVector> &lepPairedP4) {
       return lepPairedP4[0].Pt() > 25. && lepPairedP4[1].Pt() > 20.;
     }, {aPrefLepFlavLower[iLepFlav] + "PairedP4"});
   }
@@ -719,89 +740,128 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   std::array<ROOT::RDF::RNode, 2> aDfNoExtraL = aDfZMassCutted;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfNoExtraL[iLepFlav]
-    = aDfNoExtraL[iLepFlav].Filter(Form("n%s<3&&n%s<2", aPrefLepFlav[iLepFlav].c_str(), aPrefLepFlav[1 - iLepFlav].c_str()));
+    aDfNoExtraL[iLepFlav] = aDfNoExtraL[iLepFlav]
+    .Filter(Form("n%s<3&&n%s<2", aPrefLepFlav[iLepFlav].c_str(), aPrefLepFlav[1 - iLepFlav].c_str()));
   }
   // https://stackoverflow.com/questions/28541488/nested-aggregate-initialization-of-stdarray
-  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfPreselected {{ {aDfNoExtraL[0], aDfNoExtraL[0]}, {aDfNoExtraL[1], aDfNoExtraL[1]} }};
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfHasJet {{ {aDfNoExtraL[0], aDfNoExtraL[0]}, {aDfNoExtraL[1], aDfNoExtraL[1]} }};
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
-      aaDfPreselected[iLepFlav][iAK] = aaDfPreselected[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 1");
+      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 1");
+    }
+  }
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfLPairPassPt = aaDfHasJet;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      aaDfLPairPassPt[iLepFlav][iAK] = aaDfLPairPassPt[iLepFlav][iAK].Filter(aPrefLepFlavLower[iLepFlav] + "PairP4.Pt() >= 50.");
     }
   }
   {
     const size_t nCol = vNameColOriginal.size();
     vHistViewOriginal.clear();
-    vHistViewOriginal.reserve(nCol);
+    vHistViewOriginal.reserve(nCol + 2);
+    vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, "mcWeight"));
+    vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, "mcWeightSgn"));
     for (const std::string &nameCol: vNameColOriginal) {
-      vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol, "mcWeight"));
+      vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol, "mcWeightSgn"));
     }
   }
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       const size_t nCol = avNameColGen[iLepFlav].size();
       avHistViewGen[iLepFlav].clear();
-      avHistViewGen[iLepFlav].reserve(nCol);
+      avHistViewGen[iLepFlav].reserve(nCol + 2);
+      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "mcWeight"));
+      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "mcWeightSgn"));
       for (const std::string &nameCol: avNameColGen[iLepFlav]) {
-        avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], nameCol, "mcWeight"));
+        avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], nameCol, "mcWeightSgn"));
       }
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColHasLPair[iLepFlav].size();
     avHistViewHasLPair[iLepFlav].clear();
-    avHistViewHasLPair[iLepFlav].reserve(nCol);
+    avHistViewHasLPair[iLepFlav].reserve(nCol + 2);
+    avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], "mcWeight"));
+    avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColHasLPair[iLepFlav]) {
-      avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], nameCol, "mcWeight"));
+      avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColHasVtx[iLepFlav].size();
     avHistViewHasVtx[iLepFlav].clear();
-    avHistViewHasVtx[iLepFlav].reserve(nCol);
+    avHistViewHasVtx[iLepFlav].reserve(nCol + 2);
+
+      if (debug) std::cerr << "Specifying hist for mcWeight and mcWeightSgn" << std::endl;
+    avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeight"));
+    avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColHasVtx[iLepFlav]) {
-      avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], nameCol, "mcWeight"));
+      if (debug) std::cerr << "Specifying hist for column " << nameCol << std::endl;
+      avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColNoTau[iLepFlav].size();
     avHistViewNoTau[iLepFlav].clear();
-    avHistViewNoTau[iLepFlav].reserve(nCol);
+    avHistViewNoTau[iLepFlav].reserve(nCol + 2);
+    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeight"));
+    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColNoTau[iLepFlav]) {
-      avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], nameCol, "mcWeight"));
+      avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColLPairedPassPt[iLepFlav].size();
     avHistViewLPairedPassPt[iLepFlav].clear();
-    avHistViewLPairedPassPt[iLepFlav].reserve(nCol);
+    avHistViewLPairedPassPt[iLepFlav].reserve(nCol + 2);
+    avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], "mcWeight"));
+    avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColLPairedPassPt[iLepFlav]) {
-      avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], nameCol, "mcWeight"));
+      avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColZMassCutted[iLepFlav].size();
     avHistViewZMassCutted[iLepFlav].clear();
-    avHistViewZMassCutted[iLepFlav].reserve(nCol);
+    avHistViewZMassCutted[iLepFlav].reserve(nCol + 2);
+    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], "mcWeight"));
+    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColZMassCutted[iLepFlav]) {
-      avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], nameCol, "mcWeight"));
+      avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColNoExtraL[iLepFlav].size();
     avHistViewNoExtraL[iLepFlav].clear();
-    avHistViewNoExtraL[iLepFlav].reserve(nCol);
+    avHistViewNoExtraL[iLepFlav].reserve(nCol + 2);
+    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], "mcWeight"));
+    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColNoExtraL[iLepFlav]) {
-      avHistViewNoExtraL[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], nameCol, "mcWeight"));
+      avHistViewNoExtraL[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
-      const size_t nCol = aavHistViewPreselected[iLepFlav][iAK].size();
-      aavHistViewPreselected[iLepFlav][iAK].clear();
-      aavHistViewPreselected[iLepFlav][iAK].reserve(nCol);
-      for (const std::string &nameCol: aavNameColPreselected[iLepFlav][iAK]) {
-        aavHistViewPreselected[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfPreselected[iLepFlav][iAK], nameCol, "mcWeight"));
+      const size_t nCol = aavHistViewHasJet[iLepFlav][iAK].size();
+      aavHistViewHasJet[iLepFlav][iAK].clear();
+      aavHistViewHasJet[iLepFlav][iAK].reserve(nCol + 2);
+      aavHistViewHasJet[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfHasJet[iLepFlav][iAK], "mcWeight"));
+      aavHistViewHasJet[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfHasJet[iLepFlav][iAK], "mcWeightSgn"));
+      for (const std::string &nameCol: aavNameColHasJet[iLepFlav][iAK]) {
+        aavHistViewHasJet[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfHasJet[iLepFlav][iAK], nameCol, "mcWeightSgn"));
+      }
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      const size_t nCol = aavHistViewLPairPassPt[iLepFlav][iAK].size();
+      aavHistViewLPairPassPt[iLepFlav][iAK].clear();
+      aavHistViewLPairPassPt[iLepFlav][iAK].reserve(nCol + 2);
+      aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], "mcWeight"));
+      aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], "mcWeightSgn"));
+      for (const std::string &nameCol: aavNameColLPairPassPt[iLepFlav][iAK]) {
+        aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], nameCol, "mcWeightSgn"));
       }
     }
   }
@@ -835,8 +895,22 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("NoTau" + aPrefLepFlav[iLepFlav]).c_str(), ("Entries with no cutted tau").c_str())->cd();
+    tfOut->mkdir(("HasVtx" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with at least 1 vertex")->cd();
+    for (auto &&histView: avHistViewHasVtx[iLepFlav]) {
+      histView->Write();
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->cd("/");
+    tfOut->mkdir(("NoTau" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no cutted HPSTau")->cd();
     for (auto &&histView: avHistViewNoTau[iLepFlav]) {
+      histView->Write();
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->cd("/");
+    tfOut->mkdir(("LPairedPassPt" + aPrefLepFlav[iLepFlav]).c_str(), Form("Entries with paired %s passing pT cuts", aPrefLepFlav[iLepFlav].c_str()))->cd();
+    for (auto &&histView: avHistViewLPairedPassPt[iLepFlav]) {
       histView->Write();
     }
   }
@@ -848,10 +922,26 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->cd("/");
+    tfOut->mkdir(("NoExtraL" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no extra leptons")->cd();
+    for (auto &&histView: avHistViewNoExtraL[iLepFlav]) {
+      histView->Write();
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       tfOut->cd("/");
-      tfOut->mkdir(("Preselected" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), "Preselected entries")->cd();
-      for (auto &&histView: aavHistViewPreselected[iLepFlav][iAK]) {
+      tfOut->mkdir(("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str())->cd();
+      for (auto &&histView: aavHistViewHasJet[iLepFlav][iAK]) {
+        histView->Write();
+      }
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      tfOut->cd("/");
+      tfOut->mkdir(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with " + aPrefLepFlav[iLepFlav] + " Pair pT < 50").c_str())->cd();
+      for (auto &&histView: aavHistViewLPairPassPt[iLepFlav][iAK]) {
         histView->Write();
       }
     }
