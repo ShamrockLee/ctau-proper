@@ -1,30 +1,23 @@
-#include<TROOT.h>
-#include<TSystem.h>
-#include<TDirectory.h>
-#include<TFile.h>
-#include<TLeaf.h>
-#include<TPad.h>
-#include<TCanvas.h>
-#include<TString.h>
-#include<TH1.h>
-#include<TLegend.h>
-#include<TMath.h>
+#include <TROOT.h>
+#include <TSystem.h>
+#include <TDirectory.h>
+#include <TFile.h>
+#include <TKey.h>
+#include <TLeaf.h>
+#include <TPad.h>
+#include <TCanvas.h>
+#include <TString.h>
+#include <TH1.h>
+#include <TLegend.h>
+#include <TMath.h>
 
 #include <functional>
 #include <iostream>
 
-void plotAll(TString pathFileIn, TString dirOut, const Bool_t normalize = false, const Bool_t logy = false, const Option_t *optionDraw = "", const std::function<TH1*(TH1*)> funAdjustHist = nullptr);
+void plotAll(TString pathFileIn, TString dirOut, const Bool_t plotSubdir = true, const Bool_t normalize = false, const Bool_t logy = false, const Option_t *optionDraw = "", const std::function<TH1*(TH1*)> funAdjustHist = nullptr);
 
-void plotAll(const char* pathFileIn, const char* dirout, const Bool_t normalize = false, const Bool_t logy = false, const Option_t *optionDraw = "", const std::function<TH1*(TH1*)> funAdjustHist = nullptr) {
-  plotAll((TString) pathFileIn, (TString) dirout, normalize, logy, optionDraw, funAdjustHist);
-}
-
-void plotAll(TString pathFileIn, TString dirOut, const Bool_t normalize, const Bool_t logy, const Option_t *optionDraw, const std::function<TH1*(TH1*)> funAdjustHist) {
+void plotAll(TDirectory *tdirIn, TString dirOut, const Bool_t plotSubdir, const Bool_t normalize, const Bool_t logy, const Option_t *optionDraw, const std::function<TH1*(TH1*)> funAdjustHist) {
   TString seperatorPath = "/";
-  TFile *fileIn = TFile::Open(pathFileIn);
-  TString basenameFileIn = gSystem->GetFromPipe(
-      Form("file=%s; test=${file##*/}; echo \"${test%%.root}\"",
-      pathFileIn.Data()));
   gSystem->mkdir(dirOut);
   if (dirOut.Length() > 1 && dirOut.EndsWith(seperatorPath)) {
     dirOut.Resize(dirOut.Length()-1);
@@ -33,22 +26,38 @@ void plotAll(TString pathFileIn, TString dirOut, const Bool_t normalize, const B
     gROOT->MakeDefCanvas();
   }
   gPad->SetLogy(logy);
-  for (auto&& keyRaw: *fileIn->GetListOfKeys()) {
+  for (auto&& keyRaw: *tdirIn->GetListOfKeys()) {
     TKey *key = (TKey *) keyRaw;
     if (key == nullptr) continue;
     TString name = key->GetName();
     TObject *obj = key->ReadObj();
     if (obj == nullptr) continue;
-    if (!obj->IsA()->InheritsFrom("TH1")) continue;
-    TH1 *hist = (TH1 *) key->ReadObj();
-    if (normalize) {
-      hist->Scale(1.0 / hist->Integral());
+    if (plotSubdir && obj->IsA()->InheritsFrom("TDirectory")) {
+      plotAll(static_cast<TDirectory*>(obj), dirOut + seperatorPath + name, true, normalize, logy, optionDraw, funAdjustHist);
     }
-    if (funAdjustHist != nullptr) hist = funAdjustHist(hist);
-    hist->Draw(optionDraw);
-    gPad->Print(dirOut + seperatorPath + basenameFileIn + "_" + name + ".svg");
+    if (obj->IsA()->InheritsFrom("TH1")) {
+      TH1 *hist = (TH1 *) key->ReadObj();
+      if (normalize) {
+        hist->Scale(1.0 / hist->Integral());
+      }
+      if (funAdjustHist != nullptr) hist = funAdjustHist(hist);
+      hist->Draw(optionDraw);
+      gPad->Print(dirOut + seperatorPath + name + ".svg");
+    }
   }
-  fileIn->Close();
+  tdirIn->Close();
+}
+
+void plotAll(const TString pathFileIn, const TString dirOut, const Bool_t plotSubdir, const Bool_t normalize, const Bool_t logy, const Option_t *optionDraw, const std::function<TH1*(TH1*)> funAdjustHist) {
+  // TString basenameFileIn = gSystem->GetFromPipe(
+  //     Form("file=%s; test=${file##*/}; echo \"${test%%.root}\"",
+  //     pathFileIn.Data()));
+  TFile *fileIn = TFile::Open(pathFileIn);
+  plotAll(fileIn, dirOut, plotSubdir, normalize, logy, optionDraw, funAdjustHist);
+}
+
+void plotAll(const char* pathFileIn, const char* dirout, const Bool_t plotSubdir = true, const Bool_t normalize = false, const Bool_t logy = false, const Option_t *optionDraw = "", const std::function<TH1*(TH1*)> funAdjustHist = nullptr) {
+  plotAll((TString) pathFileIn, (TString) dirout, plotSubdir, normalize, logy, optionDraw, funAdjustHist);
 }
 
 TH1* RebinTo100(TH1 * hist) {
