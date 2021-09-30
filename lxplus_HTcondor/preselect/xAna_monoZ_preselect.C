@@ -698,22 +698,27 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
     aDfHasLPair[iLepFlav] = aDfHasLPair[iLepFlav]
-    .Define("HPSTauIdxPassBasicCuts", [](const ROOT::RVec<TypeLorentzVector> &HPSTauP4, const ROOT::RVec<TypeLorentzVector> &lepPairedP4) {
+    .Define("HPSTauIdxPassBasicCuts", [](
+      const ROOT::RVec<TypeLorentzVector> &HPSTauP4, const ROOT::RVec<TypeLorentzVector> &lepPairedP4,
+      const ROOT::RVec<Bool_t> disc_decayModeFindingNewDMs, const ROOT::RVec<Bool_t> disc_byVTightIsolationMVA3newDMwLT) {
       const Int_t nHPSTau = HPSTauP4.size();
       ROOT::RVec<size_t> vResult(nHPSTau);
       vResult.clear();
       for (Int_t iHPSTau = 0; iHPSTau < nHPSTau; ++iHPSTau) {
-        if (HPSTauP4[iHPSTau].Pt() > 18. && TMath::Abs(HPSTauP4[iHPSTau].Eta()) < 2.5) {
+        if (HPSTauP4[iHPSTau].Pt() > 18. && TMath::Abs(HPSTauP4[iHPSTau].Eta()) < 2.5
+          && disc_decayModeFindingNewDMs[iHPSTau] && disc_byVTightIsolationMVA3newDMwLT[iHPSTau]) {
+          Bool_t isPass = true;
           for (const auto& p4Lep: lepPairedP4) {
             if (GetDeltaR2(HPSTauP4[iHPSTau], p4Lep) < 0.4 * 0.4) {
-              continue;
+              isPass = false;
+              break;
             }
           }
-          vResult.emplace_back(iHPSTau);
+          if (isPass) vResult.emplace_back(iHPSTau);
         }
       }
       return vResult;
-    }, {"HPSTauP4", aPrefLepFlavLower[iLepFlav] + "PairedP4"})
+    }, {"HPSTauP4", aPrefLepFlavLower[iLepFlav] + "PairedP4", "disc_decayModeFindingNewDMs", "disc_byVTightIsolationMVA3newDMwLT"})
     .Define("nHPSTauPassBasicCuts", "static_cast<Int_t>(HPSTauIdxPassBasicCuts.size())")
     .Define("nHPSTau", "nHPSTauPassBasicCuts");
   }
