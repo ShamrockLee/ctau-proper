@@ -28,15 +28,6 @@
         })
       ];
     };
-  in{
-    legacyPackages = pkgs;
-    legacyPackages-root = pkgs-root;
-    packages = {
-      inherit (pkgs-root) root gcc gnumake cmake;
-      inherit (pkgs) gawk;
-      inherit (pkgs.gitAndTools) git gitFull;
-    };
-    defaultPackage = pkgs-root.root;
     devShell = pkgs.mkShell {
       buildInputs = (with pkgs-root; [
         root
@@ -50,5 +41,22 @@
         gitAndTools.gitFull
       ]);
     };
+    packages = {
+      inherit (pkgs-root) root gcc gnumake cmake;
+      inherit (pkgs) gawk;
+      inherit (pkgs.gitAndTools) git gitFull;
+    };
+    run = pkgs.writeShellScriptBin "run" ''
+      export PATH="${ with packages; pkgs.lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
+      if test -n "${devShell.shellHook}"; then
+        . "${devShell.shellHook}";
+      fi
+      exec "$@"
+    '';
+  in{
+    legacyPackages = pkgs;
+    legacyPackages-root = pkgs-root;
+    inherit devShell packages;
+    defaultPackage = run;
   });
 }
