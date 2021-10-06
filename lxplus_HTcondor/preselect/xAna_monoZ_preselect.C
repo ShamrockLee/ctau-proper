@@ -318,8 +318,8 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
     if (debug) std::cerr << "avNameColHasVtx[0].size(): " << avNameColHasVtx[0].size() << std::endl;
-    for (const std::string nameCol: vNamesCol) {
-      const TString tstrNameCol(nameCol);
+    for (std::string nameCol: vNamesCol) {
+      TString tstrNameCol(nameCol);
       // if (debug) std::cerr << tstrNameCol << "\tLength: " << tstrNameCol.Length() << std::endl;
       if (tstrNameCol.EndsWith("P4") || nameCol == "HPSTau_4Momentum") {
         TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
@@ -356,7 +356,9 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         //       expression);
         // }
         if (nameCol == "HPSTau_4Momentum") {
-          dfOriginal = dfOriginal.Define("HPSTauP4", "HPSTau_4Momentum");
+          nameCol = "HPSTauP4";
+          tstrNameCol = nameCol;
+          dfOriginal = dfOriginal.Define(nameCol, "HPSTau_4Momentum");
         }
         dfOriginal = dfOriginal
         .Define(prefNameCol + "Pt", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
@@ -588,9 +590,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
           return vResult;
         }
         for (vResult[0] = 0; vResult[0] < nLep - 1; ++(vResult[0])) {
-          if (lepP4[vResult[0]].Pt() <= 25.) break;
           for (vResult[1] = vResult[0] + 1; vResult[1] < nLep; ++(vResult[1])) {
-            if (lepP4[vResult[1]].Pt() <= 20.) break;
             if (ROOT::VecOps::All(ROOT::VecOps::Take(isMedium, vResult))) {
               return vResult;
             }
