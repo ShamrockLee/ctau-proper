@@ -779,7 +779,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   std::array<ROOT::RDF::RNode, 2> aDfNoExtraL = aDfZMassCutted;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfNoExtraL[iLepFlav] = aDfNoExtraL[iLepFlav]
-    .Filter(Form("n%s<3&&n%s==0", aPrefLepFlav[iLepFlav].c_str(), aPrefLepFlav[1 - iLepFlav].c_str()));
+    .Filter(Form("n%sPassMedium<3&&n%sPassMedium==0", aPrefLepFlav[iLepFlav].c_str(), aPrefLepFlav[1 - iLepFlav].c_str()));
   }
   std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfNoExtraL;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
