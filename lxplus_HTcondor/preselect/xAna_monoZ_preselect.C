@@ -73,9 +73,8 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
   Double_t alignment = 0.;
   Bool_t isLowerAssigned = false;
   Bool_t isUpperAssigned = false;
-  Int_t halfWidth = 10000;
-  Int_t lowerLimitBins = -halfWidth;
-  Int_t upperLimitBins = halfWidth;
+  Int_t lowerLimitBins = -1000;
+  Int_t upperLimitBins = 5000;
   Int_t nBins;
   Double_t lowerLimit, upperLimit;
   if (nameColumn == "Counter") {
@@ -120,8 +119,13 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
     } else if (tstrNameColumnStripped.EndsWith("Pt")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("Rho")) {
+      binDensityOrder = 1;
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
     } else if (tstrNameColumnStripped.EndsWith("Eta")) {
       binDensityOrder = 1;
+      lowerLimitBins = -upperLimitBins;
     } else if (tstrNameColumnStripped.EndsWith("Phi")) {
       binDensityOrder = 2;
       isUpperAssigned = true;
@@ -147,15 +151,15 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       lowerLimitBins = 0;
     } else if (tstrNameColumnStripped.EndsWith("EF")) {
       binDensityOrder = 2;
-      isLowerAssigned = 0;
+      isLowerAssigned = true;
       lowerLimitBins = 0;
-      isUpperAssigned = 0;
+      isUpperAssigned = true;
       upperLimitBins = TMath::Power(10, binDensityOrder);
     } else if (tstrNameColumnStripped(0, tstrNameColumnStripped.Length() - 2).String().EndsWith("Cov")) {
       binDensityOrder = 2;
-      isLowerAssigned = 0;
+      isLowerAssigned = true;
       lowerLimitBins = 0;
-      isUpperAssigned = 0;
+      isUpperAssigned = true;
       upperLimitBins = TMath::Power(10, binDensityOrder);
     } else if (tstrNameColumnStripped.Contains("Btag")) {
       binDensityOrder = 2;
