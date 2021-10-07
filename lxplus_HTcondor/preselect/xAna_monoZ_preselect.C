@@ -211,6 +211,9 @@ void RedefineWithIdx(D &df, const std::string pref, const std::string nameIdx, c
         if (debug) std::cerr << "Redefining 2D: " << nameCol << " (" << typenameE << ") (" << typenameCol << ")" << std::endl;
         df = df
         .Redefine(nameCol,
+          "if (true && " + nameCol + ".size() <= ROOT::VecOps::Max(" + nameIdx + ")) {"
+          "  Fatal(\"lambda:RedefineWithIdx\", \"" + nameIdx + " maximum (%d) exceeds the " + nameCol + " size (%zu)\", ROOT::VecOps::Max(" + nameIdx + "), " + nameCol + ".size());"
+          "}"
           "ROOT::VecOps::RVec<ROOT::VecOps::RVec<" + typenameE + ">> vvResult(" + nameCol + ".size());"
           "vvResult.clear();"
           "for (size_t iVE: " + nameIdx + ") {"
@@ -242,10 +245,10 @@ void RedefineWithIdx(D &df, const std::string pref, const std::string nameIdx, c
   }
 }
 
-void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const Bool_t recreate=true, const Bool_t debug=false) {
+void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const Bool_t enableIMT=true, const Bool_t debug=false) {
   typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
   const std::string typenameLorentzVector = "ROOT::Math::PtEtaPhiMVector";
-  ROOT::EnableImplicitMT();
+  if (enableIMT) ROOT::EnableImplicitMT();
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
   constexpr Double_t massElectron =
       0.0005109989461;  //< static mass of electron (constant)
@@ -404,7 +407,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         .Define(prefNameCol + "Rank", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
           ROOT::RVec<Int_t> vResult(vP4.size());
           std::iota(vResult.begin(), vResult.end(), 0);
-          std::stable_sort(vResult.begin(), vResult.end(), [ &vP4 ](const Int_t ia, const Int_t ib)->Bool_t{ return vP4[ia].Pt() < vP4[ib].Pt(); });
+          std::stable_sort(vResult.begin(), vResult.end(), [ &vP4 ](const Int_t ia, const Int_t ib)->Bool_t{ return vP4[ia].Pt() > vP4[ib].Pt(); });
           return vResult;
         }, {{ nameCol }})
         .Define("is" + prefNameCol + "Presorted", [](const ROOT::RVec<Int_t> vRank)->Bool_t{
@@ -444,7 +447,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   dfOriginal = dfOriginal
   .Define("eleIdxPassBasicCuts", [](const Int_t nEle, const ROOT::RVec<TypeLorentzVector> &eleP4){
-    ROOT::RVec<size_t> vResult(nEle);
+    ROOT::RVec<Int_t> vResult(nEle);
     vResult.clear();
     for (Int_t iEle = 0; iEle < nEle; ++iEle) {
       if (eleP4[iEle].Pt() > 20. && TMath::Abs(eleP4[iEle].Eta()) < 2.4) {
@@ -456,7 +459,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   .Define("nElePassBasicCuts", "static_cast<Int_t>(eleIdxPassBasicCuts.size())")
   .Redefine("nEle", "nElePassBasicCuts")
   .Define("muIdxPassBasicCuts", [](const Int_t nMu, const ROOT::RVec<TypeLorentzVector> &muP4) {
-    ROOT::RVec<size_t> vResult(nMu);
+    ROOT::RVec<Int_t> vResult(nMu);
     vResult.clear();
     for (Int_t iMu = 0; iMu < nMu; ++iMu) {
       if (muP4[iMu].Pt() > 20. && TMath::Abs(muP4[iMu].Eta()) < 2.4) {
@@ -470,7 +473,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   .Define("THINjetIdxPassBasicCuts", [](const Int_t THINnJet, const ROOT::RVec<TypeLorentzVector> THINjetP4
       , const ROOT::RVec<TypeLorentzVector> eleP4, const ROOT::RVec<TypeLorentzVector> muP4) {
     const auto lepP4 = ROOT::VecOps::Concatenate(eleP4, muP4);
-    ROOT::RVec<size_t> vResult(THINnJet);
+    ROOT::RVec<Int_t> vResult(THINnJet);
     vResult.clear();
     for (Int_t iJet = 0; iJet < THINnJet; ++iJet) {
       const auto &p4THIN = THINjetP4[iJet];
@@ -492,7 +495,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   .Define("FATjetIdxPassBasicCuts", [](const Int_t FATnJet, const ROOT::RVec<TypeLorentzVector> FATjetP4
       , const ROOT::RVec<TypeLorentzVector> eleP4, const ROOT::RVec<TypeLorentzVector> muP4) {
     const auto lepP4 = ROOT::VecOps::Concatenate(eleP4, muP4);
-    ROOT::RVec<size_t> vResult(FATnJet);
+    ROOT::RVec<Int_t> vResult(FATnJet);
     vResult.clear();
     for (Int_t iJet = 0; iJet < FATnJet; ++iJet) {
       const auto &p4FAT = FATjetP4[iJet];
@@ -908,7 +911,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
-  TFile* tfOut = TFile::Open(fileOut.c_str(), recreate ? "recreate" : "update");
+  TFile* tfOut = TFile::Open(fileOut.c_str(), "recreate");
   // tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
   // TH1 *histTotalEvents = tfIn->Get<TH1>("allEventsCounter/totalEvents");
   // if (isSignal) {
