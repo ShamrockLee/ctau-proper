@@ -26,15 +26,26 @@
 #include <algorithm>
 #include <regex>
 
+/**Calculate deltaR2 of two ROOT::Math::LorentzVector
+ * \\(\\Delta R ^2= \\Delta \\eta ^2 + \\Delta \\phi ^2\\)
+ */
 template<typename TypeVector1, typename TypeVector2>
-inline Double_t GetDeltaR2(TypeVector1 v1, TypeVector2 v2) {
+inline Double_t GetDeltaR2(TypeVector1 lv1, TypeVector2 lv2) {
   return 
-    (static_cast<Double_t>(v1.Eta()) - static_cast<Double_t>(v2.Eta())) *
-    (static_cast<Double_t>(v1.Eta()) - static_cast<Double_t>(v2.Eta())) +
-    (static_cast<Double_t>(v1.Phi()) - static_cast<Double_t>(v2.Phi())) *
-    (static_cast<Double_t>(v1.Phi()) - static_cast<Double_t>(v2.Phi()));
+    (static_cast<Double_t>(lv1.Eta()) - static_cast<Double_t>(lv2.Eta())) *
+    (static_cast<Double_t>(lv1.Eta()) - static_cast<Double_t>(lv2.Eta())) +
+    (static_cast<Double_t>(lv1.Phi()) - static_cast<Double_t>(lv2.Phi())) *
+    (static_cast<Double_t>(lv1.Phi()) - static_cast<Double_t>(lv2.Phi()));
 }
 
+/**Generate a histogram of the specified expression lazily
+ * from an RDataFram
+ * by applying Histo1D() with specified binning information
+ * 
+ * This overload does the actual application
+ * and store the binning specification
+ * in the histogram title in JSON format
+ */
 template<typename V = ROOT::RDFDetail::RInferredType, typename W = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
 ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(
     D &df,
@@ -62,6 +73,15 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(
     : df.template Histo1D<V>(model, expression);
 }
 
+/**Generate a histogram of the specified expression lazily
+ * from an RDataFram by applying Histo1D()
+ * 
+ * The binning information (an ROOT::RDF::TH1DModel insteance)
+ * is calculated from the column name or another string specified.
+ * 
+ * This overload decide the bin number and lower and upper limits
+ * from the specified string (`nameColumnStripped`)
+ */
 template<typename V = ROOT::RDFDetail::RInferredType, typename W = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
 ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nameColumn, const std::string typenameColumn, const std::string expression, std::string exprWeight = "", const std::string nameColumnStripped = "") {
   if (!nameColumnStripped.length()) {
@@ -175,12 +195,21 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       expression, exprWeight);
 }
 
+/**Generate a histogram of an RDataFrame column lazily
+ * from an RDataFram by applying Histo1D()
+ * 
+ * The binning information (an ROOT::RDF::TH1DModel insteance)
+ * is calculated from the column name or another string specified.
+ */
 template<typename V = ROOT::RDFDetail::RInferredType, typename W = ROOT::RDFDetail::RInferredType, typename D = ROOT::RDF::RNode>
 ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColumn, std::string exprWeight = "", const std::string nameColumnStripped = "") {
   const std::string typenameColumn = df.GetColumnType(nameColumn);
   return GetHistFromColumnCustom<V, W, D>(df, nameColumn, typenameColumn, nameColumn, exprWeight, nameColumnStripped);
 }
 
+/**Determine if a type name string describes a 2D Rvec
+ * and get the element type name string
+ */
 Bool_t RefgetE2D(std::string &typenameE, const std::string typenameCol) {
   std::regex r ("^ROOT::VecOps::RVec\\s*<\\s*(vector|ROOT::VecOps::RVec)\\s*<\\s*(.*\\S)\\s*>\\s*>\\s*$");
   std::smatch m;
@@ -191,6 +220,9 @@ Bool_t RefgetE2D(std::string &typenameE, const std::string typenameCol) {
   return result;
 }
 
+/**Determine if a type name string describes a 1D Rvec
+ * and get the element type name string
+ */
 Bool_t RefgetE1D(std::string &typenameE, const std::string typenameCol) {
   std::regex r ("^ROOT::VecOps::RVec\\s*<\\s*(.*\\S)\\s*>\\s*$");
   std::smatch m;
