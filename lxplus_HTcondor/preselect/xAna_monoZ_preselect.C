@@ -233,12 +233,42 @@ Bool_t RefgetE1D(std::string &typenameE, const std::string typenameCol) {
   return result;
 }
 
+inline std::string GetExprTakeIdx2D(const std::string nameCol, const std::string nameIdx, const std::string typenameE, const Bool_t debug = false) {
+  return
+    // "if (true && " + nameCol + ".size() <= ROOT::VecOps::Max(" + nameIdx + ")) {"
+    // "  Fatal(\"lambda:RedefineWithIdx\", \"" + nameIdx + " maximum (%d) exceeds the " + nameCol + " size (%zu)\", ROOT::VecOps::Max(" + nameIdx + "), " + nameCol + ".size());"
+    // "}"
+    "ROOT::VecOps::RVec<ROOT::VecOps::RVec<" + typenameE + ">> vvResult(" + nameCol + ".size());"
+    "vvResult.clear();"
+    "for (size_t iVE: " + nameIdx + ") {"
+    "  const auto& vE = " + nameCol + "[iVE];"
+    "  ROOT::VecOps::RVec<" + typenameE + "> resultSub(vE.size());"
+    "  resultSub.clear();"
+    "  for (auto iterElement = vE.cbegin(); iterElement != vE.cend(); ++iterElement) {"
+    "    resultSub.push_back(*iterElement);"
+    "  } "
+    "  vvResult.push_back(resultSub);"
+    "} "
+    "return vvResult"
+    // // Doesn't work
+    // "ROOT::VecOps::Map("
+    // + nameCol +
+    // ", [" + nameIdx + "](ROOT::RVec<" + typenameE + "> vSub){"
+    // "  return ROOT::VecOps::Take(vSub, " + nameIdx + ");"
+    // "})"
+  ;
+}
+
+inline std::string GetExprTakeIdx1D(const std::string nameCol, const std::string nameIdx, const std::string typenameE, const Bool_t debug = false) {
+  return Form("ROOT::VecOps::Take(%s, %s)", nameCol.c_str(), nameIdx.c_str());
+}
+
 template <class D = ROOT::RDF::RNode>
-void RedefineWithIdx(D &df, const std::string pref, const std::string nameIdx, const std::function<void(const std::string nameCol, const Int_t nDims, const std::string typenameE)> funPickNameCol = nullptr, const Bool_t debug = false) {
+void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::string> vPrefExcl, const std::string nameIdx, const std::function<void(const std::string nameCol, const Int_t nDims, const std::string typenameE)> funPickNameCol = nullptr, const Bool_t debug = false) {
   for (const std::string &nameCol: df.GetColumnNames()) {
+    if (std::find(vPrefExcl.cbegin(), vPrefExcl.cend(), pref) != vPrefExcl.cend()) continue;
     std::string typenameCol = df.GetColumnType(nameCol);
     const TString tstrNameCol = nameCol;
-    const TString tstrTypenameCol = typenameCol;
     std::string typenameE = "";
     const Int_t nDims = RefgetE2D(typenameE, typenameCol) ? 2 : (RefgetE1D(typenameE, typenameCol) ? 1 : 0);
     const TString tstrTypenameE = typenameE;
@@ -246,33 +276,11 @@ void RedefineWithIdx(D &df, const std::string pref, const std::string nameIdx, c
       if (nDims == 2) {
         if (debug) std::cerr << "Redefining 2D: " << nameCol << " (" << typenameE << ") (" << typenameCol << ")" << std::endl;
         df = df
-        .Redefine(nameCol,
-          "if (true && " + nameCol + ".size() <= ROOT::VecOps::Max(" + nameIdx + ")) {"
-          "  Fatal(\"lambda:RedefineWithIdx\", \"" + nameIdx + " maximum (%d) exceeds the " + nameCol + " size (%zu)\", ROOT::VecOps::Max(" + nameIdx + "), " + nameCol + ".size());"
-          "}"
-          "ROOT::VecOps::RVec<ROOT::VecOps::RVec<" + typenameE + ">> vvResult(" + nameCol + ".size());"
-          "vvResult.clear();"
-          "for (size_t iVE: " + nameIdx + ") {"
-          "  const auto& vE = " + nameCol + "[iVE];"
-          "  ROOT::VecOps::RVec<" + typenameE + "> resultSub(vE.size());"
-          "  resultSub.clear();"
-          "  for (auto iterElement = vE.cbegin(); iterElement != vE.cend(); ++iterElement) {"
-          "    resultSub.push_back(*iterElement);"
-          "  } "
-          "  vvResult.push_back(resultSub);"
-          "} "
-          "return vvResult"
-          // // Doesn't work
-          // "ROOT::VecOps::Map("
-          // + nameCol +
-          // ", [" + nameIdx + "](ROOT::RVec<" + typenameE + "> vSub){"
-          // "  return ROOT::VecOps::Take(vSub, " + nameIdx + ");"
-          // "})"
-          );
+        .Redefine(nameCol, GetExprTakeIdx2D(nameCol, nameIdx, typenameE, debug));
       } else if (nDims == 1) {
         if (debug) std::cerr << "Redefining 1D: " << nameCol << " (" << typenameE << ") (" << typenameCol << ")" << std::endl;
         df = df
-        .Redefine(nameCol, Form("ROOT::VecOps::Take(%s, %s)", nameCol.c_str(), nameIdx.c_str()));
+        .Redefine(nameCol, GetExprTakeIdx1D(nameCol, nameIdx, typenameE, debug));
       }
       if (funPickNameCol && nDims > 0) {
         funPickNameCol(nameCol, nDims, typenameE);
@@ -397,17 +405,13 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
     if (debug) std::cerr << "avNameColHasVtx[0].size(): " << avNameColHasVtx[0].size() << std::endl;
+    std::vector<std::string> vPref;
+    vPref.clear();
     for (std::string nameCol: vNamesCol) {
       TString tstrNameCol(nameCol);
+      const std::string typenameCol = dfOriginal.GetColumnType(nameCol);
       // if (debug) std::cerr << tstrNameCol << "\tLength: " << tstrNameCol.Length() << std::endl;
       if (tstrNameCol.EndsWith("P4") || nameCol == "HPSTau_4Momentum") {
-        TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
-        if (nameCol == "HPSTau_4Momentum") {
-          tstrPrefNameCol = "HPSTau";
-        }
-        const std::string prefNameCol (tstrPrefNameCol.Data());
-        const std::string typenameCol = dfOriginal.GetColumnType(nameCol);
-        if (debug) std::cerr << "prefNameCol: " << prefNameCol << std::endl;
         if (typenameCol == "TClonesArray") {
           dfOriginal = dfOriginal
           .Redefine(nameCol, [/*prefNameCol*/](const TClonesArray &tcaP4){
@@ -434,51 +438,65 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         //       prefNameCol + suff,
         //       expression);
         // }
+        TString tstrPrefNameCol = tstrNameCol(0, tstrNameCol.Length() - 2);
+        if (debug) std::cerr << "prefNameCol: " << tstrPrefNameCol << std::endl;
         if (nameCol == "HPSTau_4Momentum") {
           nameCol = "HPSTauP4";
           tstrNameCol = nameCol;
+          tstrPrefNameCol = "HPSTau";
           dfOriginal = dfOriginal.Define(nameCol, "HPSTau_4Momentum");
         }
-        dfOriginal = dfOriginal
-        .Define(prefNameCol + "Rank", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-          ROOT::RVec<Int_t> vResult(vP4.size());
-          std::iota(vResult.begin(), vResult.end(), 0);
-          std::stable_sort(vResult.begin(), vResult.end(), [ &vP4 ](const Int_t ia, const Int_t ib)->Bool_t{ return vP4[ia].Pt() > vP4[ib].Pt(); });
-          return vResult;
-        }, {{ nameCol }})
-        .Define("is" + prefNameCol + "Presorted", [](const ROOT::RVec<Int_t> vRank)->Bool_t{
-          return std::is_sorted(vRank.begin(), vRank.end());
-        }, {{ prefNameCol + "Rank" }});
-        vNameColOriginal.emplace_back("is" + prefNameCol + "Presorted");
-        RedefineWithIdx(dfOriginal, prefNameCol, prefNameCol + "Rank", nullptr, debug);
-        dfOriginal = dfOriginal
-        .Define(prefNameCol + "Pt", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-            return p4.Pt();
-          });
-        }, {{ nameCol }})
-        .Define(prefNameCol + "Eta", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-            return p4.Eta();
-          });
-        }, {{ nameCol }})
-        .Define(prefNameCol + "Phi", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-            return p4.Phi();
-          });
-        }, {{ nameCol }})
-        .Define(prefNameCol + "E", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-            return p4.E();
-          });
-        }, {{ nameCol }})
-        .Define(prefNameCol + "M", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-          return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-            return p4.M();
-          });
-        }, {{ nameCol }});
-        continue;
+        vPref.emplace_back(tstrPrefNameCol.Data());
       }
+    }
+    // std::vector<size_t> vIdxPrefSorted(vPref.size(), 0);
+    // std::iota(vIdxPrefSorted.begin(), vIdxPrefSorted.end());
+    // std::sort(vIdxPrefSorted.begin(), vIdxPrefSorted.end(), [&vPref](size_t i, size_t j){ return vPref[i] > vPref[j]; });
+    for (std::string prefNameCol: { "ele", "mu", "THINjet", "FATjet", "HPSTau" }) {
+      std::string nameCol = prefNameCol + "P4";
+      TString tstrNameCol(nameCol);
+      TString tstrPrefNameCol(prefNameCol);
+      dfOriginal = dfOriginal
+      .Define(prefNameCol + "Rank", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+        ROOT::RVec<Int_t> vResult(vP4.size());
+        std::iota(vResult.begin(), vResult.end(), 0);
+        std::stable_sort(vResult.begin(), vResult.end(), [ &vP4 ](const Int_t ia, const Int_t ib)->Bool_t{ return vP4[ia].Pt() > vP4[ib].Pt(); });
+        return vResult;
+      }, {{ nameCol }})
+      .Define("is" + prefNameCol + "Presorted", [](const ROOT::RVec<Int_t> vRank)->Bool_t{
+        return std::is_sorted(vRank.begin(), vRank.end());
+      }, {{ prefNameCol + "Rank" }});
+      vNameColOriginal.emplace_back("is" + prefNameCol + "Presorted");
+      if (!tstrPrefNameCol.Contains("gen") && !tstrPrefNameCol.Contains("Gen") && !tstrPrefNameCol.Contains("GEN")) {
+        RedefinePrefWithIdx(dfOriginal, prefNameCol, { prefNameCol + "jet", prefNameCol + "Jet" + prefNameCol + "GenJet" }, prefNameCol + "Rank", nullptr, debug);
+      }
+      dfOriginal = dfOriginal
+      .Define(prefNameCol + "Pt", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+          return p4.Pt();
+        });
+      }, {{ nameCol }})
+      .Define(prefNameCol + "Eta", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+          return p4.Eta();
+        });
+      }, {{ nameCol }})
+      .Define(prefNameCol + "Phi", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+          return p4.Phi();
+        });
+      }, {{ nameCol }})
+      .Define(prefNameCol + "E", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+          return p4.E();
+        });
+      }, {{ nameCol }})
+      .Define(prefNameCol + "M", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+          return p4.M();
+        });
+      }, {{ nameCol }});
+      continue;
     }
   }
   dfOriginal = dfOriginal
@@ -574,7 +592,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
     for (const std::string pref: {"ele", "mu", "THINjet", "FATjet"}) {
-      RedefineWithIdx(dfOriginal, pref, pref + "IdxPassBasicCuts",
+      RedefinePrefWithIdx(dfOriginal, pref, {}, pref + "IdxPassBasicCuts",
         [debug, &vNameColOriginal, &aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColMatching, &aavNameColAllMatched]
         (const std::string nameCol, const Int_t nDims, const std::string typenameE){
           const TString tstrTypenameE = typenameE;
@@ -776,7 +794,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     }, {"HPSTauP4", aPrefLepFlavLower[iLepFlav] + "PairedP4", "disc_decayModeFindingNewDMs", "disc_byVTightIsolationMVA3newDMwLT"})
     .Define("nHPSTauPassBasicCuts", "static_cast<Int_t>(HPSTauIdxPassBasicCuts.size())")
     .Define("nHPSTau", "nHPSTauPassBasicCuts");
-    RedefineWithIdx(aDfHasLPair[iLepFlav], "HPSTau", "HPSTauIdxPassBasicCuts",
+    RedefinePrefWithIdx(aDfHasLPair[iLepFlav], "HPSTau", {}, "HPSTauIdxPassBasicCuts",
       [debug, &avNameColHasLPair]
       (const std::string nameCol, const Int_t nDims, const std::string typenameE){
         const TString tstrTypenameE = typenameE;
