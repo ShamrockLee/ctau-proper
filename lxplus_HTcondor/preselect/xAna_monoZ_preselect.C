@@ -822,12 +822,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     aDfHasVtx[iLepFlav] = aDfHasVtx[iLepFlav]
     .Filter("nVtx>0");
   }
-  std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfHasVtx;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfNoTau[iLepFlav] = aDfNoTau[iLepFlav]
-    .Filter("nHPSTau==0");
-  }
-  std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfNoTau;
+  std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfHasVtx;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfLPairedPassPt[iLepFlav] = aDfLPairedPassPt[iLepFlav]
     .Filter([](const ROOT::RVec<TypeLorentzVector> &lepPairedP4) {
@@ -843,8 +838,13 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     aDfNoExtraL[iLepFlav] = aDfNoExtraL[iLepFlav]
     .Filter(Form("n%sPassMedium<3&&n%sPassMedium==0", aPrefLepFlav[iLepFlav].c_str(), aPrefLepFlav[1 - iLepFlav].c_str()));
   }
+  std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfNoExtraL;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aDfNoTau[iLepFlav] = aDfNoTau[iLepFlav]
+    .Filter("nHPSTau==0");
+  }
   // https://stackoverflow.com/questions/28541488/nested-aggregate-initialization-of-stdarray
-  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfHasJet {{ {aDfNoExtraL[0], aDfNoExtraL[0]}, {aDfNoExtraL[1], aDfNoExtraL[1]} }};
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfHasJet {{ {aDfNoTau[0], aDfNoTau[0]}, {aDfNoTau[1], aDfNoTau[1]} }};
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 1");
@@ -902,16 +902,6 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    const size_t nCol = avNameColNoTau[iLepFlav].size();
-    avHistViewNoTau[iLepFlav].clear();
-    avHistViewNoTau[iLepFlav].reserve(nCol + 2);
-    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeight"));
-    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeightSgn"));
-    for (const std::string &nameCol: avNameColNoTau[iLepFlav]) {
-      avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], nameCol, "mcWeightSgn"));
-    }
-  }
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColLPairedPassPt[iLepFlav].size();
     avHistViewLPairedPassPt[iLepFlav].clear();
     avHistViewLPairedPassPt[iLepFlav].reserve(nCol + 2);
@@ -939,6 +929,16 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColNoExtraL[iLepFlav]) {
       avHistViewNoExtraL[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], nameCol, "mcWeightSgn"));
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    const size_t nCol = avNameColNoTau[iLepFlav].size();
+    avHistViewNoTau[iLepFlav].clear();
+    avHistViewNoTau[iLepFlav].reserve(nCol + 2);
+    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeight"));
+    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeightSgn"));
+    for (const std::string &nameCol: avNameColNoTau[iLepFlav]) {
+      avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
@@ -1002,13 +1002,6 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("NoTau" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no cutted HPSTau")->cd();
-    for (auto &&histView: avHistViewNoTau[iLepFlav]) {
-      histView->Write();
-    }
-  }
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    tfOut->cd("/");
     tfOut->mkdir(("LPairedPassPt" + aPrefLepFlav[iLepFlav]).c_str(), Form("Entries with paired %s passing pT cuts", aPrefLepFlav[iLepFlav].c_str()))->cd();
     for (auto &&histView: avHistViewLPairedPassPt[iLepFlav]) {
       histView->Write();
@@ -1025,6 +1018,13 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     tfOut->cd("/");
     tfOut->mkdir(("NoExtraL" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no extra leptons")->cd();
     for (auto &&histView: avHistViewNoExtraL[iLepFlav]) {
+      histView->Write();
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->cd("/");
+    tfOut->mkdir(("NoTau" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no cutted HPSTau")->cd();
+    for (auto &&histView: avHistViewNoTau[iLepFlav]) {
       histView->Write();
     }
   }
