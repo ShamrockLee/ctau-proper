@@ -512,16 +512,22 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }, {"nEle", "eleP4"})
   .Define("nElePassBasicCuts", "static_cast<Int_t>(eleIdxPassBasicCuts.size())")
   .Redefine("nEle", "nElePassBasicCuts")
-  .Define("muIdxPassBasicCuts", [](const Int_t nMu, const ROOT::RVec<TypeLorentzVector> &muP4) {
+  // // JIT compilation doesn't pass without an obvious reason
+  // .Define("muRelIso", "(muChHadIso + ROOT::VecOps::Map(muNeHadIso + muGamIso + 0.5 * muPUPt, [](const Double_t x){ return x > 0 ? x : 0.; })) / muPt")
+  .Define("muRelIso", [](
+      const ROOT::RVec<Float_t> &muChHadIso, const ROOT::RVec<Float_t> &muNeHadIso, const ROOT::RVec<Float_t> &muGamIso, const ROOT::RVec<Float_t> &muPUPt, const ROOT::RVec<Double_t> &muPt) {
+    return (muChHadIso + ROOT::VecOps::Map(muNeHadIso + muGamIso + 0.5 * muPUPt, [](const Double_t x){ return x > 0 ? x : 0.; })) / muPt;
+  }, { "muChHadIso", "muNeHadIso", "muGamIso", "muPUPt", "muPt" })
+  .Define("muIdxPassBasicCuts", [](const Int_t nMu, const ROOT::RVec<TypeLorentzVector> &muP4, const ROOT::RVec<Double_t> &muRelIso, const ROOT::RVec<Int_t> muTrkLayers) {
     ROOT::RVec<Int_t> vResult(nMu);
     vResult.clear();
     for (Int_t iMu = 0; iMu < nMu; ++iMu) {
-      if (muP4[iMu].Pt() > 20. && TMath::Abs(muP4[iMu].Eta()) < 2.4) {
+      if (muP4[iMu].Pt() > 20. && TMath::Abs(muP4[iMu].Eta()) < 2.4 && muRelIso[iMu] < 0.15 && muTrkLayers[iMu] >= 5) {
         vResult.emplace_back(iMu);
       }
     }
     return vResult;
-  }, {"nMu", "muP4"})
+  }, {"nMu", "muP4", "muRelIso", "muTrkLayers"})
   .Define("nMuPassBasicCuts", "static_cast<Int_t>(muIdxPassBasicCuts.size())")
   .Redefine("nMu", "nMuPassBasicCuts")
   .Define("THINjetIdxPassBasicCuts", [](const Int_t THINnJet, const ROOT::RVec<TypeLorentzVector> THINjetP4
@@ -836,7 +842,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   std::array<ROOT::RDF::RNode, 2> aDfNoExtraL = aDfZMassCutted;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfNoExtraL[iLepFlav] = aDfNoExtraL[iLepFlav]
-    .Filter(Form("n%sPassMedium<3&&n%sPassMedium==0", aPrefLepFlav[iLepFlav].c_str(), aPrefLepFlav[1 - iLepFlav].c_str()));
+    .Filter(Form("nElePassLoose<=%d&&nMuPassSoft<=%d", iLepFlav ? 0 : 2, iLepFlav ? 2 : 0));
   }
   std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfNoExtraL;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
