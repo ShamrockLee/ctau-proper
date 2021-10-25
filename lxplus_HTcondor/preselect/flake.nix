@@ -13,13 +13,15 @@
           root = prev.root.overrideAttrs (oldAttrs: {
             version = "2021-09-01";
             src = root-source;
-            cmakeFlags = map (oldFlag:
+            cmakeFlags = (map (oldFlag:
               if oldFlag == "-Dimt=OFF" then "-Dimt=ON"
               else if oldFlag == "-Dssl=OFF" then "-Dssl=ON"
               # else if oldFlag == "-Dgfal=OFF" then "-Dgfal=ON"
               # else if oldFlag == "-Dxrootd=OFF" then "-Dxrootd=ON"
               else oldFlag
-            ) oldAttrs.cmakeFlags;
+            ) oldAttrs.cmakeFlags) ++ [
+              "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+            ];
             buildInputs = oldAttrs.buildInputs ++ (with pkgs-root; [
               tbb # for implicit multithreading
               openssl # for ssl support
