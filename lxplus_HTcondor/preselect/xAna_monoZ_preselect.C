@@ -1057,7 +1057,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   tfIn->Close();
 }
 
-#if false
+#if true
 int main(int argc, char** argv) {
   xAna_monoZ_preselect(argv[0], argv[1], true, true);
 }
