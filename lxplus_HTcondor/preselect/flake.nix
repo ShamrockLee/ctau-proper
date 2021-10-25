@@ -4,7 +4,7 @@
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.root-source.url = "github:root-project/root/master";
   inputs.root-source.flake = false;
-  outputs = inputs@{nixpkgs, nixpkgs-root, flake-utils, root-source, ...}: flake-utils.lib.eachDefaultSystem (system: let
+  outputs = inputs@{self, nixpkgs, nixpkgs-root, flake-utils, root-source, ...}: flake-utils.lib.eachDefaultSystem (system: let
     pkgs = nixpkgs.legacyPackages.${system};
     pkgs-root = import nixpkgs-root {
       inherit system;
@@ -43,22 +43,27 @@
         gitAndTools.gitFull
       ]);
     };
-    packages = {
+    packagesSub = {
       inherit (pkgs-root) root gcc gnumake cmake;
       inherit (pkgs) gawk;
       inherit (pkgs.gitAndTools) git gitFull;
     };
     run = pkgs.writeShellScriptBin "run" ''
-      export PATH="${ with packages; pkgs.lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
+      export PATH="${ with packagesSub; pkgs.lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
       if test -n "${devShell.shellHook}"; then
         . "${devShell.shellHook}";
       fi
       exec "$@"
     '';
+    ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
   in{
     legacyPackages = pkgs;
     legacyPackages-root = pkgs-root;
-    inherit devShell packages;
+    inherit devShell;
     defaultPackage = run;
+    packages = packagesSub // {
+      srcRaw = self;
+      inherit run ana;
+    };
   });
 }
