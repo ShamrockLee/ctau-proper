@@ -1,3 +1,5 @@
+# Nix expression to build the analysis ROOT macro
+
 { lib
 , root
 , nameMacro ? "xAna_monoZ_preselect.C"
@@ -22,13 +24,16 @@ root.stdenv.mkDerivation {
   ];
 
   buildInputs = [
-  ] ++ root.buildInputs;
+  ];
 
   dontUnpack = true;
 
+  # Use g++/c++ instead of gcc/cc
+  # to prevent the code being falsely identified as C instead of C++
+  # See https://discourse.nixos.org/t/how-to-compile-cern-root-macro-analysis-c-code/15695/2
   buildPhase = ''
     runHook preBuild
-    cc -o "${mainProgram}" $(root-config --glibs --cflags) -g -Wall -Wextra -O1 "$src/${nameMacro}"
+    c++ -o "${mainProgram}" $(root-config --glibs --cflags) -g -Wall -Wextra -O2 "$src/${nameMacro}" || true
     runHook postBuild
   '';
 
