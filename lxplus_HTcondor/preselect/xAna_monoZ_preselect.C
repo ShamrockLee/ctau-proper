@@ -979,14 +979,59 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   // }
   // histTotalEvents->Write();
   tfOut->cd("/");
-  tfOut->mkdir("Original", "Unfiltered entries")->cd();
+  tfOut->mkdir("Original", "Unfiltered entries");
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->mkdir(("HasLPair" + aPrefLepFlav[iLepFlav]).c_str(), ("Entries with correct " + aPrefLepFlavLower[iLepFlav] + " numbers").c_str());
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->mkdir(("Gen" + aPrefLepFlav[iLepFlav]).c_str(), ("GEN-level " + aPrefLepFlavLower[iLepFlav] + " events").c_str());
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->mkdir(("HasVtx" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with at least 1 vertex");
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->mkdir(("LPairedPassPt" + aPrefLepFlav[iLepFlav]).c_str(), Form("Entries with paired %s passing pT cuts", aPrefLepFlav[iLepFlav].c_str()));
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->mkdir(("ZMassCutted" + aPrefLepFlav[iLepFlav]).c_str(), "Entries passing the Z mass cut");
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->mkdir(("NoExtraL" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no extra leptons");
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    tfOut->mkdir(("NoTau" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no cutted HPSTau");
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      tfOut->mkdir(("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
+    }
+  }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      tfOut->mkdir(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with " + aPrefLepFlav[iLepFlav] + " Pair pT < 50").c_str());
+    }
+  }
+  tfOut->Close();
+  std::vector<RResultPtr<RInterface<RLoopManager>>> vSn;
+  vSn.clear();
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}));
+    }
+  }
+  for (auto &&sn: vSn) {
+    sn.GetValue();
+  }
+  tfOut->Open(fileOut.c_str(), "update");
+  tfOut->cd("/");
+  tfOut->cd("Original");
   for (auto &&histView: vHistViewOriginal) {
     histView->Write();
   }
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       tfOut->cd("/");
-      tfOut->mkdir(("Gen" + aPrefLepFlav[iLepFlav]).c_str(), ("GEN-level " + aPrefLepFlavLower[iLepFlav] + " events").c_str())->cd();
+      tfOut->cd(("Gen" + aPrefLepFlav[iLepFlav]).c_str());
       for (auto &&histView: avHistViewGen[iLepFlav]) {
         histView->Write();
       }
@@ -994,42 +1039,42 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("HasLPair" + aPrefLepFlav[iLepFlav]).c_str(), ("Entries with correct " + aPrefLepFlavLower[iLepFlav] + " numbers").c_str())->cd();
+    tfOut->cd(("HasLPair" + aPrefLepFlav[iLepFlav]).c_str());
     for (auto &&histView: avHistViewHasLPair[iLepFlav]) {
       histView->Write();
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("HasVtx" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with at least 1 vertex")->cd();
+    tfOut->cd(("HasVtx" + aPrefLepFlav[iLepFlav]).c_str());
     for (auto &&histView: avHistViewHasVtx[iLepFlav]) {
       histView->Write();
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("LPairedPassPt" + aPrefLepFlav[iLepFlav]).c_str(), Form("Entries with paired %s passing pT cuts", aPrefLepFlav[iLepFlav].c_str()))->cd();
+    tfOut->cd(("LPairedPassPt" + aPrefLepFlav[iLepFlav]).c_str());
     for (auto &&histView: avHistViewLPairedPassPt[iLepFlav]) {
       histView->Write();
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("ZMassCutted" + aPrefLepFlav[iLepFlav]).c_str(), "Entries passing the Z mass cut")->cd();
+    tfOut->cd(("ZMassCutted" + aPrefLepFlav[iLepFlav]).c_str());
     for (auto &&histView: avHistViewZMassCutted[iLepFlav]) {
       histView->Write();
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("NoExtraL" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no extra leptons")->cd();
+    tfOut->cd(("NoExtraL" + aPrefLepFlav[iLepFlav]).c_str());
     for (auto &&histView: avHistViewNoExtraL[iLepFlav]) {
       histView->Write();
     }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->cd("/");
-    tfOut->mkdir(("NoTau" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with no cutted HPSTau")->cd();
+    tfOut->cd(("NoTau" + aPrefLepFlav[iLepFlav]).c_str());
     for (auto &&histView: avHistViewNoTau[iLepFlav]) {
       histView->Write();
     }
@@ -1037,7 +1082,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       tfOut->cd("/");
-      tfOut->mkdir(("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str())->cd();
+      tfOut->cd(("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str());
       for (auto &&histView: aavHistViewHasJet[iLepFlav][iAK]) {
         histView->Write();
       }
@@ -1046,14 +1091,14 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       tfOut->cd("/");
-      tfOut->mkdir(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with " + aPrefLepFlav[iLepFlav] + " Pair pT < 50").c_str())->cd();
+      tfOut->cd(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str());
       for (auto &&histView: aavHistViewLPairPassPt[iLepFlav][iAK]) {
         histView->Write();
       }
     }
   }
-  if (debug) std::cerr << "Completed!" << std::endl;
   tfOut->Close();
+  if (debug) std::cerr << "Completed!" << std::endl;
   tfIn->Close();
 }
 
