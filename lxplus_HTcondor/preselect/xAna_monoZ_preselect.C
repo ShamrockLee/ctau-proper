@@ -1014,9 +1014,22 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   tfOut->Close();
   std::vector<RResultPtr<RInterface<RLoopManager>>> vSn;
   vSn.clear();
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
-      vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}));
+  {
+    std::vector<std::string> vNameColJetCmp {
+      "nGenPar", "genParPt", "genParEta", "genParPhi", "genParE", "genParM", "genParId", "genMomParId", "genParIndex", "genParQ", "genParSt"
+      // , "nEle", "elePt", "eleEta", "elePhi", "eleE", "eleM", "eleCharge", "eleChargeConsistent"
+      , "elePairedIdx", "elePairedPt", "elePairedEta", "elePairedPhi", "elePairedE", "elePairedM", "elePairedCharge", "elePairedChargeConsistent"
+      // , "nMu", "muPt", "muEta", "muPhi", "muE", "muM", "muCharge"
+      , "muPairedIdx", "muPairedPt", "muPairedEta", "muPairedPhi", "muPairedE", "muPairedM", "muPairedCharge"
+      , "THINnJet", "THINjetIdxPassBasicCuts", "THINjetPt", "THINjetEta", "THINjetPhi", "THINjetE", "THINjetM", "THINjetArea", "THINjetCharge"
+      , "FATnJet", "FATjetIdxPassBasicCuts", "FATjetPt", "FATjetEta", "FATjetPhi", "FATjetE", "FATjetM", "FATjetArea", "FATjetCharge"
+      , "pfMetCorrPt", "pfMetCorrEta", "pfMetCorrPhi", "pfMetCorrSumEt", "pfMetCorrSig", "pfMetCorrUnc"
+    };
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}));
+        // vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}));
+      }
     }
   }
   for (auto &&sn: vSn) {
