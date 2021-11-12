@@ -980,11 +980,13 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   // histTotalEvents->Write();
   tfOut->cd("/");
   tfOut->mkdir("Original", "Unfiltered entries");
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    tfOut->mkdir(("HasLPair" + aPrefLepFlav[iLepFlav]).c_str(), ("Entries with correct " + aPrefLepFlavLower[iLepFlav] + " numbers").c_str());
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      tfOut->mkdir(("Gen" + aPrefLepFlav[iLepFlav]).c_str(), ("GEN-level " + aPrefLepFlavLower[iLepFlav] + " events").c_str());
+    }
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    tfOut->mkdir(("Gen" + aPrefLepFlav[iLepFlav]).c_str(), ("GEN-level " + aPrefLepFlavLower[iLepFlav] + " events").c_str());
+    tfOut->mkdir(("HasLPair" + aPrefLepFlav[iLepFlav]).c_str(), ("Entries with correct " + aPrefLepFlavLower[iLepFlav] + " numbers").c_str());
   }
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     tfOut->mkdir(("HasVtx" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with at least 1 vertex");
@@ -1006,25 +1008,25 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       tfOut->mkdir(("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
     }
   }
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
-      tfOut->mkdir(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with " + aPrefLepFlav[iLepFlav] + " Pair pT < 50").c_str());
-    }
-  }
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   for (size_t iAK = 0; iAK < 2; ++iAK) {
+  //     tfOut->mkdir(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with " + aPrefLepFlav[iLepFlav] + " Pair pT < 50").c_str());
+  //   }
+  // }
   tfOut->Close();
-  std::vector<RResultPtr<RInterface<RLoopManager>>> vSn;
+  std::vector<ROOT::RDF::RResultPtr<ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager>>> vSn;
   vSn.clear();
   {
-    std::vector<std::string> vNameColJetCmp {
-      "nGenPar", "genParPt", "genParEta", "genParPhi", "genParE", "genParM", "genParId", "genMomParId", "genParIndex", "genParQ", "genParSt"
+    const std::vector<std::string> vNameColJetCmp ({
+      "nGenPar"//, "genParPt", "genParEta", "genParPhi", "genParE", "genParM", "genParId", "genMomParId", "genParIndex", "genParQ", "genParSt"
       // , "nEle", "elePt", "eleEta", "elePhi", "eleE", "eleM", "eleCharge", "eleChargeConsistent"
-      , "elePairedIdx", "elePairedPt", "elePairedEta", "elePairedPhi", "elePairedE", "elePairedM", "elePairedCharge", "elePairedChargeConsistent"
+      , "elePairedIdx"// , "elePairedPt", "elePairedEta", "elePairedPhi", "elePairedE", "elePairedM", "elePairedCharge", "elePairedChargeConsistent"
       // , "nMu", "muPt", "muEta", "muPhi", "muE", "muM", "muCharge"
-      , "muPairedIdx", "muPairedPt", "muPairedEta", "muPairedPhi", "muPairedE", "muPairedM", "muPairedCharge"
-      , "THINnJet", "THINjetIdxPassBasicCuts", "THINjetPt", "THINjetEta", "THINjetPhi", "THINjetE", "THINjetM", "THINjetArea", "THINjetCharge"
-      , "FATnJet", "FATjetIdxPassBasicCuts", "FATjetPt", "FATjetEta", "FATjetPhi", "FATjetE", "FATjetM", "FATjetArea", "FATjetCharge"
-      , "pfMetCorrPt", "pfMetCorrEta", "pfMetCorrPhi", "pfMetCorrSumEt", "pfMetCorrSig", "pfMetCorrUnc"
-    };
+      , "muPairedIdx"// , "muPairedPt", "muPairedEta", "muPairedPhi", "muPairedE", "muPairedM", "muPairedCharge"
+      , "THINnJet", "THINjetIdxPassBasicCuts"// , "THINjetPt", "THINjetEta", "THINjetPhi", "THINjetE", "THINjetM", "THINjetArea", "THINjetCharge"
+      , "FATnJet", "FATjetIdxPassBasicCuts"// , "FATjetPt", "FATjetEta", "FATjetPhi", "FATjetE", "FATjetM", "FATjetArea", "FATjetCharge"
+      // , "pfMetCorrPt", "pfMetCorrEta", "pfMetCorrPhi", "pfMetCorrSumEt", "pfMetCorrSig", "pfMetCorrUnc"
+    });
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       for (size_t iAK = 0; iAK < 2; ++iAK) {
         vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}));
@@ -1035,7 +1037,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   for (auto &&sn: vSn) {
     sn.GetValue();
   }
-  tfOut->Open(fileOut.c_str(), "update");
+  tfOut = TFile::Open(fileOut.c_str(), "update");
   tfOut->cd("/");
   tfOut->cd("Original");
   for (auto &&histView: vHistViewOriginal) {
@@ -1101,15 +1103,15 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
-      tfOut->cd("/");
-      tfOut->cd(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str());
-      for (auto &&histView: aavHistViewLPairPassPt[iLepFlav][iAK]) {
-        histView->Write();
-      }
-    }
-  }
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   for (size_t iAK = 0; iAK < 2; ++iAK) {
+  //     tfOut->cd("/");
+  //     tfOut->cd(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str());
+  //     for (auto &&histView: aavHistViewLPairPassPt[iLepFlav][iAK]) {
+  //       histView->Write();
+  //     }
+  //   }
+  // }
   tfOut->Close();
   if (debug) std::cerr << "Completed!" << std::endl;
   tfIn->Close();
