@@ -33,7 +33,7 @@ root.stdenv.mkDerivation {
   # See https://discourse.nixos.org/t/how-to-compile-cern-root-macro-analysis-c-code/15695/2
   buildPhase = ''
     runHook preBuild
-    c++ -o "${mainProgram}" $(root-config --glibs --cflags) -g -Wall -Wextra -O2 "$src/${nameMacro}" || true
+    c++ -o "${mainProgram}" $(root-config --glibs --cflags) -g -O2 "$src/${nameMacro}"
     runHook postBuild
   '';
 
