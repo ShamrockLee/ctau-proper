@@ -38,13 +38,16 @@
         gcc
         gnumake
         cmake
+        gdb
+        gmock
+        gtest
       ]) ++ (with pkgs;[
         gawk
         gitAndTools.gitFull
       ]);
     };
     packagesSub = {
-      inherit (pkgs-root) root gcc gnumake cmake;
+      inherit (pkgs-root) root gcc gnumake cmake gdb gmock gtest;
       inherit (pkgs) gawk;
       inherit (pkgs.gitAndTools) git gitFull;
     };
