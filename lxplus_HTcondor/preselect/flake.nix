@@ -53,6 +53,7 @@
     };
     run = pkgs.writeShellScriptBin "run" ''
       export PATH="${ with packagesSub; pkgs.lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
+      export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath (with pkgs-root; [ root gcc ]) }:$LD_LIBRARY_PATH"
       if test -n "${devShell.shellHook}"; then
         . "${devShell.shellHook}";
       fi
