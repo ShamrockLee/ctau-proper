@@ -24,6 +24,7 @@ root.stdenv.mkDerivation {
   ];
 
   buildInputs = [
+    root
   ];
 
   dontUnpack = true;
