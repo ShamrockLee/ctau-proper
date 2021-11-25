@@ -1,12 +1,17 @@
 # Nix expression to build the analysis ROOT macro
 
 { lib
+, makeWrapper
 , root
 , nameMacro ? "xAna_monoZ_preselect.C"
 , mainProgram ? "xAna_monoZ_preselect"
 , srcRaw ? ./.
 }:
 
+let
+  # The default and unwrapped gcc package
+  ccUnwrapped = root.stdenv.cc.cc;
+in
 root.stdenv.mkDerivation {
   pname = mainProgram;
   version = "0.0.1";
@@ -21,6 +26,7 @@ root.stdenv.mkDerivation {
 
   nativeBuildInputs = [
     root
+    makeWrapper
   ];
 
   buildInputs = [
@@ -34,14 +40,15 @@ root.stdenv.mkDerivation {
   # See https://discourse.nixos.org/t/how-to-compile-cern-root-macro-analysis-c-code/15695/2
   buildPhase = ''
     runHook preBuild
-    c++ -o "${mainProgram}" $(root-config --glibs --cflags) -g -O2 "$src/${nameMacro}"
+    c++ -o "${mainProgram}.o" $(root-config --glibs --cflags) -g -O2 "$src/${nameMacro}"
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
     mkdir -p "$out/bin"
-    mv "${mainProgram}" "$out/bin/"
+    mv "${mainProgram}.o" "$out/bin/"
+    makeWrapper "$out/bin/${mainProgram}.o" "$out/bin/${mainProgram}" --prefix LD_LIBRARY_PATH : ${ lib.makeLibraryPath [ root ccUnwrapped ] }
     runHook postInstall
   '';
 
