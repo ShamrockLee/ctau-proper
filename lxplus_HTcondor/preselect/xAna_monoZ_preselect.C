@@ -560,7 +560,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
     vResult.clear();
     for (Int_t iJet = 0; iJet < FATnJet; ++iJet) {
       const auto &p4FAT = FATjetP4[iJet];
-      if (p4FAT.Pt() > 200. && TMath::Abs(p4FAT.Eta()) < 2.5
+      if (p4FAT.Pt() > 170. && TMath::Abs(p4FAT.Eta()) < 2.5
           && ROOT::VecOps::All(ROOT::VecOps::Map(
               lepP4,
               [&p4FAT](const TypeLorentzVector p4Lep) {
@@ -953,7 +953,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
   std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfHasJet {{ {aDfNoTau[0], aDfNoTau[0]}, {aDfNoTau[1], aDfNoTau[1]} }};
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
-      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 1");
+      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 2");
     }
   }
   // Lazily register histogram action for the HasJet stages
