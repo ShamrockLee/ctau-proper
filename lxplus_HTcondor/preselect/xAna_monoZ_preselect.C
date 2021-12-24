@@ -350,6 +350,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
+  // Begin the Original stage
   ROOT::RDF::RNode dfOriginal(dfIn);
   dfOriginal = dfOriginal
   .Define("Counter", [](){return 0.5;}, {})
@@ -684,6 +685,18 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
           aPrefLepFlavLower[iLepFlav] + "IsPassLoose", aPrefLepFlavLower[iLepFlav] + "IsPassMedium", aPrefLepFlavLower[iLepFlav] + "IsPassTight",
           aPrefLepFlavLower[iLepFlav] + "P4"});
   }
+  // Lazily register histogram action for the Original stage
+  {
+    const size_t nCol = vNameColOriginal.size();
+    vHistViewOriginal.clear();
+    vHistViewOriginal.reserve(nCol + 2);
+    vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, "mcWeight"));
+    vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, "mcWeightSgn"));
+    for (const std::string &nameCol: vNameColOriginal) {
+      vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol, "mcWeightSgn"));
+    }
+  }
+  // Begin the Gen stages in case the input dataset is MC Signal
   std::array<ROOT::RDF::RNode, 2> aDfGen {dfOriginal, dfOriginal};
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
@@ -694,7 +707,19 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         ")");
       avNameColGen[iLepFlav] = vNameColOriginal;
     }
+    // Lazily register histogram action for the Gen stages
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      const size_t nCol = avNameColGen[iLepFlav].size();
+      avHistViewGen[iLepFlav].clear();
+      avHistViewGen[iLepFlav].reserve(nCol + 2);
+      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "mcWeight"));
+      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "mcWeightSgn"));
+      for (const std::string &nameCol: avNameColGen[iLepFlav]) {
+        avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], nameCol, "mcWeightSgn"));
+      }
+    }
   }
+  // Begin the HasLPair stages
   std::array<ROOT::RDF::RNode, 2> aDfHasLPair = aDfGen;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfHasLPair[iLepFlav] = aDfHasLPair[iLepFlav]
@@ -823,67 +848,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
         }
       }, debug);
   }
-  std::array<ROOT::RDF::RNode, 2> aDfHasVtx = aDfHasLPair;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfHasVtx[iLepFlav] = aDfHasVtx[iLepFlav]
-    .Filter("nVtx>0");
-  }
-  std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfHasVtx;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfLPairedPassPt[iLepFlav] = aDfLPairedPassPt[iLepFlav]
-    .Filter([](const ROOT::RVec<TypeLorentzVector> &lepPairedP4) {
-      return lepPairedP4[0].Pt() > 25. && lepPairedP4[1].Pt() > 20.;
-    }, {aPrefLepFlavLower[iLepFlav] + "PairedP4"});
-  }
-  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfLPairedPassPt;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfZMassCutted[iLepFlav] = aDfZMassCutted[iLepFlav].Filter(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
-  }
-  std::array<ROOT::RDF::RNode, 2> aDfNoExtraL = aDfZMassCutted;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfNoExtraL[iLepFlav] = aDfNoExtraL[iLepFlav]
-    .Filter(Form("nElePassLoose<=%d&&nMuPassSoft<=%d", iLepFlav ? 0 : 2, iLepFlav ? 2 : 0));
-  }
-  std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfNoExtraL;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aDfNoTau[iLepFlav] = aDfNoTau[iLepFlav]
-    .Filter("nHPSTau==0");
-  }
-  // https://stackoverflow.com/questions/28541488/nested-aggregate-initialization-of-stdarray
-  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfHasJet {{ {aDfNoTau[0], aDfNoTau[0]}, {aDfNoTau[1], aDfNoTau[1]} }};
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
-      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 1");
-    }
-  }
-  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfLPairPassPt = aaDfHasJet;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
-      aaDfLPairPassPt[iLepFlav][iAK] = aaDfLPairPassPt[iLepFlav][iAK].Filter(aPrefLepFlavLower[iLepFlav] + "PairP4.Pt() >= 50.");
-    }
-  }
-  {
-    const size_t nCol = vNameColOriginal.size();
-    vHistViewOriginal.clear();
-    vHistViewOriginal.reserve(nCol + 2);
-    vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, "mcWeight"));
-    vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, "mcWeightSgn"));
-    for (const std::string &nameCol: vNameColOriginal) {
-      vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol, "mcWeightSgn"));
-    }
-  }
-  if (isSignal) {
-    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      const size_t nCol = avNameColGen[iLepFlav].size();
-      avHistViewGen[iLepFlav].clear();
-      avHistViewGen[iLepFlav].reserve(nCol + 2);
-      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "mcWeight"));
-      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "mcWeightSgn"));
-      for (const std::string &nameCol: avNameColGen[iLepFlav]) {
-        avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], nameCol, "mcWeightSgn"));
-      }
-    }
-  }
+  // Lazily register histogram action for the HasLPair stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColHasLPair[iLepFlav].size();
     avHistViewHasLPair[iLepFlav].clear();
@@ -894,12 +859,19 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
+  // Begin the HasVtx stages
+  std::array<ROOT::RDF::RNode, 2> aDfHasVtx = aDfHasLPair;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aDfHasVtx[iLepFlav] = aDfHasVtx[iLepFlav]
+    .Filter("nVtx>0");
+  }
+  // Lazily register histogram action for the HasVtx stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColHasVtx[iLepFlav].size();
     avHistViewHasVtx[iLepFlav].clear();
     avHistViewHasVtx[iLepFlav].reserve(nCol + 2);
 
-      if (debug) std::cerr << "Specifying hist for mcWeight and mcWeightSgn" << std::endl;
+    if (debug) std::cerr << "Specifying hist for mcWeight and mcWeightSgn" << std::endl;
     avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeight"));
     avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeightSgn"));
     for (const std::string &nameCol: avNameColHasVtx[iLepFlav]) {
@@ -907,6 +879,15 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
+  // Begin the LPairPassPt stages
+  std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfHasVtx;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aDfLPairedPassPt[iLepFlav] = aDfLPairedPassPt[iLepFlav]
+    .Filter([](const ROOT::RVec<TypeLorentzVector> &lepPairedP4) {
+      return lepPairedP4[0].Pt() > 25. && lepPairedP4[1].Pt() > 20.;
+    }, {aPrefLepFlavLower[iLepFlav] + "PairedP4"});
+  }
+  // Lazily register histogram action for the LPairedPassPt stage
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColLPairedPassPt[iLepFlav].size();
     avHistViewLPairedPassPt[iLepFlav].clear();
@@ -917,6 +898,12 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
+  // Begin the ZMassCutted stages
+  std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfLPairedPassPt;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aDfZMassCutted[iLepFlav] = aDfZMassCutted[iLepFlav].Filter(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
+  }
+  // Lazily register histogram action for the ZMassCutted stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColZMassCutted[iLepFlav].size();
     avHistViewZMassCutted[iLepFlav].clear();
@@ -927,6 +914,13 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
+  // Begin the NoExtraL stage
+  std::array<ROOT::RDF::RNode, 2> aDfNoExtraL = aDfZMassCutted;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aDfNoExtraL[iLepFlav] = aDfNoExtraL[iLepFlav]
+    .Filter(Form("nElePassLoose<=%d&&nMuPassSoft<=%d", iLepFlav ? 0 : 2, iLepFlav ? 2 : 0));
+  }
+  // Lazily register histogram action for the NoExtraL stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColNoExtraL[iLepFlav].size();
     avHistViewNoExtraL[iLepFlav].clear();
@@ -937,6 +931,13 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       avHistViewNoExtraL[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
+  // Begin the NoTau stage
+  std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfNoExtraL;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aDfNoTau[iLepFlav] = aDfNoTau[iLepFlav]
+    .Filter("nHPSTau==0");
+  }
+  // Lazily register histogram action for the NoTau stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     const size_t nCol = avNameColNoTau[iLepFlav].size();
     avHistViewNoTau[iLepFlav].clear();
@@ -947,6 +948,15 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], nameCol, "mcWeightSgn"));
     }
   }
+  // Begin the HasJet stage
+  // https://stackoverflow.com/questions/28541488/nested-aggregate-initialization-of-stdarray
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfHasJet {{ {aDfNoTau[0], aDfNoTau[0]}, {aDfNoTau[1], aDfNoTau[1]} }};
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 1");
+    }
+  }
+  // Lazily register histogram action for the HasJet stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       const size_t nCol = aavHistViewHasJet[iLepFlav][iAK].size();
@@ -959,6 +969,14 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
+  // Begin the LPairPassPt stage
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfLPairPassPt = aaDfHasJet;
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      aaDfLPairPassPt[iLepFlav][iAK] = aaDfLPairPassPt[iLepFlav][iAK].Filter(aPrefLepFlavLower[iLepFlav] + "PairP4.Pt() >= 50.");
+    }
+  }
+  // Lazily register histogram action for the LPairPassPt stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       const size_t nCol = aavHistViewLPairPassPt[iLepFlav][iAK].size();
@@ -971,6 +989,7 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
       }
     }
   }
+  // Realize the actions and write to output files
   TFile* tfOut = TFile::Open(fileOut.c_str(), "recreate");
   // tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
   // TH1 *histTotalEvents = tfIn->Get<TH1>("allEventsCounter/totalEvents");
