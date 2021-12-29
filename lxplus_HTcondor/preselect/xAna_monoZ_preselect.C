@@ -31,18 +31,6 @@
 #define OPTPARSE_API static
 #include "skeeto_optparse.h"
 
-/**Calculate deltaR2 of two ROOT::Math::LorentzVector
- * \\(\\Delta R ^2= \\Delta \\eta ^2 + \\Delta \\phi ^2\\)
- */
-template<typename TypeVector1, typename TypeVector2>
-inline Double_t GetDeltaR2(TypeVector1 lv1, TypeVector2 lv2) {
-  return 
-    (static_cast<Double_t>(lv1.Eta()) - static_cast<Double_t>(lv2.Eta())) *
-    (static_cast<Double_t>(lv1.Eta()) - static_cast<Double_t>(lv2.Eta())) +
-    (static_cast<Double_t>(lv1.Phi()) - static_cast<Double_t>(lv2.Phi())) *
-    (static_cast<Double_t>(lv1.Phi()) - static_cast<Double_t>(lv2.Phi()));
-}
-
 /**Generate a histogram of the specified expression lazily
  * from an RDataFram
  * by applying Histo1D() with specified binning information
@@ -548,7 +536,7 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
           && ROOT::VecOps::All(ROOT::VecOps::Map(
               lepP4,
               [&p4THIN](const TypeLorentzVector p4Lep) {
-                return GetDeltaR2(p4THIN, p4Lep) > 0.4 * 0.4;
+                return ROOT::Math::VectorUtil::DeltaR2(p4THIN, p4Lep) > 0.4 * 0.4;
           }))
       ) {
         vResult.emplace_back(iJet);
@@ -569,7 +557,7 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
           && ROOT::VecOps::All(ROOT::VecOps::Map(
               lepP4,
               [&p4FAT](const TypeLorentzVector p4Lep) {
-                return GetDeltaR2(p4FAT, p4Lep) > 0.8 * 0.8;
+                return ROOT::Math::VectorUtil::DeltaR2(p4FAT, p4Lep) > 0.8 * 0.8;
           }))
       ) {
         vResult.emplace_back(iJet);
@@ -818,7 +806,7 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
           && disc_decayModeFindingNewDMs[iHPSTau] && disc_byVTightIsolationMVA3newDMwLT[iHPSTau]) {
           Bool_t isPass = true;
           for (const auto& p4Lep: lepPairedP4) {
-            if (GetDeltaR2(HPSTauP4[iHPSTau], p4Lep) < 0.4 * 0.4) {
+            if (ROOT::Math::VectorUtil::DeltaR2(HPSTauP4[iHPSTau], p4Lep) < 0.4 * 0.4) {
               isPass = false;
               break;
             }
