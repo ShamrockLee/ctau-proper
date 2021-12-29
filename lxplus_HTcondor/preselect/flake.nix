@@ -1,73 +1,77 @@
 {
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.05";
-  inputs.nixpkgs-root.url = "github:ShamrockLee/nixpkgs/root-6-25";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.root-source.url = "github:root-project/root/master";
   inputs.root-source.flake = false;
-  outputs = inputs@{self, nixpkgs, nixpkgs-root, flake-utils, root-source, ...}: flake-utils.lib.eachDefaultSystem (system: let
-    pkgs = nixpkgs.legacyPackages.${system};
-    pkgs-root = import nixpkgs-root {
-      inherit system;
-      overlays = [
-        (final: prev: {
-          root = prev.root.overrideAttrs (oldAttrs: {
-            version = "2021-09-01";
-            src = root-source;
-            cmakeFlags = (map (oldFlag:
-              if oldFlag == "-Dimt=OFF" then "-Dimt=ON"
-              else if oldFlag == "-Dssl=OFF" then "-Dssl=ON"
-              # else if oldFlag == "-Dgfal=OFF" then "-Dgfal=ON"
-              # else if oldFlag == "-Dxrootd=OFF" then "-Dxrootd=ON"
-              else oldFlag
-            ) oldAttrs.cmakeFlags) ++ [
-              "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
-            ];
-            buildInputs = oldAttrs.buildInputs ++ (with pkgs-root; [
-              tbb # for implicit multithreading
-              openssl # for ssl support
-            ]);
-          });
-        })
-      ];
-    };
-    devShell = pkgs.mkShell {
-      buildInputs = (with pkgs-root; [
-        root
-      ]);
-      nativeBuildInputs = (with pkgs-root; [
-        gcc
-        gnumake
-        cmake
-        gdb
-        gmock
-        gtest
-      ]) ++ (with pkgs;[
-        gawk
-        gitAndTools.gitFull
-      ]);
-    };
-    packagesSub = {
-      inherit (pkgs-root) root gcc gnumake cmake gdb gmock gtest;
-      inherit (pkgs) gawk;
-      inherit (pkgs.gitAndTools) git gitFull;
-    };
-    run = pkgs.writeShellScriptBin "run" ''
-      export PATH="${ with packagesSub; pkgs.lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
-      export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath (with pkgs-root; [ root gcc ]) }:$LD_LIBRARY_PATH"
-      if test -n "${devShell.shellHook}"; then
-        . "${devShell.shellHook}";
-      fi
-      exec "$@"
-    '';
-    ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
-  in{
-    legacyPackages = pkgs;
-    legacyPackages-root = pkgs-root;
-    inherit devShell;
-    defaultPackage = run;
-    packages = packagesSub // {
-      srcRaw = self;
-      inherit run ana;
-    };
-  });
+  outputs = inputs@{ self, nixpkgs, flake-utils, root-source, ... }: flake-utils.lib.eachDefaultSystem (system:
+    let
+      pkgs = nixpkgs.legacyPackages.${system};
+      lib = nixpkgs.lib.${system};
+      switchFlag = patternToRemove: flagToAdd: flags: (
+        let
+          flags' = lib.filter (flag: builtins.match patternToRemove flag == null) flags;
+        in
+        if lib.elem flagToAdd flags' then flags'
+        else flags' ++ [ flagToAdd ]
+      );
+      root = (pkgs.callPackage dependency-builders/root { }
+      ).overrideAttrs (oldAttrs: {
+        src = root-source;
+        cmakeFlags = builtins.foldl'
+          (flags: pair:
+            switchFlag (lib.first pair) (lib.last pair) flags
+          ) [
+            [ "-Dimt=OFF" "-Dimt=ON" ]
+            [ "-Dssl=OFF" "-Dssl=ON" ]
+            # # The dependencies are not packaged yet.
+            # [ "-Dgfal=OFF" "-Dgfal=ON" ]
+            # [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
+            [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
+        ];
+        buildInputs = oldAttrs.buildInputs ++ (with pkgs; [
+          tbb # for implicit multithreading
+          openssl # for ssl support
+        ]);
+      });
+      devShell = pkgs.mkShell {
+        buildInputs = (with pkgs; [
+          root
+          gcc
+        ]);
+        nativeBuildInputs = (with pkgs;[
+          root
+          gcc
+          gnumake
+          cmake
+          gdb
+          gmock
+          gtest
+          gawk
+          gitAndTools.gitFull
+        ]);
+      };
+      packagesSub = {
+        inherit (pkgs) root gcc gnumake cmake gdb gmock gtest;
+        inherit (pkgs) gawk;
+        inherit (pkgs.gitAndTools) git gitFull;
+      };
+      run = pkgs.writeShellScriptBin "run" ''
+        export PATH="${ with packagesSub; pkgs.lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
+        export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath (with pkgs; [ gcc ]) ++ [ root ] }:$LD_LIBRARY_PATH"
+        if test -n "${devShell.shellHook}"; then
+          . "${devShell.shellHook}";
+        fi
+        exec "$@"
+      '';
+      ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
+    in
+    {
+      legacyPackages = pkgs;
+      inherit devShell;
+      defaultPackage = run;
+      packages = packagesSub // {
+        srcRaw = self;
+        inherit run ana;
+      };
+    });
 }

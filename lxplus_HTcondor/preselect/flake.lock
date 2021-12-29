@@ -31,27 +31,10 @@
         "type": "github"
       }
     },
-    "nixpkgs-root": {
-      "locked": {
-        "lastModified": 1628672385,
-        "narHash": "sha256-Xb/yIAo1OK8OEwrtd5SP3bjAD06PLXsrWG3WTLKqme0=",
-        "owner": "ShamrockLee",
-        "repo": "nixpkgs",
-        "rev": "60e709069fa2fbcfca943d8f6df8dc6d33c67025",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ShamrockLee",
-        "ref": "root-6-25",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-root": "nixpkgs-root",
         "root-source": "root-source"
       }
     },
