@@ -962,26 +962,28 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
       }
     }
   }
-  // Begin the LPairPassPt stage
-  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfLPairPassPt = aaDfHasJet;
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
-      aaDfLPairPassPt[iLepFlav][iAK] = aaDfLPairPassPt[iLepFlav][iAK].Filter(aPrefLepFlavLower[iLepFlav] + "PairP4.Pt() >= 50.");
-    }
-  }
-  // Lazily register histogram action for the LPairPassPt stages
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
-      const size_t nCol = aavHistViewLPairPassPt[iLepFlav][iAK].size();
-      aavHistViewLPairPassPt[iLepFlav][iAK].clear();
-      aavHistViewLPairPassPt[iLepFlav][iAK].reserve(nCol + 2);
-      aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], "mcWeight"));
-      aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], "mcWeightSgn"));
-      for (const std::string &nameCol: aavNameColLPairPassPt[iLepFlav][iAK]) {
-        aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], nameCol, "mcWeightSgn"));
-      }
-    }
-  }
+
+  // // Begin the LPairPassPt stage
+  // std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfLPairPassPt = aaDfHasJet;
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   for (size_t iAK = 0; iAK < 2; ++iAK) {
+  //     aaDfLPairPassPt[iLepFlav][iAK] = aaDfLPairPassPt[iLepFlav][iAK].Filter(aPrefLepFlavLower[iLepFlav] + "PairP4.Pt() >= 50.");
+  //   }
+  // }
+  // // Lazily register histogram action for the LPairPassPt stages
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   for (size_t iAK = 0; iAK < 2; ++iAK) {
+  //     const size_t nCol = aavHistViewLPairPassPt[iLepFlav][iAK].size();
+  //     aavHistViewLPairPassPt[iLepFlav][iAK].clear();
+  //     aavHistViewLPairPassPt[iLepFlav][iAK].reserve(nCol + 2);
+  //     aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], "mcWeight"));
+  //     aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], "mcWeightSgn"));
+  //     for (const std::string &nameCol: aavNameColLPairPassPt[iLepFlav][iAK]) {
+  //       aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], nameCol, "mcWeightSgn"));
+  //     }
+  //   }
+  // }
+
   // Realize the actions and write to output files
   TFile* tfOut = TFile::Open(fileOut.c_str(), "recreate");
   // tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
@@ -1041,7 +1043,7 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
     });
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       for (size_t iAK = 0; iAK < 2; ++iAK) {
-        vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}));
+        // vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}));
         // vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}));
       }
     }
