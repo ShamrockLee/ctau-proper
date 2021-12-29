@@ -17,8 +17,10 @@
         inherit system;
         overlays = [ (final: prev:
           {
-            root = (final.callPackage dependency-builders/root { }
-            ).overrideAttrs (oldAttrs: {
+            root = (final.callPackage dependency-builders/root (with final; {
+              python = python3;
+              inherit (darwin.apple_sdk.frameworks) Cocoa CoreSymbolication OpenGL;
+            })).overrideAttrs (oldAttrs: {
               src = root-source;
               cmakeFlags = builtins.foldl'
                 (flags: pair:
