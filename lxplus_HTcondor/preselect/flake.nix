@@ -5,7 +5,6 @@
   inputs.root-source.flake = false;
   outputs = inputs@{ self, nixpkgs, flake-utils, root-source, ... }: flake-utils.lib.eachDefaultSystem (system:
     let
-      pkgs = nixpkgs.legacyPackages.${system};
       lib = nixpkgs.lib.${system};
       switchFlag = patternToRemove: flagToAdd: flags: (
         let
@@ -14,25 +13,32 @@
         if lib.elem flagToAdd flags' then flags'
         else flags' ++ [ flagToAdd ]
       );
-      root = (pkgs.callPackage dependency-builders/root { }
-      ).overrideAttrs (oldAttrs: {
-        src = root-source;
-        cmakeFlags = builtins.foldl'
-          (flags: pair:
-            switchFlag (lib.first pair) (lib.last pair) flags
-          ) [
-            [ "-Dimt=OFF" "-Dimt=ON" ]
-            [ "-Dssl=OFF" "-Dssl=ON" ]
-            # # The dependencies are not packaged yet.
-            # [ "-Dgfal=OFF" "-Dgfal=ON" ]
-            # [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
-            [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
-        ];
-        buildInputs = oldAttrs.buildInputs ++ (with pkgs; [
-          tbb # for implicit multithreading
-          openssl # for ssl support
-        ]);
-      });
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ (final: prev:
+          {
+            root = (final.callPackage dependency-builders/root { }
+            ).overrideAttrs (oldAttrs: {
+              src = root-source;
+              cmakeFlags = builtins.foldl'
+                (flags: pair:
+                  switchFlag (lib.first pair) (lib.last pair) flags
+                ) [
+                  [ "-Dimt=OFF" "-Dimt=ON" ]
+                  [ "-Dssl=OFF" "-Dssl=ON" ]
+                  # # The dependencies are not packaged yet.
+                  # [ "-Dgfal=OFF" "-Dgfal=ON" ]
+                  # [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
+                  [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
+              ];
+              buildInputs = oldAttrs.buildInputs ++ (with final; [
+                tbb # for implicit multithreading
+                openssl # for ssl support
+              ]);
+            });
+          }) ];
+      };
+      inherit (pkgs) root;
       devShell = pkgs.mkShell {
         buildInputs = (with pkgs; [
           root
