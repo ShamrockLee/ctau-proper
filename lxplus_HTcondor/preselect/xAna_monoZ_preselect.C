@@ -25,6 +25,11 @@
 #include <array>
 #include <algorithm>
 #include <regex>
+#include <cstdlib>
+
+#define OPTPARSE_IMPLEMENTATION
+#define OPTPARSE_API static
+#include "skeeto_optparse.h"
 
 /**Calculate deltaR2 of two ROOT::Math::LorentzVector
  * \\(\\Delta R ^2= \\Delta \\eta ^2 + \\Delta \\phi ^2\\)
@@ -289,10 +294,10 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
   }
 }
 
-void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const Bool_t enableIMT=true, const Bool_t debug=false) {
+  void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const size_t nThread=0, const int debug=0) {
   typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
   const std::string typenameLorentzVector = "ROOT::Math::PtEtaPhiMVector";
-  if (enableIMT) ROOT::EnableImplicitMT();
+  ROOT::EnableImplicitMT(nThread);
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
   constexpr Double_t massElectron =
       0.0005109989461;  //< static mass of electron (constant)
@@ -1138,7 +1143,33 @@ void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, c
 
 #if true
 int main(int argc, char** argv) {
-  xAna_monoZ_preselect(argv[1], argv[2], true, true);
+  size_t nThread = 0;
+  int debug = 0;
+  struct optparse_long longopts[] = {
+    {"debug", 'v', OPTPARSE_NONE},
+    {"threads", 'j', OPTPARSE_REQUIRED}
+  };
+  int option;
+  struct optparse options;
+  optparse_init(&options, argv);
+  while ((option = optparse_long(&options, longopts, NULL)) != -1) {
+    switch (option) {
+      case 'v':
+        debug++;
+        break;
+      case 'j':
+        nThread = std::atoi(options.optarg);
+        break;
+      case '?':
+        std::fprintf(stderr, "%s: %s\n", argv[0], options.errmsg);
+        std::cerr << std::flush;
+        return 1;
+        break;
+    }
+  }
+  char *pathFileInRaw = optparse_arg(&options);
+  char *pathFileOutRaw = optparse_arg(&options);
+  xAna_monoZ_preselect(pathFileInRaw, pathFileOutRaw, nThread, debug);
   return 0;
 }
 #endif
