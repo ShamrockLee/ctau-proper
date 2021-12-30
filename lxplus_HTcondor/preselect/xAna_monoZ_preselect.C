@@ -5,6 +5,9 @@
 #include <ROOT/RVec.hxx>
 #include <ROOT/RDF/HistoModels.hxx>
 #include <Math/Vector4D.h>
+#include <Math/Vector2D.h>
+#include <Math/Vector3D.h>
+#include <Math/VectorUtil.h>
 #include <TFile.h>
 #include <TDirectory.h>
 #include <TKey.h>
@@ -30,6 +33,11 @@
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
 #include "skeeto_optparse.h"
+
+template<class Vector1, class Vector2>
+inline typename Vector1::Scalar DetXY(const Vector1 &v1, const Vector2 &v2) {
+  return v1.X() * v2.Y() - v1.Y() * v2.X();
+}
 
 /**Generate a histogram of the specified expression lazily
  * from an RDataFram
@@ -149,9 +157,7 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       isLowerAssigned = true;
       lowerLimitBins = 0;
     } else if (tstrNameColumnStripped.EndsWith("M")
-      || tstrNameColumnStripped.EndsWith("M2")
-      || tstrNameColumnStripped.EndsWith("Mt")
-      || tstrNameColumnStripped.EndsWith("Mt2")) {
+      || tstrNameColumnStripped.EndsWith("M2")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
     } else if (tstrNameColumnStripped.EndsWith("Sig")) {
@@ -765,7 +771,7 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
       "ROOT::VecOps::Sum("
       + aPrefLepFlavLower[iLepFlav] + "PairedP4"
       ", " + typenameLorentzVector + "())");
-    for (const std::string suff: {"Pt", "Eta", "Phi", "E", "M", "Mt2"}) {
+    for (const std::string suff: {"Pt", "Eta", "Phi", "E", "M"}) {
       const std::string nameColNew = aPrefLepFlavLower[iLepFlav] + "Pair" + suff;
       if (debug) std::cerr << "Defining " << nameColNew << std::endl;
       aDfHasLPair[iLepFlav] = aDfHasLPair[iLepFlav]
@@ -949,6 +955,35 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
       aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Filter(aPrefAKShort[iAK] + "nJet" + " >= 2");
     }
   }
+
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   aaDfHasJet[iLepFlav][1] = aaDfHasJet[iLepFlav][1].Define(
+  //       "FATjetMT2",
+  //       [](const RVec<TypeLorentzVector> vJetP4, const Float_t ptMet, const Float_t phiMet)->Double_t {
+  //         const TypeLorentzVector &p4DDA = vJetP4[0];
+  //         const TypeLorentzVector &p4DDB = vJetP4[1];
+  //         const ROOT::Math::XYVector p2DDA(p4DDA.X(), p4DDA.Y());
+  //         const ROOT::Math::XYVector p2DDB(p4DDB.X(), p4DDB.Y());
+  //         const ROOT::Math::Polar2DVector p2MetPolar(ptMet, phiMet)
+  //         const ROOT::Math::XYVector p2Met(p2MetPolar);
+  //         const ROOT::Math::XYVector basep2Met(p2Met / ptMet);
+  //         const TypeLorentzVector ptX1aInit =
+  //             (p4DDA.M2() - p4DDB.M2()
+  //               + p4DDB.Pt() * ptMet * ROOT::TMath::Cos(p4DDB.Phi() - phiMet)
+  //               - p4DDB.E() * ptMet * 2)
+  //             / (-(p4DDA.E() + p4DDB.E()) * 2 + (p2DDA + p2DDB).Dot(p2Met) / ptMet
+  //             );
+  //         ROOT::Math::XYVector p2X1a = basep2Met * ptX1aInit;
+  //         ROOT::Math::XYVector gradMtSqA = basep2Met * (p4DDA.E() * 2) - p2DDA;
+  //         ROOT::Math::XYVector gradMtSqB = basep2Met * (p4DDB.E() * 2) - p2DDB;
+  //         Double_t slopeIntersection = DetXY(gradMtSqA, gradMtSqB);
+  //         if (TMath::Abs(slopeIntersection) < )
+  //         const Double_t sgnInit = std::signbit(slopeIntersection) ? -1 : 1;
+  //         constexpr Double_t step = 0.01;
+  //         slopeIntersection = -slopeIntersection;
+  //       }, { "FATjetP4", "pfMetCorrPt", "pfMetCorrPhi" }
+  //   );
+  // }
   // Lazily register histogram action for the HasJet stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
