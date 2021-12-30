@@ -5,7 +5,7 @@
   inputs.root-source.flake = false;
   outputs = inputs@{ self, nixpkgs, flake-utils, root-source, ... }: flake-utils.lib.eachDefaultSystem (system:
     let
-      lib = nixpkgs.lib.${system};
+      lib = nixpkgs.lib;
       switchFlag = patternToRemove: flagToAdd: flags: (
         let
           flags' = lib.filter (flag: builtins.match patternToRemove flag == null) flags;
@@ -15,30 +15,34 @@
       );
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [ (final: prev:
-          {
-            root = (final.callPackage dependency-builders/root (with final; {
-              python = python3;
-              inherit (darwin.apple_sdk.frameworks) Cocoa CoreSymbolication OpenGL;
-            })).overrideAttrs (oldAttrs: {
-              src = root-source;
-              cmakeFlags = builtins.foldl'
-                (flags: pair:
-                  switchFlag (lib.first pair) (lib.last pair) flags
-                ) [
-                  [ "-Dimt=OFF" "-Dimt=ON" ]
-                  [ "-Dssl=OFF" "-Dssl=ON" ]
-                  # # The dependencies are not packaged yet.
-                  # [ "-Dgfal=OFF" "-Dgfal=ON" ]
-                  # [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
-                  [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
-              ];
-              buildInputs = oldAttrs.buildInputs ++ (with final; [
-                tbb # for implicit multithreading
-                openssl # for ssl support
-              ]);
-            });
-          }) ];
+        overlays = [
+          (final: prev:
+            {
+              root = (final.callPackage ./dependency-builders/root (with final; {
+                python = python3;
+                inherit (darwin.apple_sdk.frameworks) Cocoa CoreSymbolication OpenGL;
+              })).overrideAttrs (oldAttrs: {
+                src = root-source;
+                cmakeFlags = builtins.foldl'
+                  (flags: pair:
+                    switchFlag (lib.head pair) (lib.last pair) flags
+                  )
+                  oldAttrs.cmakeFlags
+                  [
+                    [ "-Dimt=OFF" "-Dimt=ON" ]
+                    [ "-Dssl=OFF" "-Dssl=ON" ]
+                    # # The dependencies are not packaged yet.
+                    # [ "-Dgfal=OFF" "-Dgfal=ON" ]
+                    # [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
+                    [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
+                  ];
+                buildInputs = oldAttrs.buildInputs ++ (with final; [
+                  tbb # for implicit multithreading
+                  openssl # for ssl support
+                ]);
+              });
+            })
+        ];
       };
       inherit (pkgs) root;
       devShell = pkgs.mkShell {
@@ -46,7 +50,7 @@
           root
           gcc
         ]);
-        nativeBuildInputs = (with pkgs;[
+        nativeBuildInputs = (with pkgs; [
           root
           gcc
           gnumake
@@ -64,11 +68,12 @@
         inherit (pkgs.gitAndTools) git gitFull;
       };
       run = pkgs.writeShellScriptBin "run" ''
-        export PATH="${ with packagesSub; pkgs.lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
-        export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath (with pkgs; [ gcc ]) ++ [ root ] }:$LD_LIBRARY_PATH"
+        export PATH="${ with packagesSub; lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
+        export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath (with packagesSub; [ gcc root ]) }:$LD_LIBRARY_PATH"
         if test -n "${devShell.shellHook}"; then
           . "${devShell.shellHook}";
         fi
+        . "${packagesSub.root}/bin/thisroot.sh"
         exec "$@"
       '';
       ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
