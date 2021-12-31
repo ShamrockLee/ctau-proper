@@ -1171,16 +1171,30 @@ int main(int argc, char** argv) {
   size_t nThread = 0;
   int debug = 0;
   struct optparse_long longopts[] = {
+    {"help", 'h', OPTPARSE_NONE},
     {"debug", 'v', OPTPARSE_NONE},
-    {"threads", 'j', OPTPARSE_REQUIRED}
+    {"threads", 'j', OPTPARSE_REQUIRED},
+    {0} // NULL termination
   };
   int option;
   struct optparse options;
   optparse_init(&options, argv);
+  // argv is NULL terminated, so no need to check argc here
   while ((option = optparse_long(&options, longopts, NULL)) != -1) {
     switch (option) {
+      case 'h':
+        std::cout << "Description:\n"
+        "xAna_monoZ_preselect [-v] [-j n] fileIn fileOut\n"
+        "  -h --help\tDisplay this help message.\n"
+        "  -v --debug\tRun with debug message and examinations.\n"
+        "\tThis can be specified multiple times.\n"
+        "  -j --threads\tSpecify the number of threads to use by EnableImplicitMT.\n"
+        "\tDefault to 0, which means the number of all the logical cores.\n"
+        << std::endl;
+        return 0;
+        break;
       case 'v':
-        debug++;
+        ++debug;
         break;
       case 'j':
         nThread = std::atoi(options.optarg);
@@ -1192,8 +1206,22 @@ int main(int argc, char** argv) {
         break;
     }
   }
+  if (debug) std::cerr << "Debug level: " << debug << std::endl;
+  if (debug) std::cerr << "Number of remaining command-line arguments: " << argc - options.optind << std::endl;
+  if (argc - options.optind < 2) {
+    std::cerr << "error: Expect fileIn and fileOut" << std::endl;
+    return 1;
+  }
+  if (debug) std::cerr << "Getting filenames ..." << std::endl;
   char *pathFileInRaw = optparse_arg(&options);
+  if (debug) std::cerr << "pathFileInRaw: " << (void *) pathFileInRaw << std::endl;
   char *pathFileOutRaw = optparse_arg(&options);
+  if (debug) std::cerr << "pathFileOutRaw: " << (void *) pathFileOutRaw << std::endl;
+  if (debug) {
+    std::cerr << "pathFileInRaw: \"" << pathFileInRaw
+    << "\"\npathFileOutRaw: \"" << pathFileOutRaw << "\""
+    << std::endl;
+  }
   xAna_monoZ_preselect(pathFileInRaw, pathFileOutRaw, nThread, debug);
   return 0;
 }
