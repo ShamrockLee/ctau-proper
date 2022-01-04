@@ -67,9 +67,10 @@
         inherit (pkgs) gawk;
         inherit (pkgs.gitAndTools) git gitFull;
       };
+      # `nix-shell -c` replacement with LD_LIBRARY_PATH and ./thisroot.sh soucing
       run = pkgs.writeShellScriptBin "run" ''
-        export PATH="${ with packagesSub; lib.makeBinPath [ root gcc gnumake cmake gawk gitFull ]}:$PATH"
-        export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath (with packagesSub; [ gcc root ]) }:$LD_LIBRARY_PATH"
+        export PATH="${ lib.makeBinPath (lib.unique (devShell.nativeBuildInputs ++ devShell.buildInputs)) }:$PATH"
+        export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath devShell.nativeBuildInputs }:$LD_LIBRARY_PATH"
         if test -n "${devShell.shellHook}"; then
           . "${devShell.shellHook}";
         fi
