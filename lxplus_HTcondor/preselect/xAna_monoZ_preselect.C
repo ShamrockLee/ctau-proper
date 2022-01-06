@@ -294,8 +294,96 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
   }
 }
 
+typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
+
+Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, const Double_t ptMet, const Double_t phiMet) {
+  const ROOT::Math::XYVector p2DDA(p4DDA.X(), p4DDA.Y());
+  const ROOT::Math::XYVector p2DDB(p4DDB.X(), p4DDB.Y());
+  const ROOT::Math::XYVector basep2Met(TMath::Cos(phiMet), TMath::Sin(phiMet));
+  const ROOT::Math::XYVector basep2MetPerp(-basep2Met.Y(), basep2Met.X());
+  const ROOT::Math::XYVector p2DDARotated(p2DDA.Dot(basep2Met), p2DDA.Dot(basep2MetPerp));
+  const ROOT::Math::XYVector p2DDBRotated(p2DDB.Dot(basep2Met), p2DDB.Dot(basep2MetPerp));
+  if (p4DDA.M2() >= p4DDB.M2() + (p4DDB.Et() - p2DDBRotated.X()) * ptMet * 2) {
+    return p4DDA.M();
+  }
+  if (p4DDB.M2() >= p4DDA.M2() + (p4DDA.Et() + p2DDBRotated.X()) * ptMet * 2) {
+    return p4DDB.M();
+  }
+  const Double_t ptX1aInit =
+      (p4DDA.M2() - p4DDB.M2()
+        + p2DDBRotated.X() * ptMet
+        - p4DDB.Et() * ptMet * 2)
+      / (-(p4DDA.Et() + p4DDB.Et()) * 2 + p2DDARotated.X() + p2DDBRotated.X());
+  Double_t pParaX1a = ptX1aInit;
+  Double_t pVertX1a = 0.;
+  // ROOT::Math::XYVector gradMtSqA = basep2Met * (p4DDA.Et() * 2) - p2DDA;
+  // ROOT::Math::XYVector gradMtSqB = basep2Met * (p4DDB.Et() * 2) - p2DDB;
+  // ROOT::Math::XYVector direction2D(-gradMtSqA.X()+gradMtSqA.Y(), gradMtSqB.X()-gradMtSqB.Y());
+  ROOT::Math::XYVector gradMtSqARotated(ROOT::Math::XYVector(1., 0.) - p2DDARotated);
+  ROOT::Math::XYVector gradMtSqBRotated(ROOT::Math::XYVector(1., 0) - p2DDBRotated);
+  ROOT::Math::XYVector direction2DRotated(-gradMtSqARotated.X()+gradMtSqARotated.Y(), gradMtSqBRotated.X()-gradMtSqBRotated.Y());
+  Double_t slopeIntersection = DetXY(gradMtSqARotated, gradMtSqBRotated);
+  slopeIntersection /= direction2DRotated.R();
+  direction2DRotated /= direction2DRotated.R();
+  const Double_t sgnInit = std::signbit(slopeIntersection) ? -1 : 1;
+  constexpr Double_t step = 0.1;
+  direction2DRotated *= -sgnInit;
+  slopeIntersection *= -sgnInit;
+  std::function<Double_t(Double_t pParaX1a)> fDeltaMT2Para = [
+    // mutable
+    &pVertX1a,
+    // constant
+    &p4DDA, &p4DDB, &p2DDARotated, &p2DDBRotated, &ptMet
+  ](Double_t pParaX1a)->Double_t {
+    return (p4DDA.M2() + p4DDA.Et() * (pParaX1a * pParaX1a + pVertX1a * pVertX1a) * 2 - (p2DDARotated.X() * pParaX1a + p2DDARotated.Y() * pVertX1a) * 2)
+    - (p4DDB.M2() + p4DDB.Et() * ((ptMet - pParaX1a) * (ptMet - pParaX1a) + pVertX1a * pVertX1a) * 2 - (p2DDBRotated.X() * (ptMet - pParaX1a) - p2DDBRotated.Y() * pVertX1a) * 2);
+  };
+  std::function<Double_t(Double_t pParaX1a)> fGradDeltaMT2Para = [
+    // mutable
+    &pVertX1a,
+    // constant
+    &p4DDA, &p4DDB, &p2DDARotated, &p2DDBRotated, &ptMet
+  ](Double_t pParaX1a)->Double_t {
+    return (
+      (p4DDA.Et() * pParaX1a / (pParaX1a * pParaX1a + pVertX1a * pVertX1a) - p2DDARotated.X())
+    - (p4DDB.Et() * (ptMet - pParaX1a) / ((ptMet - pParaX1a) * (ptMet - pParaX1a) + pVertX1a * pVertX1a) - p2DDBRotated.X())
+    ) * 2;
+  };
+  ROOT::Math::XYVector p2X1aRotated(ptX1aInit, 0), p2X1bRotated(ptMet - ptX1aInit, 0);
+  ROOT::Math::XYVector p2X1aRotatedPrev(p2X1aRotated);
+  Double_t slopeIntersectionPrev = slopeIntersection;
+  while (slopeIntersection < 0 && -slopeIntersection <= __FLT_EPSILON__) {
+    pVertX1a += direction2DRotated.Y() * step;
+    Double_t pParaX1aPred = pParaX1a + direction2DRotated.X() * step;
+    auto *finder = new ROOT::Math::RootFinder();
+    finder->SetMethod(ROOT::Math::RootFinder::kBRENT);
+    ROOT::Math::Functor1D f(fDeltaMT2Para);
+    ROOT::Math::GradFunctor1D g(fDeltaMT2Para, fGradDeltaMT2Para);
+    finder->SetFunction(f, -step * 100, step * 100);
+    finder->SetFunction(g, pParaX1aPred);
+    finder->Solve();
+    pParaX1a = finder->Root();
+    delete finder;
+    p2X1aRotated.SetXY(pParaX1a, pVertX1a);
+    p2X1bRotated.SetXY(ptMet - pParaX1a, pVertX1a);
+    gradMtSqARotated = p2X1aRotated * (p4DDA.Et() * 2 / p2X1aRotated.R()) - p2DDARotated * 2;
+    gradMtSqBRotated = p2X1bRotated * (p4DDB.Et() * 2 / p2X1bRotated.R()) - p2DDBRotated * 2;
+    direction2DRotated.SetXY((-gradMtSqARotated.X()+gradMtSqARotated.Y()) * (-sgnInit), (gradMtSqBRotated.X()-gradMtSqBRotated.Y()) * (-sgnInit));
+    slopeIntersection = DetXY(gradMtSqARotated, gradMtSqBRotated) * (-sgnInit);
+    slopeIntersection /= direction2DRotated.R();
+    direction2DRotated /= direction2DRotated.R();
+    p2X1aRotatedPrev = p2X1aRotated;
+    slopeIntersectionPrev = slopeIntersection;
+  }
+  if (TMath::Abs(slopeIntersection) > __FLT_EPSILON__) {
+    p2X1aRotated = 
+      p2X1aRotatedPrev * (-slopeIntersection / (slopeIntersection - slopeIntersectionPrev))
+    + p2X1bRotated * (slopeIntersectionPrev / (slopeIntersection - slopeIntersectionPrev));
+  }
+  return TMath::Sqrt(p4DDA.M2() + (p4DDA.Et() * p2X1aRotated.R() - p2DDARotated.Dot(p2X1aRotated)) * 2);
+}
+
   void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const size_t nThread=0, const int debug=0) {
-  typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
   const std::string typenameLorentzVector = "ROOT::Math::PtEtaPhiMVector";
   ROOT::EnableImplicitMT(nThread);
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
@@ -706,11 +794,35 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aDfGen[iLepFlav] = aDfGen[iLepFlav]
-      .Filter("ROOT::VecOps::Any("
-        "genParId==" + std::to_string(iLepFlav ? pdgMuon : pdgElectron) +
-        "&& genMomParId==" + std::to_string(pdgZ) +
-        ")");
+      .Define("gen" + aPrefLepFlav[iLepFlav] + "Idx",
+      [iLepFlav, pdgElectron, pdgMuon](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+        ROOT::RVec<Int_t> genLIdx(2, -1);
+        const Int_t pdgLep = iLepFlav ? pdgMuon : pdgElectron;
+        for (int i = 0; i < nGenPar; ++i) {
+          if (TMath::Abs(genParId[i]) == pdgLep && TMath::Abs(genMomParId[i]) == pdgZ) {
+            genLIdx[genParId[i] < 0] = i;
+          }
+        }
+        return genLIdx;
+      }, {"nGenPar", "genParId", "genMomParId"})
+      .Filter("ROOT::VecOps::All(gen" + aPrefLepFlav[iLepFlav] + "Idx != -1)")
+      .Define("genDIdx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+        ROOT::RVec<Int_t> genDIdx(4, -1);
+        for (int i = 0; i < nGenPar; ++i) {
+          if (TMath::Abs(genParId[i]) == pdgDown && TMath::Abs(genMomParId[i]) == pdgX2) {
+            genDIdx[(genMomParId[i] < 0) << 1 + (genParId[i] < 0)] = i;
+          }
+        }
+        return genDIdx;
+      }, {"nGenPar", "genParId", "genMomParId"})
+      .Define("genDP4", "ROOT::VecOps::Take(genParP4, genDIdx)")
+      .Define("genMTTwo", [](const ROOT::RVec<TypeLorentzVector> genDP4, const Float_t ptMet, const Float_t phiMet)->Double_t{
+        return GetMTTwo(genDP4[0] + genDP4[1], genDP4[2] + genDP4[3], ptMet, phiMet);
+      }, {"genDP4", "pfMetCorrPt", "pfMetCorrPhi"});
       avNameColGen[iLepFlav] = vNameColOriginal;
+      // avNameColGen[iLepFlav].emplace_back("gen" + aPrefLepFlav[iLepFlav] + "Idx");
+      // avNameColGen[iLepFlav].emplace_back("genDIdx");
+      avNameColGen[iLepFlav].emplace_back("genMTTwo");
     }
     // Lazily register histogram action for the Gen stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
@@ -966,92 +1078,7 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
     aaDfHasJet[iLepFlav][1] = aaDfHasJet[iLepFlav][1].Define(
         "FATjetMTTwo",
         [](const ROOT::RVec<TypeLorentzVector> vJetP4, const Float_t ptMet, const Float_t phiMet)->Double_t {
-          const TypeLorentzVector &p4DDA = vJetP4[0];
-          const TypeLorentzVector &p4DDB = vJetP4[1];
-          const ROOT::Math::XYVector p2DDA(p4DDA.X(), p4DDA.Y());
-          const ROOT::Math::XYVector p2DDB(p4DDB.X(), p4DDB.Y());
-          const ROOT::Math::XYVector basep2Met(TMath::Cos(phiMet), TMath::Sin(phiMet));
-          const ROOT::Math::XYVector basep2MetPerp(-basep2Met.Y(), basep2Met.X());
-          const ROOT::Math::XYVector p2DDARotated(p2DDA.Dot(basep2Met), p2DDA.Dot(basep2MetPerp));
-          const ROOT::Math::XYVector p2DDBRotated(p2DDB.Dot(basep2Met), p2DDB.Dot(basep2MetPerp));
-          if (p4DDA.M2() >= p4DDB.M2() + (p4DDB.Et() - p2DDBRotated.X()) * ptMet * 2) {
-            return p4DDA.M();
-          }
-          if (p4DDB.M2() >= p4DDA.M2() + (p4DDA.Et() + p2DDBRotated.X()) * ptMet * 2) {
-            return p4DDB.M();
-          }
-          const Double_t ptX1aInit =
-              (p4DDA.M2() - p4DDB.M2()
-                + p2DDBRotated.X() * ptMet
-                - p4DDB.Et() * ptMet * 2)
-              / (-(p4DDA.Et() + p4DDB.Et()) * 2 + p2DDARotated.X() + p2DDBRotated.X());
-          Double_t pParaX1a = ptX1aInit;
-          Double_t pVertX1a = 0.;
-          // ROOT::Math::XYVector gradMtSqA = basep2Met * (p4DDA.Et() * 2) - p2DDA;
-          // ROOT::Math::XYVector gradMtSqB = basep2Met * (p4DDB.Et() * 2) - p2DDB;
-          // ROOT::Math::XYVector direction2D(-gradMtSqA.X()+gradMtSqA.Y(), gradMtSqB.X()-gradMtSqB.Y());
-          ROOT::Math::XYVector gradMtSqARotated(ROOT::Math::XYVector(1., 0.) - p2DDARotated);
-          ROOT::Math::XYVector gradMtSqBRotated(ROOT::Math::XYVector(1., 0) - p2DDBRotated);
-          ROOT::Math::XYVector direction2DRotated(-gradMtSqARotated.X()+gradMtSqARotated.Y(), gradMtSqBRotated.X()-gradMtSqBRotated.Y());
-          Double_t slopeIntersection = DetXY(gradMtSqARotated, gradMtSqBRotated);
-          slopeIntersection /= direction2DRotated.R();
-          direction2DRotated /= direction2DRotated.R();
-          const Double_t sgnInit = std::signbit(slopeIntersection) ? -1 : 1;
-          constexpr Double_t step = 0.1;
-          direction2DRotated *= -sgnInit;
-          slopeIntersection *= -sgnInit;
-          std::function<Double_t(Double_t pParaX1a)> fDeltaMT2Para = [
-            // mutable
-            &pVertX1a,
-            // constant
-            &p4DDA, &p4DDB, &p2DDARotated, &p2DDBRotated, &ptMet
-          ](Double_t pParaX1a)->Double_t {
-            return (p4DDA.M2() + p4DDA.Et() * (pParaX1a * pParaX1a + pVertX1a * pVertX1a) * 2 - (p2DDARotated.X() * pParaX1a + p2DDARotated.Y() * pVertX1a) * 2)
-            - (p4DDB.M2() + p4DDB.Et() * ((ptMet - pParaX1a) * (ptMet - pParaX1a) + pVertX1a * pVertX1a) * 2 - (p2DDBRotated.X() * (ptMet - pParaX1a) - p2DDBRotated.Y() * pVertX1a) * 2);
-          };
-          std::function<Double_t(Double_t pParaX1a)> fGradDeltaMT2Para = [
-            // mutable
-            &pVertX1a,
-            // constant
-            &p4DDA, &p4DDB, &p2DDARotated, &p2DDBRotated, &ptMet
-          ](Double_t pParaX1a)->Double_t {
-            return (
-              (p4DDA.Et() * pParaX1a / (pParaX1a * pParaX1a + pVertX1a * pVertX1a) - p2DDARotated.X())
-            - (p4DDB.Et() * (ptMet - pParaX1a) / ((ptMet - pParaX1a) * (ptMet - pParaX1a) + pVertX1a * pVertX1a) - p2DDBRotated.X())
-            ) * 2;
-          };
-          ROOT::Math::XYVector p2X1aRotated(ptX1aInit, 0), p2X1bRotated(ptMet - ptX1aInit, 0);
-          ROOT::Math::XYVector p2X1aRotatedPrev(p2X1aRotated);
-          Double_t slopeIntersectionPrev = slopeIntersection;
-          while (slopeIntersection < 0 && -slopeIntersection <= __FLT_EPSILON__) {
-            pVertX1a += direction2DRotated.Y() * step;
-            Double_t pParaX1aPred = pParaX1a + direction2DRotated.X() * step;
-            auto *finder = new ROOT::Math::RootFinder();
-            finder->SetMethod(ROOT::Math::RootFinder::kBRENT);
-            ROOT::Math::Functor1D f(fDeltaMT2Para);
-            ROOT::Math::GradFunctor1D g(fDeltaMT2Para, fGradDeltaMT2Para);
-            finder->SetFunction(f, -step * 100, step * 100);
-            finder->SetFunction(g, pParaX1aPred);
-            finder->Solve();
-            pParaX1a = finder->Root();
-            delete finder;
-            p2X1aRotated.SetXY(pParaX1a, pVertX1a);
-            p2X1bRotated.SetXY(ptMet - pParaX1a, pVertX1a);
-            gradMtSqARotated = p2X1aRotated * (p4DDA.Et() * 2 / p2X1aRotated.R()) - p2DDARotated * 2;
-            gradMtSqBRotated = p2X1bRotated * (p4DDB.Et() * 2 / p2X1bRotated.R()) - p2DDBRotated * 2;
-            direction2DRotated.SetXY((-gradMtSqARotated.X()+gradMtSqARotated.Y()) * (-sgnInit), (gradMtSqBRotated.X()-gradMtSqBRotated.Y()) * (-sgnInit));
-            slopeIntersection = DetXY(gradMtSqARotated, gradMtSqBRotated) * (-sgnInit);
-            slopeIntersection /= direction2DRotated.R();
-            direction2DRotated /= direction2DRotated.R();
-            p2X1aRotatedPrev = p2X1aRotated;
-            slopeIntersectionPrev = slopeIntersection;
-          }
-          if (TMath::Abs(slopeIntersection) > __FLT_EPSILON__) {
-            p2X1aRotated = 
-              p2X1aRotatedPrev * (-slopeIntersection / (slopeIntersection - slopeIntersectionPrev))
-            + p2X1bRotated * (slopeIntersectionPrev / (slopeIntersection - slopeIntersectionPrev));
-          }
-          return TMath::Sqrt(p4DDA.M2() + (p4DDA.Et() * p2X1aRotated.R() - p2DDARotated.Dot(p2X1aRotated)) * 2);
+	  return GetMTTwo(vJetP4[0], vJetP4[1], ptMet, phiMet);
         }, { "FATjetP4", "pfMetCorrPt", "pfMetCorrPhi" }
     );
     aavNameColHasJet[iLepFlav][1].emplace_back("FATjetMTTwo");
