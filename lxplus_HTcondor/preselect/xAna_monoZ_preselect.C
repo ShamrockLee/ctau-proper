@@ -853,37 +853,37 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
         }
       }, debug);
   }
-  // Lazily register histogram action for the HasLPair stages
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    const size_t nCol = avNameColHasLPair[iLepFlav].size();
-    avHistViewHasLPair[iLepFlav].clear();
-    avHistViewHasLPair[iLepFlav].reserve(nCol + 2);
-    avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], "mcWeight"));
-    avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], "mcWeightSgn"));
-    for (const std::string &nameCol: avNameColHasLPair[iLepFlav]) {
-      avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], nameCol, "mcWeightSgn"));
-    }
-  }
+  // // Lazily register histogram action for the HasLPair stages
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   const size_t nCol = avNameColHasLPair[iLepFlav].size();
+  //   avHistViewHasLPair[iLepFlav].clear();
+  //   avHistViewHasLPair[iLepFlav].reserve(nCol + 2);
+  //   avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], "mcWeight"));
+  //   avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], "mcWeightSgn"));
+  //   for (const std::string &nameCol: avNameColHasLPair[iLepFlav]) {
+  //     avHistViewHasLPair[iLepFlav].emplace_back(GetHistFromColumn(aDfHasLPair[iLepFlav], nameCol, "mcWeightSgn"));
+  //   }
+  // }
   // Begin the HasVtx stages
   std::array<ROOT::RDF::RNode, 2> aDfHasVtx = aDfHasLPair;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfHasVtx[iLepFlav] = aDfHasVtx[iLepFlav]
     .Filter("nVtx>0");
   }
-  // Lazily register histogram action for the HasVtx stages
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    const size_t nCol = avNameColHasVtx[iLepFlav].size();
-    avHistViewHasVtx[iLepFlav].clear();
-    avHistViewHasVtx[iLepFlav].reserve(nCol + 2);
+  // // Lazily register histogram action for the HasVtx stages
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   const size_t nCol = avNameColHasVtx[iLepFlav].size();
+  //   avHistViewHasVtx[iLepFlav].clear();
+  //   avHistViewHasVtx[iLepFlav].reserve(nCol + 2);
 
-    if (debug) std::cerr << "Specifying hist for mcWeight and mcWeightSgn" << std::endl;
-    avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeight"));
-    avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeightSgn"));
-    for (const std::string &nameCol: avNameColHasVtx[iLepFlav]) {
-      if (debug) std::cerr << "Specifying hist for column " << nameCol << std::endl;
-      avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], nameCol, "mcWeightSgn"));
-    }
-  }
+  //   if (debug) std::cerr << "Specifying hist for mcWeight and mcWeightSgn" << std::endl;
+  //   avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeight"));
+  //   avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], "mcWeightSgn"));
+  //   for (const std::string &nameCol: avNameColHasVtx[iLepFlav]) {
+  //     if (debug) std::cerr << "Specifying hist for column " << nameCol << std::endl;
+  //     avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], nameCol, "mcWeightSgn"));
+  //   }
+  // }
   // Begin the LPairPassPt stages
   std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfHasVtx;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
@@ -892,67 +892,67 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
       return lepPairedP4[0].Pt() > 25. && lepPairedP4[1].Pt() > 20.;
     }, {aPrefLepFlavLower[iLepFlav] + "PairedP4"});
   }
-  // Lazily register histogram action for the LPairedPassPt stage
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    const size_t nCol = avNameColLPairedPassPt[iLepFlav].size();
-    avHistViewLPairedPassPt[iLepFlav].clear();
-    avHistViewLPairedPassPt[iLepFlav].reserve(nCol + 2);
-    avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], "mcWeight"));
-    avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], "mcWeightSgn"));
-    for (const std::string &nameCol: avNameColLPairedPassPt[iLepFlav]) {
-      avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], nameCol, "mcWeightSgn"));
-    }
-  }
+  // // Lazily register histogram action for the LPairedPassPt stage
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   const size_t nCol = avNameColLPairedPassPt[iLepFlav].size();
+  //   avHistViewLPairedPassPt[iLepFlav].clear();
+  //   avHistViewLPairedPassPt[iLepFlav].reserve(nCol + 2);
+  //   avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], "mcWeight"));
+  //   avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], "mcWeightSgn"));
+  //   for (const std::string &nameCol: avNameColLPairedPassPt[iLepFlav]) {
+  //     avHistViewLPairedPassPt[iLepFlav].emplace_back(GetHistFromColumn(aDfLPairedPassPt[iLepFlav], nameCol, "mcWeightSgn"));
+  //   }
+  // }
   // Begin the ZMassCutted stages
   std::array<ROOT::RDF::RNode, 2> aDfZMassCutted = aDfLPairedPassPt;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfZMassCutted[iLepFlav] = aDfZMassCutted[iLepFlav].Filter(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
   }
-  // Lazily register histogram action for the ZMassCutted stages
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    const size_t nCol = avNameColZMassCutted[iLepFlav].size();
-    avHistViewZMassCutted[iLepFlav].clear();
-    avHistViewZMassCutted[iLepFlav].reserve(nCol + 2);
-    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], "mcWeight"));
-    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], "mcWeightSgn"));
-    for (const std::string &nameCol: avNameColZMassCutted[iLepFlav]) {
-      avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], nameCol, "mcWeightSgn"));
-    }
-  }
+  // // Lazily register histogram action for the ZMassCutted stages
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   const size_t nCol = avNameColZMassCutted[iLepFlav].size();
+  //   avHistViewZMassCutted[iLepFlav].clear();
+  //   avHistViewZMassCutted[iLepFlav].reserve(nCol + 2);
+  //   avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], "mcWeight"));
+  //   avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], "mcWeightSgn"));
+  //   for (const std::string &nameCol: avNameColZMassCutted[iLepFlav]) {
+  //     avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfZMassCutted[iLepFlav], nameCol, "mcWeightSgn"));
+  //   }
+  // }
   // Begin the NoExtraL stage
   std::array<ROOT::RDF::RNode, 2> aDfNoExtraL = aDfZMassCutted;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfNoExtraL[iLepFlav] = aDfNoExtraL[iLepFlav]
     .Filter(Form("nElePassLoose<=%d&&nMuPassSoft<=%d", iLepFlav ? 0 : 2, iLepFlav ? 2 : 0));
   }
-  // Lazily register histogram action for the NoExtraL stages
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    const size_t nCol = avNameColNoExtraL[iLepFlav].size();
-    avHistViewNoExtraL[iLepFlav].clear();
-    avHistViewNoExtraL[iLepFlav].reserve(nCol + 2);
-    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], "mcWeight"));
-    avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], "mcWeightSgn"));
-    for (const std::string &nameCol: avNameColNoExtraL[iLepFlav]) {
-      avHistViewNoExtraL[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], nameCol, "mcWeightSgn"));
-    }
-  }
+  // // Lazily register histogram action for the NoExtraL stages
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   const size_t nCol = avNameColNoExtraL[iLepFlav].size();
+  //   avHistViewNoExtraL[iLepFlav].clear();
+  //   avHistViewNoExtraL[iLepFlav].reserve(nCol + 2);
+  //   avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], "mcWeight"));
+  //   avHistViewZMassCutted[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], "mcWeightSgn"));
+  //   for (const std::string &nameCol: avNameColNoExtraL[iLepFlav]) {
+  //     avHistViewNoExtraL[iLepFlav].emplace_back(GetHistFromColumn(aDfNoExtraL[iLepFlav], nameCol, "mcWeightSgn"));
+  //   }
+  // }
   // Begin the NoTau stage
   std::array<ROOT::RDF::RNode, 2> aDfNoTau = aDfNoExtraL;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfNoTau[iLepFlav] = aDfNoTau[iLepFlav]
     .Filter("nHPSTau==0");
   }
-  // Lazily register histogram action for the NoTau stages
-  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    const size_t nCol = avNameColNoTau[iLepFlav].size();
-    avHistViewNoTau[iLepFlav].clear();
-    avHistViewNoTau[iLepFlav].reserve(nCol + 2);
-    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeight"));
-    avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeightSgn"));
-    for (const std::string &nameCol: avNameColNoTau[iLepFlav]) {
-      avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], nameCol, "mcWeightSgn"));
-    }
-  }
+  // // Lazily register histogram action for the NoTau stages
+  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   const size_t nCol = avNameColNoTau[iLepFlav].size();
+  //   avHistViewNoTau[iLepFlav].clear();
+  //   avHistViewNoTau[iLepFlav].reserve(nCol + 2);
+  //   avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeight"));
+  //   avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], "mcWeightSgn"));
+  //   for (const std::string &nameCol: avNameColNoTau[iLepFlav]) {
+  //     avHistViewNoTau[iLepFlav].emplace_back(GetHistFromColumn(aDfNoTau[iLepFlav], nameCol, "mcWeightSgn"));
+  //   }
+  // }
   // Begin the HasJet stage
   // https://stackoverflow.com/questions/28541488/nested-aggregate-initialization-of-stdarray
   std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfHasJet {{ {aDfNoTau[0], aDfNoTau[0]}, {aDfNoTau[1], aDfNoTau[1]} }};
