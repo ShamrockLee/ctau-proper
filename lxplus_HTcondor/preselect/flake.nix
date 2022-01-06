@@ -68,14 +68,37 @@
         inherit (pkgs.gitAndTools) git gitFull;
       };
       # `nix-shell -c` replacement with LD_LIBRARY_PATH and ./thisroot.sh soucing
+      # Use as `nix run .#run -- something to run` or `nix run .# -- something to run`
       run = pkgs.writeShellScriptBin "run" ''
-        export PATH="${ lib.makeBinPath (lib.unique (devShell.nativeBuildInputs ++ devShell.buildInputs)) }:$PATH"
+        export PATH="${ lib.makeBinPath (lib.unique (devShell.nativeBuildInputs ++ devShell.buildInputs ++ [ compile-with-root ])) }:$PATH"
         export LD_LIBRARY_PATH="${ pkgs.lib.makeLibraryPath devShell.nativeBuildInputs }:$LD_LIBRARY_PATH"
         if test -n "${devShell.shellHook}"; then
           . "${devShell.shellHook}";
         fi
         . "${packagesSub.root}/bin/thisroot.sh"
         exec "$@"
+      '';
+      # `nix run .#run -- g++ $(root-config ROOTCONFIG_ARGS) CC_ARGS` equivalence
+      # to make life easier in VSCode's launch.json
+      # Use as `nix run .# -- nix run .#compile-with-root -- ROOTCONFIG_ARGS -- CC_ARGS`
+      # `''${}` is the escaped form of `${}` in a ''...'' string
+      compile-with-root = pkgs.writeShellScriptBin "compile-with-root" ''
+        declare -a ROOTCONFIG_ARGS=()
+        declare -a CC_ARGS=()
+        isRootConfigArg=true
+        for arg in "$@"; do
+          if $isRootConfigArg && [ "$arg" == "--" ]; then
+            isRootConfigArg=false
+          else
+            if $isRootConfigArg; then
+              ROOTCONFIG_ARGS+=("$arg")
+            else
+              CC_ARGS+=("$arg")
+            fi
+          fi
+        done
+        echo g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}" >2
+        g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}"
       '';
       ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
     in
@@ -85,7 +108,7 @@
       defaultPackage = run;
       packages = packagesSub // {
         srcRaw = self;
-        inherit run ana;
+        inherit run ana compile-with-root;
       };
     });
 }
