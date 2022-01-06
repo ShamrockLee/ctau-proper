@@ -6,6 +6,8 @@
 , nameMacro ? "xAna_monoZ_preselect.C"
 , mainProgram ? "xAna_monoZ_preselect"
 , srcRaw ? ./.
+  # Don't try to fetch binary substitute for this drv
+, allowSubstitutes ? false
 }:
 
 let
@@ -15,6 +17,8 @@ in
 root.stdenv.mkDerivation {
   pname = mainProgram;
   version = "0.0.1";
+
+  inherit allowSubstitutes;
 
   src = lib.cleanSourceWith {
     filter = (name: type:
