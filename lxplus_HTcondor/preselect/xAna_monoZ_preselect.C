@@ -8,6 +8,8 @@
 #include <Math/Vector2D.h>
 #include <Math/Vector3D.h>
 #include <Math/VectorUtil.h>
+#include <Math/RootFinder.h>
+#include <Math/RootFinderAlgorithms.h>
 #include <TFile.h>
 #include <TDirectory.h>
 #include <TKey.h>
@@ -153,13 +155,17 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       upperLimitBins = TMath::CeilNint(TMath::Pi() * TMath::Power(10., binDensityOrder));
       isLowerAssigned = true;
       lowerLimitBins = -upperLimitBins;
-    }  else if (tstrNameColumnStripped.EndsWith("E")) {
+    }  else if (tstrNameColumnStripped.EndsWith("E")
+      || tstrNameColumnStripped.EndsWith("Et")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
     } else if (tstrNameColumnStripped.EndsWith("M")
-      || tstrNameColumnStripped.EndsWith("M2")) {
+      || tstrNameColumnStripped.EndsWith("M2")
+      || tstrNameColumnStripped.EndsWith("MTTwo")
+      || tstrNameColumnStripped.EndsWith("MTTwo2")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
+      binDensityOrder = 1;
     } else if (tstrNameColumnStripped.EndsWith("Sig")) {
       binDensityOrder = 2;
       isLowerAssigned = true;
@@ -956,34 +962,100 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
     }
   }
 
-  // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-  //   aaDfHasJet[iLepFlav][1] = aaDfHasJet[iLepFlav][1].Define(
-  //       "FATjetMT2",
-  //       [](const RVec<TypeLorentzVector> vJetP4, const Float_t ptMet, const Float_t phiMet)->Double_t {
-  //         const TypeLorentzVector &p4DDA = vJetP4[0];
-  //         const TypeLorentzVector &p4DDB = vJetP4[1];
-  //         const ROOT::Math::XYVector p2DDA(p4DDA.X(), p4DDA.Y());
-  //         const ROOT::Math::XYVector p2DDB(p4DDB.X(), p4DDB.Y());
-  //         const ROOT::Math::Polar2DVector p2MetPolar(ptMet, phiMet)
-  //         const ROOT::Math::XYVector p2Met(p2MetPolar);
-  //         const ROOT::Math::XYVector basep2Met(p2Met / ptMet);
-  //         const TypeLorentzVector ptX1aInit =
-  //             (p4DDA.M2() - p4DDB.M2()
-  //               + p4DDB.Pt() * ptMet * ROOT::TMath::Cos(p4DDB.Phi() - phiMet)
-  //               - p4DDB.E() * ptMet * 2)
-  //             / (-(p4DDA.E() + p4DDB.E()) * 2 + (p2DDA + p2DDB).Dot(p2Met) / ptMet
-  //             );
-  //         ROOT::Math::XYVector p2X1a = basep2Met * ptX1aInit;
-  //         ROOT::Math::XYVector gradMtSqA = basep2Met * (p4DDA.E() * 2) - p2DDA;
-  //         ROOT::Math::XYVector gradMtSqB = basep2Met * (p4DDB.E() * 2) - p2DDB;
-  //         Double_t slopeIntersection = DetXY(gradMtSqA, gradMtSqB);
-  //         if (TMath::Abs(slopeIntersection) < )
-  //         const Double_t sgnInit = std::signbit(slopeIntersection) ? -1 : 1;
-  //         constexpr Double_t step = 0.01;
-  //         slopeIntersection = -slopeIntersection;
-  //       }, { "FATjetP4", "pfMetCorrPt", "pfMetCorrPhi" }
-  //   );
-  // }
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    aaDfHasJet[iLepFlav][1] = aaDfHasJet[iLepFlav][1].Define(
+        "FATjetMTTwo",
+        [](const ROOT::RVec<TypeLorentzVector> vJetP4, const Float_t ptMet, const Float_t phiMet)->Double_t {
+          const TypeLorentzVector &p4DDA = vJetP4[0];
+          const TypeLorentzVector &p4DDB = vJetP4[1];
+          const ROOT::Math::XYVector p2DDA(p4DDA.X(), p4DDA.Y());
+          const ROOT::Math::XYVector p2DDB(p4DDB.X(), p4DDB.Y());
+          const ROOT::Math::XYVector basep2Met(TMath::Cos(phiMet), TMath::Sin(phiMet));
+          const ROOT::Math::XYVector basep2MetPerp(-basep2Met.Y(), basep2Met.X());
+          const ROOT::Math::XYVector p2DDARotated(p2DDA.Dot(basep2Met), p2DDA.Dot(basep2MetPerp));
+          const ROOT::Math::XYVector p2DDBRotated(p2DDB.Dot(basep2Met), p2DDB.Dot(basep2MetPerp));
+          if (p4DDA.M2() >= p4DDB.M2() + (p4DDB.Et() - p2DDBRotated.X()) * ptMet * 2) {
+            return p4DDA.M();
+          }
+          if (p4DDB.M2() >= p4DDA.M2() + (p4DDA.Et() + p2DDBRotated.X()) * ptMet * 2) {
+            return p4DDB.M();
+          }
+          const Double_t ptX1aInit =
+              (p4DDA.M2() - p4DDB.M2()
+                + p2DDBRotated.X() * ptMet
+                - p4DDB.Et() * ptMet * 2)
+              / (-(p4DDA.Et() + p4DDB.Et()) * 2 + p2DDARotated.X() + p2DDBRotated.X());
+          Double_t pParaX1a = ptX1aInit;
+          Double_t pVertX1a = 0.;
+          // ROOT::Math::XYVector gradMtSqA = basep2Met * (p4DDA.Et() * 2) - p2DDA;
+          // ROOT::Math::XYVector gradMtSqB = basep2Met * (p4DDB.Et() * 2) - p2DDB;
+          // ROOT::Math::XYVector direction2D(-gradMtSqA.X()+gradMtSqA.Y(), gradMtSqB.X()-gradMtSqB.Y());
+          ROOT::Math::XYVector gradMtSqARotated(ROOT::Math::XYVector(1., 0.) - p2DDARotated);
+          ROOT::Math::XYVector gradMtSqBRotated(ROOT::Math::XYVector(1., 0) - p2DDBRotated);
+          ROOT::Math::XYVector direction2DRotated(-gradMtSqARotated.X()+gradMtSqARotated.Y(), gradMtSqBRotated.X()-gradMtSqBRotated.Y());
+          Double_t slopeIntersection = DetXY(gradMtSqARotated, gradMtSqBRotated);
+          slopeIntersection /= direction2DRotated.R();
+          direction2DRotated /= direction2DRotated.R();
+          const Double_t sgnInit = std::signbit(slopeIntersection) ? -1 : 1;
+          constexpr Double_t step = 0.1;
+          direction2DRotated *= -sgnInit;
+          slopeIntersection *= -sgnInit;
+          std::function<Double_t(Double_t pParaX1a)> fDeltaMT2Para = [
+            // mutable
+            &pVertX1a,
+            // constant
+            &p4DDA, &p4DDB, &p2DDARotated, &p2DDBRotated, &ptMet
+          ](Double_t pParaX1a)->Double_t {
+            return (p4DDA.M2() + p4DDA.Et() * (pParaX1a * pParaX1a + pVertX1a * pVertX1a) * 2 - (p2DDARotated.X() * pParaX1a + p2DDARotated.Y() * pVertX1a) * 2)
+            - (p4DDB.M2() + p4DDB.Et() * ((ptMet - pParaX1a) * (ptMet - pParaX1a) + pVertX1a * pVertX1a) * 2 - (p2DDBRotated.X() * (ptMet - pParaX1a) - p2DDBRotated.Y() * pVertX1a) * 2);
+          };
+          std::function<Double_t(Double_t pParaX1a)> fGradDeltaMT2Para = [
+            // mutable
+            &pVertX1a,
+            // constant
+            &p4DDA, &p4DDB, &p2DDARotated, &p2DDBRotated, &ptMet
+          ](Double_t pParaX1a)->Double_t {
+            return (
+              (p4DDA.Et() * pParaX1a / (pParaX1a * pParaX1a + pVertX1a * pVertX1a) - p2DDARotated.X())
+            - (p4DDB.Et() * (ptMet - pParaX1a) / ((ptMet - pParaX1a) * (ptMet - pParaX1a) + pVertX1a * pVertX1a) - p2DDBRotated.X())
+            ) * 2;
+          };
+          ROOT::Math::XYVector p2X1aRotated(ptX1aInit, 0), p2X1bRotated(ptMet - ptX1aInit, 0);
+          ROOT::Math::XYVector p2X1aRotatedPrev(p2X1aRotated);
+          Double_t slopeIntersectionPrev = slopeIntersection;
+          while (slopeIntersection < 0 && -slopeIntersection <= __FLT_EPSILON__) {
+            pVertX1a += direction2DRotated.Y() * step;
+            Double_t pParaX1aPred = pParaX1a + direction2DRotated.X() * step;
+            auto *finder = new ROOT::Math::RootFinder();
+            finder->SetMethod(ROOT::Math::RootFinder::kBRENT);
+            ROOT::Math::Functor1D f(fDeltaMT2Para);
+            ROOT::Math::GradFunctor1D g(fDeltaMT2Para, fGradDeltaMT2Para);
+            finder->SetFunction(f, -step * 100, step * 100);
+            finder->SetFunction(g, pParaX1aPred);
+            finder->Solve();
+            pParaX1a = finder->Root();
+            delete finder;
+            p2X1aRotated.SetXY(pParaX1a, pVertX1a);
+            p2X1bRotated.SetXY(ptMet - pParaX1a, pVertX1a);
+            gradMtSqARotated = p2X1aRotated * (p4DDA.Et() * 2 / p2X1aRotated.R()) - p2DDARotated * 2;
+            gradMtSqBRotated = p2X1bRotated * (p4DDB.Et() * 2 / p2X1bRotated.R()) - p2DDBRotated * 2;
+            direction2DRotated.SetXY((-gradMtSqARotated.X()+gradMtSqARotated.Y()) * (-sgnInit), (gradMtSqBRotated.X()-gradMtSqBRotated.Y()) * (-sgnInit));
+            slopeIntersection = DetXY(gradMtSqARotated, gradMtSqBRotated) * (-sgnInit);
+            slopeIntersection /= direction2DRotated.R();
+            direction2DRotated /= direction2DRotated.R();
+            p2X1aRotatedPrev = p2X1aRotated;
+            slopeIntersectionPrev = slopeIntersection;
+          }
+          if (TMath::Abs(slopeIntersection) > __FLT_EPSILON__) {
+            p2X1aRotated = 
+              p2X1aRotatedPrev * (-slopeIntersection / (slopeIntersection - slopeIntersectionPrev))
+            + p2X1bRotated * (slopeIntersectionPrev / (slopeIntersection - slopeIntersectionPrev));
+          }
+          return TMath::Sqrt(p4DDA.M2() + (p4DDA.Et() * p2X1aRotated.R() - p2DDARotated.Dot(p2X1aRotated)) * 2);
+        }, { "FATjetP4", "pfMetCorrPt", "pfMetCorrPhi" }
+    );
+    aavNameColHasJet[iLepFlav][1].emplace_back("FATjetMTTwo");
+  }
   // Lazily register histogram action for the HasJet stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
