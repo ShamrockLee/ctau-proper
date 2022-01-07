@@ -810,7 +810,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
         ROOT::RVec<Int_t> genDIdx(4, -1);
         for (int i = 0; i < nGenPar; ++i) {
           if (TMath::Abs(genParId[i]) == pdgDown && TMath::Abs(genMomParId[i]) == pdgX2) {
-            genDIdx[(genMomParId[i] < 0) << 1 + (genParId[i] < 0)] = i;
+            genDIdx[((genMomParId[i] < 0) << 1) + (genParId[i] < 0)] = i;
           }
         }
         return genDIdx;
