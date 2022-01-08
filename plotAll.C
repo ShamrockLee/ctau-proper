@@ -52,6 +52,7 @@ void plotAll(const TString pathFileIn, const TString dirOut, const Bool_t plotSu
   // TString basenameFileIn = gSystem->GetFromPipe(
   //     Form("file=%s; test=${file##*/}; echo \"${test%%.root}\"",
   //     pathFileIn.Data()));
+  gSystem->mkdir(dirOut, true);
   TFile *fileIn = TFile::Open(pathFileIn);
   plotAll(fileIn, dirOut, plotSubdir, normalize, logy, optionDraw, funAdjustHist);
 }
