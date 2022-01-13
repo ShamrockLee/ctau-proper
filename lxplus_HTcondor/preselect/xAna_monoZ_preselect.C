@@ -821,6 +821,17 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
         return genLIdx;
       }, {"nGenPar", "genParId", "genMomParId"})
       .Filter("ROOT::VecOps::All(gen" + aPrefLepFlav[iLepFlav] + "Idx != -1)")
+      .Define("genX1Idx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+        ROOT::RVec<Int_t> genX1Idx(4, -1);
+        for (int i = 0; i < nGenPar; ++i) {
+          if (TMath::Abs(genParId[i]) == pdgX1 && TMath::Abs(genMomParId[i]) == pdgX2) {
+            genX1Idx[(genParId[i] < 0)] = i;
+          }
+        }
+        return genX1Idx;
+      }, {"nGenPar", "genParId", "genMomParId"})
+      .Define("genX1P4", "ROOT::VecOps::Take(genParP4, genX1Idx)")
+      .Define("genX1PairP4", "genX1P4[0] + genX1P4[1]")
       .Define("genDIdx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
         ROOT::RVec<Int_t> genDIdx(4, -1);
         for (int i = 0; i < nGenPar; ++i) {
@@ -831,13 +842,33 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
         return genDIdx;
       }, {"nGenPar", "genParId", "genMomParId"})
       .Define("genDP4", "ROOT::VecOps::Take(genParP4, genDIdx)")
-      .Define("genMTTwo", [](const ROOT::RVec<TypeLorentzVector> genDP4, const Float_t ptMet, const Float_t phiMet)->Double_t{
+      .Define("genDPairP4", "ROOT::VecOps::Take(genDP4, {0, 2}) + ROOT::VecOps::Take(genDP4, {1, 3})");
+      DefineP4Components1D(aDfGen[iLepFlav], "genX1");
+      for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et", "M"}) {
+        aDfGen[iLepFlav] = aDfGen[iLepFlav]
+        .Define("genX1Pair" + suf, "genX1PairP4." + suf + "()");
+      }
+      DefineP4Components1D(aDfGen[iLepFlav], "genD");
+      DefineP4Components1D(aDfGen[iLepFlav], "genDPair");
+      aDfGen[iLepFlav] = aDfGen[iLepFlav]
+      .Define("genDPairDeltaR", "ROOT::VecOps::DeltaR(ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}))")
+      .Define("genDPairsDeltaR", "TMath::Sqrt((genDPairEta[0] - genDPairEta[2]) * (genDPairEta[0] - genDPairEta[2]) + (genDPairPhi[0] - genDPairPhi[2]) * (genDPairPhi[0] - genDPairPhi[2]))")
+      .Define("genMTTwo", [](const ROOT::RVec<TypeLorentzVector> genDP4, const Double_t ptMet, const Double_t phiMet)->Double_t{
+        return GetMTTwo(genDP4[0] + genDP4[1], genDP4[2] + genDP4[3], ptMet, phiMet);
+      }, {"genDP4", "genX1PairPt", "genX1PairPhi"})
+      .Define("genMTTwoHybrid", [](const ROOT::RVec<TypeLorentzVector> genDP4, const Float_t ptMet, const Float_t phiMet)->Double_t{
         return GetMTTwo(genDP4[0] + genDP4[1], genDP4[2] + genDP4[3], ptMet, phiMet);
       }, {"genDP4", "pfMetCorrPt", "pfMetCorrPhi"});
       avNameColGen[iLepFlav] = vNameColOriginal;
       // avNameColGen[iLepFlav].emplace_back("gen" + aPrefLepFlav[iLepFlav] + "Idx");
       // avNameColGen[iLepFlav].emplace_back("genDIdx");
-      avNameColGen[iLepFlav].emplace_back("genMTTwo");
+      for (const std::string pref: {"genX1", "genX1Pair", "genD", "genDPair"}) {
+        for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et", "M"}) {
+          avNameColGen[iLepFlav].emplace_back(pref + suf);
+        }
+      }
+      for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR", "genMTTwo"})
+      avNameColGen[iLepFlav].emplace_back(nameCol);
     }
     // Lazily register histogram action for the Gen stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
@@ -849,6 +880,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
       for (const std::string &nameCol: avNameColGen[iLepFlav]) {
         avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], nameCol, "mcWeightSgn"));
       }
+      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "genMTTwoHybrid", "mcWeightSgn", "MTTwo"));
     }
   }
   // Begin the HasLPair stages
