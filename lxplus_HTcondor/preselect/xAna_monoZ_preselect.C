@@ -163,6 +163,11 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       || tstrNameColumnStripped.EndsWith("M2")
       || tstrNameColumnStripped.EndsWith("MTTwo")
       || tstrNameColumnStripped.EndsWith("MTTwo2")) {
+      binDensityOrder = 2;
+      isLowerAssigned = true;
+      lowerLimitBins = 0;
+    } else if (tstrNameColumnStripped.EndsWith("DeltaR")
+      || tstrNameColumnStripped.EndsWith("DeltaR2")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
       binDensityOrder = 1;
