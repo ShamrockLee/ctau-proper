@@ -296,6 +296,41 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
 
 typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
 
+void DefineP4Components1D(ROOT::RDF::RNode &df, const std::string prefNameCol) {
+  const std::string nameCol = prefNameCol + "P4";
+  df = df
+  .Define(prefNameCol + "Pt", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+    return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+      return p4.Pt();
+    });
+  }, {{ nameCol }})
+  .Define(prefNameCol + "Eta", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+    return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+      return p4.Eta();
+    });
+  }, {{ nameCol }})
+  .Define(prefNameCol + "Phi", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+    return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+      return p4.Phi();
+    });
+  }, {{ nameCol }})
+  .Define(prefNameCol + "E", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+    return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+      return p4.E();
+    });
+  }, {{ nameCol }})
+  .Define(prefNameCol + "Et", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+    return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+      return p4.Et();
+    });
+  }, {{ nameCol }})
+  .Define(prefNameCol + "M", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
+    return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
+      return p4.M();
+    });
+  }, {{ nameCol }});
+}
+
 Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, const Double_t ptMet, const Double_t phiMet) {
   const ROOT::Math::XYVector p2DDA(p4DDA.X(), p4DDA.Y());
   const ROOT::Math::XYVector p2DDB(p4DDB.X(), p4DDB.Y());
@@ -564,32 +599,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
       if (!tstrPrefNameCol.Contains("gen") && !tstrPrefNameCol.Contains("Gen") && !tstrPrefNameCol.Contains("GEN")) {
         RedefinePrefWithIdx(dfOriginal, prefNameCol, { prefNameCol + "jet", prefNameCol + "Jet" + prefNameCol + "GenJet" }, prefNameCol + "Rank", nullptr, debug);
       }
-      dfOriginal = dfOriginal
-      .Define(prefNameCol + "Pt", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-          return p4.Pt();
-        });
-      }, {{ nameCol }})
-      .Define(prefNameCol + "Eta", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-          return p4.Eta();
-        });
-      }, {{ nameCol }})
-      .Define(prefNameCol + "Phi", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-          return p4.Phi();
-        });
-      }, {{ nameCol }})
-      .Define(prefNameCol + "E", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-          return p4.E();
-        });
-      }, {{ nameCol }})
-      .Define(prefNameCol + "M", [](const ROOT::RVec<TypeLorentzVector> &vP4) {
-        return ROOT::VecOps::Map(vP4, [](const TypeLorentzVector &p4) {
-          return p4.M();
-        });
-      }, {{ nameCol }});
+      DefineP4Components1D(dfOriginal, prefNameCol);
       continue;
     }
   }
