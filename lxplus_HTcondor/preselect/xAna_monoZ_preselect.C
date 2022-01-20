@@ -422,7 +422,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
   return TMath::Sqrt(p4DDA.M2() + (p4DDA.Et() * p2X1aRotated.R() - p2DDARotated.Dot(p2X1aRotated)) * 2);
 }
 
-  void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const size_t nThread=0, const int debug=0) {
+  void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const size_t nThread=1, const int debug=0) {
   const std::string typenameLorentzVector = "ROOT::Math::PtEtaPhiMVector";
   ROOT::EnableImplicitMT(nThread);
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
@@ -1313,7 +1313,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
 
 #if true
 int main(int argc, char** argv) {
-  size_t nThread = 0;
+  size_t nThread = 1;
   int debug = 0;
   struct optparse_long longopts[] = {
     {"help", 'h', OPTPARSE_NONE},
@@ -1334,7 +1334,8 @@ int main(int argc, char** argv) {
         "  -v --debug\tRun with debug message and examinations.\n"
         "\tThis can be specified multiple times.\n"
         "  -j --threads\tSpecify the number of threads to use by EnableImplicitMT.\n"
-        "\tDefault to 0, which means the number of all the logical cores.\n"
+        "\t0 means the number of all the logical cores.\n"
+        "\tDefault to 1.\n"
         << std::endl;
         return 0;
         break;
