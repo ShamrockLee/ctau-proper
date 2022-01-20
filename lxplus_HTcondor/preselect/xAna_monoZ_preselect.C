@@ -36,6 +36,28 @@
 #define OPTPARSE_API static
 #include "skeeto_optparse.h"
 
+// https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+bool ReplaceStringFirst(std::string &str, const std::string &from, const std::string &to) {
+  const size_t iStart = str.find(from);
+  if (iStart == str.npos) {
+    return false;
+  }
+  str.replace(iStart, from.length(), to);
+  return true;
+}
+
+std::string GetBasename(const std::string &path) {
+  if (!path.size()) {
+    return "";
+  }
+  std::regex r("^(?:.*/)?([^/]+)/?");
+  std::smatch m;
+  if (std::regex_match(path, m, r)) {
+    return m[1];
+  }
+  return "";
+}
+
 template<class Vector1, class Vector2>
 inline typename Vector1::Scalar DetXY(const Vector1 &v1, const Vector2 &v2) {
   return v1.X() * v2.Y() - v1.Y() * v2.X();
@@ -214,6 +236,33 @@ template<typename V = ROOT::RDFDetail::RInferredType, typename W = ROOT::RDFDeta
 ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColumn, std::string exprWeight = "", const std::string nameColumnStripped = "") {
   const std::string typenameColumn = df.GetColumnType(nameColumn);
   return GetHistFromColumnCustom<V, W, D>(df, nameColumn, typenameColumn, nameColumn, exprWeight, nameColumnStripped);
+}
+
+/**Get the value of a parameter from the file name string
+ * 
+ * E.g. when keypattern=="Mx1", filename=="Mx2-1_Mv-500_Mx1-0p1", val will be "0p1"
+ */
+Bool_t RefgetParamFilename(std::string &val, const std::string filename, const std::string keypattern) {
+  std::regex r("^(?:.*?[._/])?" + keypattern + "-([^._/]+).*$");
+  std::smatch m;
+  const Bool_t result = std::regex_match(filename, m, r);
+  if (result) {
+    val = m[1];
+  }
+  return result;
+}
+
+/** Get the value of a parameter from the file name string
+ * with "p" substituted with "."
+ * 
+ * E.g. when keypattern=="Mx1", filename=="Mx2-1_Mv-500_Mx1-0p1", val will be "0.1"
+ */
+Bool_t RefgetParamFilenameNum(std::string &val, const std::string filename, const std::string keypattern) {
+  const Bool_t result = RefgetParamFilename(val, filename, keypattern);
+  if (result) {
+    ReplaceStringFirst(val, "p", ".");
+  }
+  return result;
 }
 
 /**Determine if a type name string describes a 2D Rvec
@@ -449,6 +498,13 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
   constexpr Int_t pdgMuon = 13;
   constexpr Int_t pdgTau = 15;
   const Bool_t isSignal = TString(fileOut).Contains("ignal");
+  Double_t mX2Truth = 100.;
+  {
+    std::string strMX2;
+    if (RefgetParamFilenameNum(strMX2, fileIn, "Mx2")) {
+      mX2Truth = std::stod(strMX2);
+    }
+  }
   // const TString namesLepton[] = {"Electron", "Muon",
   //                                "Tau"};  //< the name of the leptons (Xxx)
   // const TString namesLeptonLower[] = {"electron", "muon",
@@ -873,11 +929,11 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
       // avNameColGen[iLepFlav].emplace_back("gen" + aPrefLepFlav[iLepFlav] + "Idx");
       // avNameColGen[iLepFlav].emplace_back("genDIdx");
       for (const std::string pref: {"genX1", "genX1Pair", "genD", "genDPair"}) {
-        for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et", "M"}) {
+        for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et"}) {
           avNameColGen[iLepFlav].emplace_back(pref + suf);
         }
       }
-      for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR", "genMTTwo"})
+      for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR"})
       avNameColGen[iLepFlav].emplace_back(nameCol);
     }
     // Lazily register histogram action for the Gen stages
@@ -890,7 +946,16 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
       for (const std::string &nameCol: avNameColGen[iLepFlav]) {
         avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], nameCol, "mcWeightSgn"));
       }
-      avHistViewGen[iLepFlav].emplace_back(GetHistFromColumn(aDfGen[iLepFlav], "genMTTwoHybrid", "mcWeightSgn", "MTTwo"));
+      {
+        Int_t binDensityOrder = (mX2Truth >= 10) ? 0 : 1;
+        Int_t upperLimitBins = TMath::Max(TMath::Nint(mX2Truth) * 2, 1) * TMath::Nint(TMath::Power(10, binDensityOrder));
+        for (const std::string nameCol: {"genDM", "genDPairM", "genMTTwo", "genMTTwoHybrid"}) {
+          avHistViewGen[iLepFlav].emplace_back(
+            GetHistFromColumnCustom(aDfGen[iLepFlav], nameCol, "double", binDensityOrder, 0.,
+            true, 0, true, TMath::Max(TMath::Nint(mX2Truth * 2), 1) * (binDensityOrder ? 10 : 1),
+            nameCol, "mcWeightSgn"));
+        }
+      }
     }
   }
   // Begin the HasLPair stages
