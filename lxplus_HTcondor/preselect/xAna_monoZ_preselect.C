@@ -217,20 +217,31 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumn(D &df, const std::string nameColum
 }
 
 /**Determine if a type name string describes a 2D Rvec
- * and get the element type name string
+ * and get the element type name string.
+ * 
+ * E.g.
+ * "ROOT::VecOps::RVec<ROOT::VecOps::RVec<Double_t> >" to "Double_t"
+ * "ROOT::VecOps::RVec<vector<LorentzVector<PtEtaPhiM4D<double> > > >" to LorentzVector<PtEtaPhiM4D<double> >
+ * 
+ * Regex pattern "(:?xxxx)" represents a non-capture group that will not be listed as a match result
+ * while the normal "(xxxx)" will be listed
+ * If matched, m[0] will be the whole string, and the group result starts from m[1]
+ * 
+ * "\\s" matches to a white-space-like character such as " " and "\t",
+ * and "\\S" matches to a character other than "\\s" does
  */
 Bool_t RefgetE2D(std::string &typenameE, const std::string typenameCol) {
-  std::regex r ("^ROOT::VecOps::RVec\\s*<\\s*(vector|ROOT::VecOps::RVec)\\s*<\\s*(.*\\S)\\s*>\\s*>\\s*$");
+  std::regex r ("^ROOT::VecOps::RVec\\s*<\\s*(:?vector|ROOT::VecOps::RVec)\\s*<\\s*(.*\\S)\\s*>\\s*>\\s*$");
   std::smatch m;
   const Bool_t result = (std::regex_match(typenameCol, m, r));
   if (result) {
-    typenameE = m[2];
+    typenameE = m[1];
   }
   return result;
 }
 
 /**Determine if a type name string describes a 1D Rvec
- * and get the element type name string
+ * and get the element type name string.
  */
 Bool_t RefgetE1D(std::string &typenameE, const std::string typenameCol) {
   std::regex r ("^ROOT::VecOps::RVec\\s*<\\s*(.*\\S)\\s*>\\s*$");
