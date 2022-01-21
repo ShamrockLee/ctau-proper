@@ -3,7 +3,12 @@
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.root-source.url = "github:root-project/root/master";
   inputs.root-source.flake = false;
-  outputs = inputs@{ self, nixpkgs, flake-utils, root-source, ... }: flake-utils.lib.eachDefaultSystem (system:
+  inputs.nix-portable-flake.url = "github:DavHau/nix-portable";
+  # Use the same nixpkgs as other packages
+  inputs.nix-portable-flake.inputs.nixpkgs.follows = "nixpkgs";
+  inputs.nix-portable-flake.inputs.flake-utils.follows = "flake-utils";
+
+  outputs = inputs@{ self, nixpkgs, flake-utils, root-source, nix-portable-flake, ... }: flake-utils.lib.eachDefaultSystem (system:
     let
       lib = nixpkgs.lib;
       switchFlag = patternToRemove: flagToAdd: flags: (
@@ -109,6 +114,11 @@
       packages = packagesSub // {
         srcRaw = self;
         inherit run ana compile-with-root;
-      };
+      } // lib.optionalAttrs (system == "x86_64-linux") (lib.mapAttrs (
+        # Use the same pkgs as other packages
+        name: value: value.override { inherit pkgs; }
+      ) {
+        inherit (nix-portable-flake.packages.${system}) nix-portable nix-portable-aarch64-linux;
+      });
     });
 }
