@@ -1,3 +1,4 @@
 result*
 .nix-portable*
 .nix-closures*
+.nix-bundles*
