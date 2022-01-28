@@ -1,5 +1,5 @@
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.05";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.11";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.root-source.url = "github:root-project/root/master";
   inputs.root-source.flake = false;
