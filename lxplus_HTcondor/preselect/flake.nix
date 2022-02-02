@@ -7,8 +7,18 @@
   # Use the same nixpkgs as other packages
   inputs.nix-portable-flake.inputs.nixpkgs.follows = "nixpkgs";
   inputs.nix-portable-flake.inputs.flake-utils.follows = "flake-utils";
+  # Apptainer is the new name chosen by the Singularity community
+  # A symlink to the name singularity at $out/bin is preserved
+  inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
+  inputs.apptainer-source.flake = false;
 
-  outputs = inputs@{ self, nixpkgs, flake-utils, root-source, nix-portable-flake, ... }: flake-utils.lib.eachDefaultSystem (system:
+  outputs = inputs@{ self
+  , nixpkgs
+  , flake-utils
+  , root-source
+  , nix-portable-flake
+  , apptainer-source
+  , ... }:flake-utils.lib.eachDefaultSystem (system:
     let
       lib = nixpkgs.lib;
       switchFlag = patternToRemove: flagToAdd: flags: (
@@ -48,7 +58,28 @@
                   openssl # for ssl support
                 ]);
               });
-            })
+            }
+          )
+          (final: prev:
+            {
+              inherit (
+                final.callPackage ./dependency-builders/singularity/packages.nix { }
+              ) singularity-legacy apptainer singularity-ce;
+              singularity = final.apptainer;
+            }
+          )
+          (final: prev:
+            {
+              apptainer = prev.apptainer.overrideAttrs (oldAttrs: {
+                pname = "apptainer-unstable";
+                version = apptainer-source.lastModifiedDate;
+                src = apptainer-source;
+                postPatch = (oldAttrs.postPatch or "") + ''
+                  echo "${apptainer-source.lastModifiedDate}" > VERSION
+                '';
+              });
+            }
+          )
         ];
       };
       inherit (pkgs) root;
@@ -67,12 +98,14 @@
           gtest
           gawk
           gitAndTools.gitFull
+          # apptainer
         ]);
       };
       packagesSub = {
         inherit (pkgs) root gcc gnumake cmake gdb gmock gtest;
         inherit (pkgs) gawk;
         inherit (pkgs.gitAndTools) git gitFull;
+        # inherit (pkgs) apptainer;
       };
       # `nix-shell -c` replacement with LD_LIBRARY_PATH and ./thisroot.sh soucing
       # Use as `nix run .#run -- something to run` or `nix run .# -- something to run`
@@ -108,6 +141,11 @@
         g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}"
       '';
       ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
+      mkSingularityImage = package: pkgs.callPackage ./make-singularity-image.nix {
+        inherit package;
+        singularity = pkgs.apptainer;
+      };
+      ana-singularity-image = mkSingularityImage ana;
     in
     {
       legacyPackages = pkgs;
@@ -115,7 +153,7 @@
       defaultPackage = run;
       packages = packagesSub // {
         srcRaw = self;
-        inherit run ana compile-with-root;
+        inherit run ana compile-with-root ana-singularity-image;
       } // lib.optionalAttrs (system == "x86_64-linux") (lib.mapAttrs (
         # Use the same pkgs as other packages
         name: value: value.override { inherit pkgs; }

@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "apptainer-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1644141208,
+        "narHash": "sha256-atQF9JT1UvETxNteJkhCoi9ZjsCKBYip5994TX4KdA8=",
+        "owner": "ShamrockLee",
+        "repo": "apptainer",
+        "rev": "ea64c0ca731a2a6ecb9f4e543f34d0c7126e9695",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ShamrockLee",
+        "ref": "noroot",
+        "repo": "apptainer",
+        "type": "github"
+      }
+    },
     "defaultChannel": {
       "locked": {
         "lastModified": 1635350005,
@@ -108,6 +125,7 @@
     },
     "root": {
       "inputs": {
+        "apptainer-source": "apptainer-source",
         "flake-utils": "flake-utils",
         "nix-portable-flake": "nix-portable-flake",
         "nixpkgs": "nixpkgs",
