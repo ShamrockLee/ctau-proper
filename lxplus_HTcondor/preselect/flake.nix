@@ -7,6 +7,7 @@
   # Use the same nixpkgs as other packages
   inputs.nix-portable-flake.inputs.nixpkgs.follows = "nixpkgs";
   inputs.nix-portable-flake.inputs.flake-utils.follows = "flake-utils";
+  inputs.nix-portable-flake.inputs.nix.inputs.nixpkgs.follows = "nixpkgs";
   # Apptainer is the new name chosen by the Singularity community
   # A symlink to the name singularity at $out/bin is preserved
   inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
