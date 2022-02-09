@@ -38,6 +38,7 @@
                 python = python3;
                 inherit (darwin.apple_sdk.frameworks) Cocoa CoreSymbolication OpenGL;
               })).overrideAttrs (oldAttrs: {
+                version = root-source.lastModifiedDate;
                 src = root-source;
                 cmakeFlags = builtins.foldl'
                   (flags: pair:
@@ -83,7 +84,6 @@
           )
         ];
       };
-      inherit (pkgs) root;
       devShell = pkgs.mkShell {
         buildInputs = (with pkgs; [
           root
