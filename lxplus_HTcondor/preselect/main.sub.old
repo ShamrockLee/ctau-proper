@@ -9,9 +9,7 @@ datagroupName         = TT
 # DYJets
 #listFile              = dataTest.txt
 listFile              = dataTest_$(datagroupName).txt
-# exeMacro              = xAna_monoZ_preselect.C
-macroName               = xAna_monoZ_preselect
-singularityImage      = ana.sif
+exeMacro              = xAna_monoZ_preselect.C
 
 # +JobFlavour           = "longlunch"
 +JobFlavour           = "workday"
@@ -37,14 +35,14 @@ executable            = subMacro.sh
 output                = $Fn(listFile)/out/job_$(ClusterId)_$(ProcId).out
 error                 = $Fn(listFile)/err/job_$(ClusterId)_$(ProcId).err
 log                   = $Fn(listFile)/job_$(ClusterId).log
-arguments             = $(singularityImage) $(macroName) $(datagroupName) $(inputFile) $(outputVar)
+arguments             = $(exeMacro) $(inputFile) $(outputVar)
 
 
 #transfer input file
 should_transfer_files   = Yes
 when_to_transfer_output = ON_EXIT
 transfer_output_remaps  = "$(outputVar)=$(outputTransfer)"
-transfer_input_files   = $(singularityImage);
+transfer_input_files   = $(exeMacro), untuplizer.h, BranchMounter.h, BranchMounterForUntuplizer.h
 
 queue inputFile from $(listFile)
 
