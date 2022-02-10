@@ -12,6 +12,10 @@
   # A symlink to the name singularity at $out/bin is preserved
   inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
   inputs.apptainer-source.flake = false;
+  # inputs.nix-prefetch-flake.url = "github:msteen/nix-prefetch";
+  inputs.nix-prefetch-flake.url = "github:ShamrockLee/nix-prefetch/experimental-features";
+  inputs.nix-prefetch-flake.inputs.nixpkgs.follows = "nixpkgs";
+  inputs.nix-prefetch-flake.inputs.flake-utils.follows = "flake-utils";
 
   outputs = inputs@{ self
   , nixpkgs
@@ -19,7 +23,8 @@
   , root-source
   , nix-portable-flake
   , apptainer-source
-  , ... }:flake-utils.lib.eachDefaultSystem (system:
+  , nix-prefetch-flake
+  , ... }: flake-utils.lib.eachDefaultSystem (system:
     let
       lib = nixpkgs.lib;
       switchFlag = patternToRemove: flagToAdd: flags: (
@@ -72,10 +77,12 @@
           )
           (final: prev:
             {
-              apptainer = prev.apptainer.overrideAttrs (oldAttrs: {
+              apptainer = (prev.apptainer.override {
                 pname = "apptainer-unstable";
                 version = apptainer-source.lastModifiedDate;
                 src = apptainer-source;
+                vendorSha256 = "sha256-u6iJScCAtLfHunUQyWYz1+xtDMZ51F7i+jnWcfn0KTw=";
+              }).overrideAttrs (oldAttrs: {
                 postPatch = (oldAttrs.postPatch or "") + ''
                   echo "${apptainer-source.lastModifiedDate}" > VERSION
                 '';
@@ -84,6 +91,7 @@
           )
         ];
       };
+      nix-prefetch = nix-prefetch-flake.packages.${system}.nix-prefetch.override { nix = pkgs.nixFlakes; };
       devShell = pkgs.mkShell {
         buildInputs = (with pkgs; [
           root
@@ -100,6 +108,7 @@
           gawk
           gitAndTools.gitFull
           # apptainer
+          nix-prefetch
         ]);
       };
       packagesSub = {
@@ -107,6 +116,7 @@
         inherit (pkgs) gawk;
         inherit (pkgs.gitAndTools) git gitFull;
         # inherit (pkgs) apptainer;
+        inherit nix-prefetch;
       };
       # `nix-shell -c` replacement with LD_LIBRARY_PATH and ./thisroot.sh soucing
       # Use as `nix run .#run -- something to run` or `nix run .# -- something to run`
@@ -142,11 +152,20 @@
         g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}"
       '';
       ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
-      mkSingularityImage = package: pkgs.callPackage ./make-singularity-image.nix {
+      mkSingularityBuildscript = package: pkgs.callPackage ./make-singularity-buildscript.nix {
         inherit package;
         singularity = pkgs.apptainer;
       };
-      ana-singularity-image = mkSingularityImage ana;
+      ana-singularity-buildscript = mkSingularityBuildscript ana;
+      apptainer-prefetch-vendorsha256 = (pkgs.writeShellScriptBin "apptainer-prefetch-vendorsha256" ''
+        NIX_PATH="nixpkgs=${nixpkgs}" "${nix-prefetch}/bin/nix-prefetch" \
+          --extra-experimental-features "nix-command flakes" \
+          "let preselect-flake = builtins.getFlake \"git+file://$( (cd ../..; pwd) )?dir=lxplus_HTcondor/preselect\"; preselect-pkgs = preselect-flake.legacyPackages.${system}; in { sha256 }: (preselect-pkgs.apptainer.override { vendorSha256 = sha256; }).go-modules"
+      '').overrideAttrs (oldAttrs: {
+        meta = (oldAttrs.meta or { }) // {
+          mainProgram = "apptainer-prefetch-vendorsha256";
+        };
+      });
     in
     {
       legacyPackages = pkgs;
@@ -154,7 +173,7 @@
       defaultPackage = run;
       packages = packagesSub // {
         srcRaw = self;
-        inherit run ana compile-with-root ana-singularity-image;
+        inherit run ana compile-with-root ana-singularity-buildscript apptainer-prefetch-vendorsha256;
       } // lib.optionalAttrs (system == "x86_64-linux") (lib.mapAttrs (
         # Use the same pkgs as other packages
         name: value: value.override { inherit pkgs; }

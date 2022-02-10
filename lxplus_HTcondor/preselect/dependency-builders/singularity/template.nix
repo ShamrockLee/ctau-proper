@@ -3,6 +3,7 @@
 , gpgme
 , openssl
 , libuuid
+, bash
 , coreutils
 , which
 , makeWrapper
@@ -11,41 +12,55 @@
 , nvidia-docker # For nvidia-container-cli
 , glibc # For ldconfig needed by nvidia-container-cli
 , go
-, buildGoPackage
+, buildGoModule
 , pname
 , version
 , src
-, goPackagePath
-, projectName ? (lib.last (builtins.split "/" goPackagePath))
+, projectName # "apptainer" or "singularity"
+  # These cannot be correctly override with `overrideAttrs`
+, vendorSha256 ? null
+, deleteVendor ? false
+, proxyVendor ? false
 , doCheck ? true
 , enableNvidiaContainerCli ? true
 }:
 
 with lib;
+let
+  propagatedBuildInputs = [ coreutils squashfsTools bash ];
+in
+buildGoModule {
+  inherit pname version src;
 
-buildGoPackage rec {
-  inherit pname version src goPackagePath doCheck;
+  # `buildGoModule` reads the `go.mod` file,
+  # so no need to specify `goPackagePath`
 
-  passthru = {
-    inherit projectName;
-  };
+  # All three projects provide vendored source tarball
+  # so we set vendorSha256 = null;
+  # One who use unvendored source can override this
+  # with `override`
+  inherit vendorSha256 deleteVendor proxyVendor;
 
   # apptainer and singularity-ce both want to reference Go
   # to compile the extensions when building container images
   allowGoReference = true;
 
+  passthru = {
+    inherit projectName;
+  };
+
   buildInputs = [ gpgme openssl libuuid ];
   nativeBuildInputs = [ util-linux which makeWrapper cryptsetup ];
-  propagatedBuildInputs = [ coreutils squashfsTools ];
+  inherit propagatedBuildInputs;
 
   postPatch = ''
     substituteInPlace internal/pkg/build/files/copy.go \
       --replace /bin/cp ${coreutils}/bin/cp
   '';
 
+  # Using `buildGoModule` instead of `buildGoPackage`,
+  # We no longer need to `cd go/src/${goPackagePath}`
   postConfigure = ''
-    cd go/src/${goPackagePath}
-
     patchShebangs .
     for subPath in cmd/internal/cli/actions.go internal/pkg/util/env/env.go e2e/env/env.go; do
       if [ -f "$subPath" ]; then

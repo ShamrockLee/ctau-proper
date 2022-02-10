@@ -3,11 +3,11 @@
     "apptainer-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1644141208,
-        "narHash": "sha256-atQF9JT1UvETxNteJkhCoi9ZjsCKBYip5994TX4KdA8=",
+        "lastModified": 1644487522,
+        "narHash": "sha256-coUBLTN3amRKp3R6FTPbQVMY6b/LIp1nVto+KDzaofc=",
         "owner": "ShamrockLee",
         "repo": "apptainer",
-        "rev": "ea64c0ca731a2a6ecb9f4e543f34d0c7126e9695",
+        "rev": "92a75b54f98ea4f1694dbbc0f15eeaaaf9d80bf0",
         "type": "github"
       },
       "original": {
@@ -70,11 +70,11 @@
         "nixpkgs-regression": "nixpkgs-regression"
       },
       "locked": {
-        "lastModified": 1644263050,
+        "lastModified": 1644413094,
         "narHash": "sha256-KLGaeSqvhuUFz6DxrB9r3w+lfp9bXIiCT9K1cqg7Ze8=",
         "owner": "NixOS",
         "repo": "nix",
-        "rev": "7c64a9dfd4a8e9e171ea8b5c1806ca079b2f19ca",
+        "rev": "52f52319ad21bdbd7a33bb85eccc83756648f110",
         "type": "github"
       },
       "original": {
@@ -102,6 +102,30 @@
       "original": {
         "owner": "DavHau",
         "repo": "nix-portable",
+        "type": "github"
+      }
+    },
+    "nix-prefetch-flake": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1644471083,
+        "narHash": "sha256-FKE5K0tHRcP7HctsIU9NLRXHRZL64dhxvvazVuMAzZQ=",
+        "owner": "ShamrockLee",
+        "repo": "nix-prefetch",
+        "rev": "c8192ed787f43ca471aead41dc69ea1e2e3c0588",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ShamrockLee",
+        "ref": "experimental-features",
+        "repo": "nix-prefetch",
         "type": "github"
       }
     },
@@ -156,6 +180,7 @@
         "apptainer-source": "apptainer-source",
         "flake-utils": "flake-utils",
         "nix-portable-flake": "nix-portable-flake",
+        "nix-prefetch-flake": "nix-prefetch-flake",
         "nixpkgs": "nixpkgs_2",
         "root-source": "root-source"
       }
