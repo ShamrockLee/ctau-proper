@@ -24,10 +24,10 @@ let
         ) \
         | nix-store --store "''${SINGULARITY_ROOTFS}" --import
   '' + lib.optionalString linkBinSh ''
-        mkdir -p "''${SINGULARITY_ROOTFS}/bin/sh"
+        mkdir -p "''${SINGULARITY_ROOTFS}/bin"
         "${coreutils}/bin/ln" -s "${runtimeShell}" "''${SINGULARITY_ROOTFS}/bin/sh"
   '' + lib.optionalString linkUsrBinEnv ''
-        mkdir -p "''${SINGULARITY_ROOTFS}/usr/bin/env"
+        mkdir -p "''${SINGULARITY_ROOTFS}/usr/bin"
         "${coreutils}/bin/ln" -s "${coreutils}/bin/env" "''${SINGULARITY_ROOTFS}/usr/bin/env;"
   '' + ''
 
