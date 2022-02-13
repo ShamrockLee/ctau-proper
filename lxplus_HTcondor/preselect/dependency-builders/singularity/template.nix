@@ -22,6 +22,7 @@
 , deleteVendor ? false
 , proxyVendor ? false
 , doCheck ? true
+, withoutSuid ? true # Required to run containers without suid
 , enableNvidiaContainerCli ? true
 }:
 
@@ -53,15 +54,26 @@ buildGoModule {
   nativeBuildInputs = [ util-linux which makeWrapper cryptsetup ];
   inherit propagatedBuildInputs;
 
+  outputs = [ "out" "man" ];
+
   postPatch = ''
     substituteInPlace internal/pkg/build/files/copy.go \
       --replace /bin/cp ${coreutils}/bin/cp
   '';
 
+  configureScript = "./mconfig";
+
+  configureFlags = [
+    "--localstatedir=/var"
+  ]
+  ++ lib.optional withoutSuid "--without-suid";
+
   # Using `buildGoModule` instead of `buildGoPackage`,
   # We no longer need to `cd go/src/${goPackagePath}`
   postConfigure = ''
     patchShebangs .
+
+    # Patching the hard-coded [Dd]efaultPath
     for subPath in cmd/internal/cli/actions.go internal/pkg/util/env/env.go e2e/env/env.go; do
       if [ -f "$subPath" ]; then
         echo "Patching [Dd]efaultPath in \"$subPath\""
@@ -69,7 +81,26 @@ buildGoModule {
       fi
     done
 
-    ./mconfig -V ${version} -p $out --localstatedir=/var
+    # Try to make use of the existing configureFlags and configureFlagsArray
+    # Code borrowed from pkgs/stdenv/generic/setup.sh configurePhase()
+
+    # set to empty if unset
+    : ''${configureScript=}
+    : ''${configureFlags=}
+
+    if [[ -z "''${dontAddPrefix:-}" && -n "$prefix" ]]; then
+        configureFlags="''${prefixKey:---prefix=}$prefix $configureFlags"
+    fi
+
+    # Old bash empty array hack
+    # shellcheck disable=SC2086
+    flagsArray=( $configureFlags "''${configureFlagsArray[@]}" )
+    echoCmd 'configure flags' "''${flagsArray[@]}"
+    # shellcheck disable=SC2086
+    $configureScript -V ${version} "''${flagsArray[@]}"
+    unset flagsArray
+ 
+    # End of the code from pkgs/stdenv/generic/setup.sh configurPhase
 
     # Don't install SUID binaries
     sed -i 's/-m 4755/-m 755/g' builddir/Makefile
@@ -84,7 +115,11 @@ buildGoModule {
   installPhase = ''
     runHook preInstall
     make -C builddir install LOCALSTATEDIR=$out/var
-    chmod 755 $out/libexec/${projectName}/bin/starter-suid
+    make -C builddir man
+
+    '' + lib.optionalString (!withoutSuid) ''
+      chmod 755 $out/libexec/${projectName}/bin/starter-suid
+    '' + ''
 
     # Explicitly configure paths in the config file
     sed -i 's|^# mksquashfs path =.*$|mksquashfs path = ${lib.makeBinPath [squashfsTools]}/mksquashfs|' $out/etc/${projectName}/${projectName}.conf
