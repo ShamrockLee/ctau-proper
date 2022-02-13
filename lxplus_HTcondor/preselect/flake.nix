@@ -4,10 +4,15 @@
   inputs.root-source.url = "github:root-project/root/master";
   inputs.root-source.flake = false;
   inputs.nix-portable-flake.url = "github:DavHau/nix-portable";
+  inputs.nix-for-nix-portable.url = "nix/2.5.1";
+  inputs.nix-for-nix-portable.inputs.flake-utils.follows = "flake-utils";
+  inputs.nix-for-nix-portable.inputs.nixpkgs.follows = "nixpkgs";
+  # We don't need to benchmark Nix, but we try to keep the flake.lock unchanged
+  inputs.nix-for-nix-portable.inputs.nixpkgs-regression.follows = "nixpkgs";
   # Use the same nixpkgs as other packages
   inputs.nix-portable-flake.inputs.nixpkgs.follows = "nixpkgs";
   inputs.nix-portable-flake.inputs.flake-utils.follows = "flake-utils";
-  inputs.nix-portable-flake.inputs.nix.inputs.nixpkgs.follows = "nixpkgs";
+  inputs.nix-portable-flake.inputs.nix.follows = "nix-for-nix-portable";
   # Apptainer is the new name chosen by the Singularity community
   # A symlink to the name singularity at $out/bin is preserved
   inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
