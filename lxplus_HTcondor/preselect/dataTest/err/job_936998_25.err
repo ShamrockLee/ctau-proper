@@ -1,3 +1,0 @@
-Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_23005/./xAna_monoZ_preselect_C.so
-Error in <TNetXNGFile::Open>: [FATAL] Socket error: Operation now in progress
-FATAL: TFile::Open() failed

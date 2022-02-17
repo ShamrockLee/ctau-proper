@@ -1,3 +1,0 @@
-Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_13423/./xAna_monoZ_preselect_C.so
-Error in <TNetXNGFile::Open>: [ERROR] Server responded with an error: [3010] Opening relative path 'dpm/grid.nchc.org.tw/home/cms/store/user/syu/DarkMatter_MonoZToLL_NLO_Vector_Mx2-1_Mv-500_gDM1_gQ0p25_TuneCUETP8M1_Mx1-0p1_ctau-1_13TeV-madgraph/NanoAODSim-03July2020/200708_071410/0000/myNanoProdMc_NANO_3.root?' is disallowed.
-FATAL: TFile::Open() failed

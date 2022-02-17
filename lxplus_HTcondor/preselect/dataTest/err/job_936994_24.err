@@ -1,3 +1,0 @@
-Info in <TUnixSystem::ACLiC>: creating shared library /pool/condor/dir_5109/./xAna_monoZ_preselect_C.so
-Error in <TNetXNGFile::Open>: [FATAL] Socket timeout
-FATAL: TFile::Open() failed
