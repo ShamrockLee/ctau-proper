@@ -16,6 +16,9 @@
   # Apptainer is the new name chosen by the Singularity community
   # A symlink to the name singularity at $out/bin is preserved
   inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
+  # This input is to follow the changes at
+  # https://github.com/apptainer/apptainer/pull/250
+  # inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
   inputs.apptainer-source.flake = false;
   # inputs.nix-prefetch-flake.url = "github:msteen/nix-prefetch";
   inputs.nix-prefetch-flake.url = "github:ShamrockLee/nix-prefetch/experimental-features";

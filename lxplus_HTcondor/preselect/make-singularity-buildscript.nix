@@ -45,7 +45,7 @@ let
       echo "Expect IMAGE_PATH" >&2
       exit 1
     fi
-    ${lib.toUpper singularity.projectName}ENV_PATH="$PATH" "${singularity}/bin/${singularity.mainProgram or "singularity"}" --verbose build "$1" "${definitionFile}"
+    ${lib.toUpper singularity.projectName}ENV_PATH="$PATH" "${singularity}/bin/${singularity.mainProgram or "singularity"}" --verbose build --unprivileged "$1" "${definitionFile}"
   '';
 
 in (writeShellScriptBin "build-singularity-image" scriptString).overrideAttrs (oldAttrs: {

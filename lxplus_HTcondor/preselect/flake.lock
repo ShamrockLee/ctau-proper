@@ -3,11 +3,11 @@
     "apptainer-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1644487522,
-        "narHash": "sha256-coUBLTN3amRKp3R6FTPbQVMY6b/LIp1nVto+KDzaofc=",
+        "lastModified": 1645095004,
+        "narHash": "sha256-Q9CLpFY9wudEJAJg4ZxytoQn54ciEXOzFqt7OfRRywQ=",
         "owner": "ShamrockLee",
         "repo": "apptainer",
-        "rev": "92a75b54f98ea4f1694dbbc0f15eeaaaf9d80bf0",
+        "rev": "a09aff7748a4b293f529cbe6113b1db52950237c",
         "type": "github"
       },
       "original": {
