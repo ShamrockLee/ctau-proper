@@ -3,3 +3,4 @@ result*
 .nix-closures*
 .nix-bundles*
 *.sif
+dataTest*/
