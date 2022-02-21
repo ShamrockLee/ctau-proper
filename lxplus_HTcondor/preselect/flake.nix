@@ -81,6 +81,7 @@
                 final.callPackage ./dependency-builders/singularity/packages.nix { }
               ) singularity-legacy apptainer singularity-ce;
               singularity = final.apptainer;
+              singularity-tools = final.callPackage ./dependency-builders/singularity-tools { };
             }
           )
           (final: prev:
@@ -164,7 +165,19 @@
         inherit package;
         singularity = pkgs.apptainer;
       };
-      ana-singularity-buildscript = mkSingularityBuildscript ana;
+      ana-singularity-image = pkgs.singularity-tools.buildImage' {
+        name = ana.pname;
+        contents = [ ana pkgs.parallel ];
+        executableFlags = [ "--verbose" ];
+        diskSize = 4096;
+        memSize = 2048;
+      };
+      ana-singularity-buildscript = (pkgs.singularity-tools.buildImageFromDef {
+        name = ana.pname;
+        contents = [ ana pkgs.parallel ];
+        executableFlags = [ "--verbose" ];
+        buildImageFlags = [ "--unprivileged" ];
+      }).buildscriptPackage;
       apptainer-prefetch-vendorsha256 = (pkgs.writeShellScriptBin "apptainer-prefetch-vendorsha256" ''
         NIX_PATH="nixpkgs=${nixpkgs}" "${nix-prefetch}/bin/nix-prefetch" \
           --extra-experimental-features "nix-command flakes" \
@@ -181,7 +194,7 @@
       defaultPackage = run;
       packages = packagesSub // {
         srcRaw = self;
-        inherit run ana compile-with-root ana-singularity-buildscript apptainer-prefetch-vendorsha256;
+        inherit run ana compile-with-root ana-singularity-buildscript ana-singularity-image apptainer-prefetch-vendorsha256;
       } // lib.optionalAttrs (system == "x86_64-linux") (lib.mapAttrs (
         # Use the same pkgs as other packages
         name: value: value.override { inherit pkgs; }
