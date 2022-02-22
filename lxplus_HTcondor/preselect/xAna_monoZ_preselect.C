@@ -482,7 +482,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
   return TMath::Sqrt(p4DDA.M2() + (p4DDA.Et() * p2X1aRotated.R() - p2DDARotated.Dot(p2X1aRotated)) * 2);
 }
 
-  void xAna_monoZ_preselect(const std::string fileIn, const std::string fileOut, const size_t nThread=1, const int debug=0) {
+void xAna_monoZ_preselect(const std::string fileInGlobs, const std::string fileOut, const size_t nThread=1, const int debug=0) {
   const std::string typenameLorentzVector = "ROOT::Math::PtEtaPhiMVector";
   ROOT::EnableImplicitMT(nThread);
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
@@ -501,7 +501,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
   Double_t mX2Truth = 100.;
   {
     std::string strMX2;
-    if (RefgetParamFilenameNum(strMX2, fileIn, "Mx2")) {
+    if (RefgetParamFilenameNum(strMX2, fileInGlobs, "Mx2")) {
       mX2Truth = std::stod(strMX2);
     }
   }
@@ -515,9 +515,7 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
   const std::array<std::string, 2> aPrefLepFlavLower{"ele", "mu"};
   const std::array<std::string, 2> aPrefAKShort{"THIN", "FAT"};
 
-  TFile *tfIn = TFile::Open(fileIn.c_str());
-  TTree *ttIn = tfIn->Get<TTree>("tree/treeMaker");
-  ROOT::RDataFrame dfIn(*ttIn);
+  ROOT::RDataFrame dfIn("tree/treeMaker", fileInGlobs);
   std::vector<std::string> vNameColOriginal = {};
   std::array<std::vector<std::string>, 2> avNameColGen, avNameColHasLPair, avNameColHasVtx, avNameColNoTau, avNameColLPairedPassPt, avNameColZMassCutted, avNameColNoExtraL;
   for (auto pav: {&avNameColGen, &avNameColHasLPair, &avNameColHasVtx, &avNameColNoTau, &avNameColLPairedPassPt, &avNameColZMassCutted, &avNameColNoExtraL}) {
@@ -1242,12 +1240,6 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
 
   // Realize the actions and write to output files
   TFile* tfOut = TFile::Open(fileOut.c_str(), "recreate");
-  // tfOut->mkdir("allEventsCounter", tfIn->Get<TDirectory>("allEventsCounter")->GetTitle())->cd();
-  // TH1 *histTotalEvents = tfIn->Get<TH1>("allEventsCounter/totalEvents");
-  // if (isSignal) {
-  //   histTotalEvents->Scale(1. / 3);
-  // }
-  // histTotalEvents->Write();
   tfOut->cd("/");
   tfOut->mkdir("Original", "Unfiltered entries");
   if (isSignal) {
@@ -1384,7 +1376,6 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
   // }
   tfOut->Close();
   if (debug) std::cerr << "Completed!" << std::endl;
-  tfIn->Close();
 }
 
 #if true
@@ -1405,7 +1396,7 @@ int main(int argc, char** argv) {
     switch (option) {
       case 'h':
         std::cout << "Description:\n"
-        "xAna_monoZ_preselect [-v] [-j n] fileIn fileOut\n"
+        "xAna_monoZ_preselect [-v] [-j n] fileInGlobs fileOut\n"
         "  -h --help\tDisplay this help message.\n"
         "  -v --debug\tRun with debug message and examinations.\n"
         "\tThis can be specified multiple times.\n"
@@ -1431,7 +1422,7 @@ int main(int argc, char** argv) {
   if (debug) std::cerr << "Debug level: " << debug << std::endl;
   if (debug) std::cerr << "Number of remaining command-line arguments: " << argc - options.optind << std::endl;
   if (argc - options.optind < 2) {
-    std::cerr << "error: Expect fileIn and fileOut" << std::endl;
+    std::cerr << "error: Expect fileInGlobs and fileOut" << std::endl;
     return 1;
   }
   if (debug) std::cerr << "Getting filenames ..." << std::endl;
