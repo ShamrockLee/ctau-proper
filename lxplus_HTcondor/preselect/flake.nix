@@ -160,7 +160,10 @@
         echo g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}" >2
         g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}"
       '';
-      ana = pkgs.callPackage ./ana.nix { inherit (packagesSub) root; };
+      ana = pkgs.callPackage ./ana.nix (rec {
+        subPathMacro = "xAna_monoZ_preselect.C";
+        subPaths = [ subPathMacro "skeeto_optparse.h" ];
+      });
       mkSingularityBuildscript = package: pkgs.callPackage ./make-singularity-buildscript.nix {
         inherit package;
         singularity = pkgs.apptainer;
