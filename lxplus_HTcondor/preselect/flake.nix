@@ -191,19 +191,20 @@
           mainProgram = "apptainer-prefetch-vendorsha256";
         };
       });
+      nix-portable = nix-portable-flake.packages.${system}.nix-portable.override { inherit pkgs; };
+      nix-portable-aarch64-linux = nix-portable-flake.packages.${system}.nix-portable-aarch64-linux.override { inherit pkgs; };
     in
     {
       legacyPackages = pkgs;
       inherit devShell;
       defaultPackage = run;
       packages = packagesSub // {
-        srcRaw = self;
-        inherit run ana compile-with-root ana-singularity-buildscript ana-singularity-image apptainer-prefetch-vendorsha256;
-      } // lib.optionalAttrs (system == "x86_64-linux") (lib.mapAttrs (
-        # Use the same pkgs as other packages
-        name: value: value.override { inherit pkgs; }
-      ) {
-        inherit (nix-portable-flake.packages.${system}) nix-portable nix-portable-aarch64-linux;
-      });
+        inherit run ana compile-with-root apptainer-prefetch-vendorsha256 nix-portable;
+      } // lib.optionalAttrs (lib.hasSuffix "linux" system) {
+        inherit ana-singularity-buildscript ana-singularity-image;
+      # # Cross build seems still buggy
+      # } // lib.optionalAttrs (system == "x86_64-linux") {
+      #   inherit nix-portable-aarch64-linux;
+      };
     });
 }
