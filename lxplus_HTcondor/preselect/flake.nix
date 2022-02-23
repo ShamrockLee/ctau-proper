@@ -59,7 +59,7 @@
                   )
                   oldAttrs.cmakeFlags
                   [
-                    [ "-Dimt=ON" "-Dimt=OFF" ]
+                    [ "-Dimt=OFF" "-Dimt=ON" ]
                     [ "-Dssl=OFF" "-Dssl=ON" ]
                     # # The dependencies are not packaged yet.
                     # [ "-Dgfal=OFF" "-Dgfal=ON" ]
@@ -67,9 +67,10 @@
                     [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
                   ];
                 buildInputs = (lib.subtractLists (with final; [
-                  tbb # for static linking
+                  # Dependencies to remove
                 ]) (oldAttrs.buildInputs or [ ])) ++ (with final; [
-                  # tbb # for implicit multithreading
+                  # Dependencies to add
+                  tbb # for implicit multithreading
                   openssl # for ssl support
                 ]);
               });
