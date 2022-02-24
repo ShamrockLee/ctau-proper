@@ -47,6 +47,12 @@
         overlays = [
           (final: prev:
             {
+              voms = final.callPackage ./dependency-builders/voms { };
+              xrootd = final.callPackage ./dependency-builders/xrootd { };
+            }
+          )
+          (final: prev:
+            {
               root = (final.callPackage ./dependency-builders/root (with final; {
                 python = python3;
                 inherit (darwin.apple_sdk.frameworks) Cocoa CoreSymbolication OpenGL;
@@ -63,7 +69,7 @@
                     [ "-Dssl=OFF" "-Dssl=ON" ]
                     # # The dependencies are not packaged yet.
                     # [ "-Dgfal=OFF" "-Dgfal=ON" ]
-                    # [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
+                    [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
                     [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
                   ];
                 buildInputs = (lib.subtractLists (with final; [
@@ -72,6 +78,7 @@
                   # Dependencies to add
                   tbb # for implicit multithreading
                   openssl # for ssl support
+                  xrootd # for xrootd / "root://" url support
                 ]);
               });
             }
