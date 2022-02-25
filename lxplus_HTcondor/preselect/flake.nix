@@ -56,6 +56,7 @@
               root = (final.callPackage ./dependency-builders/root (with final; {
                 python = python3;
                 inherit (darwin.apple_sdk.frameworks) Cocoa CoreSymbolication OpenGL;
+                version = "6.26.00"; # Disable some patches that have been included
               })).overrideAttrs (oldAttrs: {
                 version = root-source.lastModifiedDate;
                 src = root-source;
