@@ -28,44 +28,54 @@ rec {
       ${text}
     '';
 
-  mkLayer =
-    { name
-    , contents ? [ ]
-    ,
-    }:
-    runCommand "${projectName}-layer-${name}"
-      {
-        inherit contents;
-      } ''
-      mkdir $out
-      for f in $contents ; do
-        cp -ra $f $out/
-      done
-    '';
+  writeMultipleReferencesToFile = paths: runCommand "runtime-deps-multiple" {
+    referencesFiles = map writeReferencesToFile paths;
+  } ''
+    touch "$out"
+    declare -a paths=();
+    for refFile in $referencesFiles; do
+      while read path; do
+        isPathIncluded=0
+        for pathIncluded in "''${paths[@]}"; do
+          if [[ "$path" == "$pathIncluded" ]]; then
+            isPathIncluded=1
+            break
+          fi
+        done
+        if (( ! isPathIncluded )); then
+          echo "$path" >> "$out"
+          paths+=( "$path" )
+        fi
+      done < "$refFile"
+    done
+  '';
 
   buildImage =
     { name
     , contents ? [ ]
     , diskSize ? 1024
+    , memSize ? 512
     , runScript ? "#!${stdenv.shell}\nexec /bin/sh"
     , runAsRoot ? null
+    , executableFlags ? [ ]
+    , buildImageFlags ? [ ]
+    , singularityPackage ? singularity
     }:
     let
-      layer = mkLayer {
-        inherit name;
-        contents = contents ++ [ bash runScriptFile ];
-      };
+      # May be "apptainer" instead of "singularity"
+      projectName = singularityPackage.projectName or "singularity";
       runAsRootFile = shellScript "run-as-root.sh" runAsRoot;
       runScriptFile = shellScript "run-script.sh" runScript;
       result = vmTools.runInLinuxVM (
         runCommand "${projectName}-image-${name}.img"
           {
             buildInputs = [ singularity e2fsprogs util-linux gawk ];
-            layerClosure = writeReferencesToFile layer;
+            layerClosure = writeMultipleReferencesToFile (contents ++ [ bash runScriptFile ]);
             preVM = vmTools.createEmptyImage {
               size = diskSize;
               fullName = "${projectName}-run-disk";
             };
+            inherit memSize executableFlags buildImageFlags;
           }
           ''
             rm -rf $out
@@ -85,7 +95,7 @@ rec {
             ''}
 
             # Build /bin and copy across closure
-            mkdir -p bin ./${builtins.storeDir}
+            mkdir -p bin ./${storeDir}
             for f in $(cat $layerClosure) ; do
               cp -ar $f ./$f
             done
@@ -113,7 +123,7 @@ rec {
             mkdir -p /var/${projectName}/mnt/{container,final,overlay,session,source}
             echo "root:x:0:0:System administrator:/root:/bin/sh" > /etc/passwd
             echo > /etc/resolv.conf
-            TMPDIR=$(pwd -P) ${projectName} build $out ./img
+            TMPDIR=$(pwd -P) ${singularityPackage}/bin/singularity $executableFlags build $buildImageFlags $out ./img
           '');
 
     in
@@ -131,14 +141,13 @@ rec {
     , definitionOverrider ? null
     , executableFlags ? [ ]
     , buildImageFlags ? [ ]
+    , singularityPackage ? singularity
     , ...
     }:
     let
-      layer = mkLayer {
-        inherit name;
-        contents = contents ++ [ bash coreutils ];
-      };
-      layerClosure = writeReferencesToFile layer;
+      # May be "apptainer" instead of "singularity"
+      projectName = singularityPackage.projectName or "singularity";
+      layerClosure = writeMultipleReferencesToFile (contents ++ [ bash coreutils ]);
       definition = if (args.definition or null != null) then args.definition else
       (
         if lib.isFunction definitionOverrider then
@@ -150,9 +159,9 @@ rec {
       ) {
         header.Bootstrap = "scratch";
         setup = ''
-          mkdir -p bin ''${SINGULARITY_ROOTFS}/${storeDir}
+          mkdir -p ''${SINGULARITY_ROOTFS}/${storeDir}
           for f in $(cat ${layerClosure}) ; do
-            cp -ar $f ''${SINGULARITY_ROOTFS}/$f
+            cp -ar "$f" "''${SINGULARITY_ROOTFS}/${storeDir}"
           done
           mkdir -p "''${SINGULARITY_ROOTFS}/bin"
           "${coreutils}/bin/ln" -s "${runtimeShell}" "''${SINGULARITY_ROOTFS}/bin/sh"
@@ -172,7 +181,7 @@ rec {
         fi
         pathSIF="$1"
         shift
-        ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularity}/bin/${projectName}" ${toString executableFlags} build ${toString buildImageFlags} "$@" "$pathSIF" "${definitionFile}"
+        ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularityPackage}/bin/singularity" ${toString executableFlags} build ${toString buildImageFlags} "$@" "$pathSIF" "${definitionFile}"
       '') // {
         meta.mainProgram = "build-image";
       };
@@ -180,10 +189,10 @@ rec {
     (runCommand "${projectName}-image-${name}.img" (removeAttrs args [ "name" "definition" ] // {
       inherit executableFlags buildImageFlags;
       passthru = args.passthru or { } // {
-        inherit layerClosure definition definitionFile buildscriptPackage;
+        inherit singularity layerClosure definition definitionFile buildscriptPackage;
       };
     }) ''
-      ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularity}/bin/${projectName}" $executableFlags build $buildImageFlags "''${buildImageFlagsArray[@]}" "$out" "${definitionFile}"
+      ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularityPackage}/bin/singularity" $executableFlags build $buildImageFlags "''${buildImageFlagsArray[@]}" "$out" "${definitionFile}"
     '');
 
   buildImage' =
