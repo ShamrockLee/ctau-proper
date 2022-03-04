@@ -1,14 +1,22 @@
 ##########################################################
 ## user setting area
 
-datagroupName         = TT
+datagroupName         = 2016BkgMC_DYJetsToLL_M-50_div-HT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8
 # signal_Mx2-150_Mv-500_Mx1-1_ctau-1
 # signal_Mx2-1_Mv-500_Mx1-0p1_ctau-1
 # signal_Mx2-50_Mv-500_Mx1-1_ctau-10
 # TT
-# DYJets
+# 2016BkgMC_DYJetsToLL_M-50_div-HT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8
 #listFile              = dataTest.txt
-listFile              = dataTest_$(datagroupName).txt
+listFile              = dataTest_ntuple_$(datagroupName).txt
+splittedListSpace     = ntuple_filelist_splitted.tmp
+outputLogSpace        = ntuple_filelist_outputlog.tmp
+outputSpace           = /eos/user/y/yuehshun/ntuple_filelist_output.tmp
+# Craft the "$(outputTransferPrefix)" from "$(inputFile)" by
+# removing the "$(splittedListSpace)/" from the beginning and
+# the filename (basename) part of "$(inputFile)" plus the preceeding "/" from the end
+# When inputFile is "path/to/myfile.txt", $Fn(inputFile) will expand to myfile
+subdirOfInput         = $$([substr("$(inputFile)", size("$(splittedListSpace)") + 1, -(size("$Fn(inputFile)") + 4 + 1))])
 # exeMacro              = xAna_monoZ_preselect.C
 macroName               = xAna_monoZ_preselect
 singularityImage      = ana.sif
@@ -28,23 +36,25 @@ singularityImage      = ana.sif
 ##########################################################
 
 
-outputTransfer        = $Fn(listFile)/output_$(datagroupName)_$(ClusterId)_$(ProcId).root
+outputTransfer        = $(outputSpace)/$(subdirOfInput)/output_$$([substr("$Fn(inputFile)", 0, -4)]))_$(ClusterId).root
 outputVar             = testOut.root
 #outputVar             = testOutSignal.root
 
 universe              = vanilla
-executable            = subMacro.sh
-output                = $Fn(listFile)/out/job_$(ClusterId)_$(ProcId).out
-error                 = $Fn(listFile)/err/job_$(ClusterId)_$(ProcId).err
-log                   = $Fn(listFile)/job_$(ClusterId).log
-arguments             = $(singularityImage) $(macroName) $(datagroupName) $(inputFile) $(outputVar)
+executable            = subMacroMultiCopyInternal.sh
+output                = $(outputLogSpace)/$(subdirOfInput)/out/job_$(ClusterId)_$(ProcId)_$Fn(inputFile).out
+error                 = $(outputLogSpace)/$(subdirOfInput)/err/job_$(ClusterId)_$(ProcId)_$Fn(inputFile).err
+log                   = $(outputLogSpace)/$(subdirOfInput)/job_$(ClusterId)_splitted.log
+arguments             = $(singularityImage) $(macroName) $(datagroupName) $(outputVar) $(inputFile)
 
 
 #transfer input file
 should_transfer_files   = Yes
 when_to_transfer_output = ON_EXIT
 transfer_output_remaps  = "$(outputVar)=$(outputTransfer)"
-transfer_input_files   = $(singularityImage);
+transfer_input_files    = $(singularityImage)
+
+request_cpus            = 8
+request_memory          = 12288
 
 queue inputFile from $(listFile)
-

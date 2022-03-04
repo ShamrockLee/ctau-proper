@@ -4,3 +4,4 @@ result*
 .nix-bundles*
 *.sif
 dataTest*/
+*.tmp
