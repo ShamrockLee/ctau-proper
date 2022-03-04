@@ -482,7 +482,8 @@ Double_t GetMTTwo(const TypeLorentzVector p4DDA, const TypeLorentzVector p4DDB, 
   return TMath::Sqrt(p4DDA.M2() + (p4DDA.Et() * p2X1aRotated.R() - p2DDARotated.Dot(p2X1aRotated)) * 2);
 }
 
-void xAna_monoZ_preselect(const std::string fileInGlobs, const std::string fileOut, const size_t nThread=1, const int debug=0) {
+template<class TIn>
+void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, const std::string fileInStripped, const size_t nThread=1, const int debug=0) {
   const std::string typenameLorentzVector = "ROOT::Math::PtEtaPhiMVector";
   ROOT::EnableImplicitMT(nThread);
   constexpr Double_t massZ = 91.1876;  //< static mass of Z (constant)
@@ -501,7 +502,7 @@ void xAna_monoZ_preselect(const std::string fileInGlobs, const std::string fileO
   Double_t mX2Truth = 100.;
   {
     std::string strMX2;
-    if (RefgetParamFilenameNum(strMX2, fileInGlobs, "Mx2")) {
+    if (RefgetParamFilenameNum(strMX2, fileInStripped, "Mx2")) {
       mX2Truth = std::stod(strMX2);
     }
   }
@@ -515,7 +516,7 @@ void xAna_monoZ_preselect(const std::string fileInGlobs, const std::string fileO
   const std::array<std::string, 2> aPrefLepFlavLower{"ele", "mu"};
   const std::array<std::string, 2> aPrefAKShort{"THIN", "FAT"};
 
-  ROOT::RDataFrame dfIn("tree/treeMaker", fileInGlobs);
+  ROOT::RDataFrame dfIn("tree/treeMaker", fileIn);
   std::vector<std::string> vNameColOriginal = {};
   std::array<std::vector<std::string>, 2> avNameColGen, avNameColHasLPair, avNameColHasVtx, avNameColNoTau, avNameColLPairedPassPt, avNameColZMassCutted, avNameColNoExtraL;
   for (auto pav: {&avNameColGen, &avNameColHasLPair, &avNameColHasVtx, &avNameColNoTau, &avNameColLPairedPassPt, &avNameColZMassCutted, &avNameColNoExtraL}) {
@@ -1378,12 +1379,22 @@ void xAna_monoZ_preselect(const std::string fileInGlobs, const std::string fileO
   if (debug) std::cerr << "Completed!" << std::endl;
 }
 
+void xAna_monoZ_preselect(const std::string fileInGlobs, const std::string fileOut, const size_t nThread=1, const int debug=0) {
+  xAna_monoZ_preselect_generic(fileInGlobs, fileOut, fileInGlobs, nThread, debug);
+}
+
+void xAna_monoZ_preselect(const std::vector<std::string> vFileIn, const std::string fileOut, const size_t nThread=1, const int debug=0) {
+  xAna_monoZ_preselect_generic(vFileIn, fileOut, vFileIn[0], nThread, debug);
+}
+
 #if true
 int main(int argc, char** argv) {
   size_t nThread = 1;
   int debug = 0;
+  bool useMultiple = false;
   struct optparse_long longopts[] = {
     {"help", 'h', OPTPARSE_NONE},
+    {"multiple", 'm', OPTPARSE_NONE},
     {"debug", 'v', OPTPARSE_NONE},
     {"threads", 'j', OPTPARSE_REQUIRED},
     {0} // NULL termination
@@ -1396,8 +1407,10 @@ int main(int argc, char** argv) {
     switch (option) {
       case 'h':
         std::cout << "Description:\n"
-        "xAna_monoZ_preselect [-v] [-j n] fileInGlobs fileOut\n"
+        "xAna_monoZ_preselect [-v] [-j n] pathFileOut pathFileInGlobs\n"
+        "xAna_monoZ_preselect [-v] [-j n] (-m|--list) pathFileOut pathFileIn1 pathFileIn2 ...\n"
         "  -h --help\tDisplay this help message.\n"
+        "  -m --multiple\tUse multiple input files.\n"
         "  -v --debug\tRun with debug message and examinations.\n"
         "\tThis can be specified multiple times.\n"
         "  -j --threads\tSpecify the number of threads to use by EnableImplicitMT.\n"
@@ -1406,6 +1419,8 @@ int main(int argc, char** argv) {
         << std::endl;
         return 0;
         break;
+      case 'm':
+        useMultiple = true;
       case 'v':
         ++debug;
         break;
@@ -1422,20 +1437,29 @@ int main(int argc, char** argv) {
   if (debug) std::cerr << "Debug level: " << debug << std::endl;
   if (debug) std::cerr << "Number of remaining command-line arguments: " << argc - options.optind << std::endl;
   if (argc - options.optind < 2) {
-    std::cerr << "error: Expect fileInGlobs and fileOut" << std::endl;
+    if (useMultiple) {
+      std::cerr << "error: Expect pathFileOut pathFileIn1 pathFileIn2 ..." << std::endl;
+    } else {
+      std::cerr << "error: Expect pathFileInGlobs and pathFileOut" << std::endl;
+    }
     return 1;
   }
-  if (debug) std::cerr << "Getting filenames ..." << std::endl;
-  char *pathFileInRaw = optparse_arg(&options);
-  if (debug) std::cerr << "pathFileInRaw: " << (void *) pathFileInRaw << std::endl;
-  char *pathFileOutRaw = optparse_arg(&options);
-  if (debug) std::cerr << "pathFileOutRaw: " << (void *) pathFileOutRaw << std::endl;
-  if (debug) {
-    std::cerr << "pathFileInRaw: \"" << pathFileInRaw
-    << "\"\npathFileOutRaw: \"" << pathFileOutRaw << "\""
-    << std::endl;
+  const std::string pathFileOut(optparse_arg(&options));
+  if (debug) std::cerr << "pathFileOut: " << pathFileOut << std::endl;
+  if (useMultiple) {
+    const Int_t nFileIn = argc - options.optind;
+    if (debug) std::cerr << "nFileIn: " << nFileIn;
+    std::vector<std::string> vPathFileIn(nFileIn, "");
+    for (std::string &pathFileIn: vPathFileIn) {
+      pathFileIn = optparse_arg(&options);
+      if (debug) std::cerr << "pathFileIn: " << pathFileIn << std::endl;
+    }
+    xAna_monoZ_preselect(vPathFileIn, pathFileOut, nThread, debug);
+  } else {
+    const std::string pathFileInGlobs(optparse_arg(&options));
+    if (debug) std::cerr << "pathFileInGlobs: " << pathFileInGlobs << std::endl;
+    xAna_monoZ_preselect(pathFileInGlobs, pathFileOut, nThread, debug);
   }
-  xAna_monoZ_preselect(pathFileInRaw, pathFileOutRaw, nThread, debug);
   return 0;
 }
 #endif
