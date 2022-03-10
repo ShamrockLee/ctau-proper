@@ -15,7 +15,7 @@ singularity build --sandbox "$sandboxPath" "$singularityImage"
 infileDir="infiles_${datagroupName}"
 mkdir "$infileDir"
 
-singularity exec "$sandboxPath" parallel -j 4 --retry 5 gfal-cp :::: "inputListFile" ::: "$infileDir/"
+singularity exec "$sandboxPath" parallel -j 4 --retry 5 gfal-cp :::: "$inputListFile" ::: "$infileDir/"
 
 singularity exec -v "$sandboxPath" "$macroName" -j 8 "$outputFile" "$infileDir/*.root"
 
