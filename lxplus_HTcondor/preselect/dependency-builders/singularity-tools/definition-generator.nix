@@ -26,11 +26,17 @@ rec {
     *     # If the element is a string instead of a list, it would be composed directly
     *     "some ad-hoc stuff"
     *   ];
-    *   # A string instead of a set is also acceptable
+    *   # A string or a list instead of a set is also acceptable
+    *   # The value part is NOT escaped as shell strings.
+    *   # Use `lib.escapeShellArg` to escape special contents
     *   environment = {
     *     __sectionPreScript = "some ad-hoc stuff beforehand";
     *     LISTEN_PORT = "12345"
     *     LC_ALL = "C";
+    *     # This will evaluates to
+    *     # `export PATH=/nix/store/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-hello-0.0.0/bin/hello:/nix/store/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-cowsay-0.0.0/bin/cowsay:${PATH:-}`
+    *     # when writing as a definition string
+    *     PATH = "${lib.makeBinPath [ hello cowsay ]}:\${PATH:-}"
     *     __sectionPostScript = "some ad-hoc stuff afterward";
     *   };
     *   post = ''
@@ -69,7 +75,7 @@ rec {
           else if (builtins.typeOf sectionContent == "set") then
             if sectionName == "environment" || sectionName == "appenv" then
               (sectionContent.__sectionPreScript or [ ])
-              ++ map (name: "export ${name}=${lib.escapeShellArg sectionContent.${name}}") (builtins.attrNames sectionContent)
+              ++ map (name: "export ${name}=${sectionContent.${name}}") (builtins.attrNames sectionContent)
               ++ (sectionContent.__sectionPostScript or [ ])
             else
               map (name: "${name} ${sectionContent.${name}}") (builtins.attrNames sectionContent)
