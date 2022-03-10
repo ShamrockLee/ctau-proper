@@ -180,6 +180,11 @@
       ana-singularity-image = pkgs.singularity-tools.buildImage' {
         name = ana.pname;
         contents = [ ana pkgs.parallel ];
+        definitionOverrider = {
+          environment = {
+            PARALLEL_SHELL = pkgs.runtimeShell;
+          };
+        };
         executableFlags = [ "--verbose" ];
         diskSize = 4096;
         memSize = 2048;
@@ -187,6 +192,11 @@
       ana-singularity-buildscript = (pkgs.singularity-tools.buildImageFromDef {
         name = ana.pname;
         contents = [ ana pkgs.parallel ];
+        definitionOverrider = {
+          environment = {
+            PARALLEL_SHELL = pkgs.runtimeShell;
+          };
+        };
         executableFlags = [ "--verbose" ];
         buildImageFlags = [ "--unprivileged" ];
       }).buildscriptPackage;
