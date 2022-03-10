@@ -153,7 +153,7 @@ rec {
         if lib.isFunction definitionOverrider then
           definitionOverrider
         else if builtins.isAttrs definitionOverrider then
-          (d: d // definitionOverrider)
+          (d: lib.recursiveUpdate d definitionOverrider)
         else
           lib.id
       ) {
