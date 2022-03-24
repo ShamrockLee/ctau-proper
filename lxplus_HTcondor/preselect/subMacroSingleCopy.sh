@@ -11,13 +11,13 @@ inputFile="$5"
 infileDir="infiles_${datagroupName}"
 mkdir "$infileDir"
 if (echo "$inputFile" | grep -q -e "^root://"); then
-  gfal-cp "$inputFile" "infileDir/"
+  gfal-copy -v "$inputFile" "infileDir/"
   inputFileNew="${infileDir}/$(basename "$inputFile")"
   inputFile="$inputFileNew"
   unset inputFileNew
 fi
 
-singularity exec "$singularityImage" -v "$macroName" -j 8 "$outputFile" "$inputFile"
+singularity exec "$singularityImage" --bind /pool/condor "$macroName" -j 8 "$outputFile" "$inputFile"
 
 duration="$SECONDS"
 echo -e "RUN TIME: $(($duration / 60)) minutes and $(($duration % 60)) seconds"
