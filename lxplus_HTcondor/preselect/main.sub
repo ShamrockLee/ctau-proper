@@ -13,11 +13,10 @@ listFile              = dataTest_ntuple_$(datagroupName).txt
 # listFile              = dataTest_ntuple_$(datagroupName)_testing.txt
 splittedListSpace     = ntuple_filelist_splitted.tmp
 outputLogSpace        = ntuple_filelist_outputlog.tmp
-outputSpace           = /eos/user/y/yuehshun/ntuple_filelist_output.tmp
+# outputSpace           = /eos/user/y/yuehshun/ntuple_filelist_output.tmp
 # Craft the "$(outputTransferPrefix)" from "$(inputFile)" by
 # removing the "$(splittedListSpace)/" from the beginning and
 # the filename (basename) part of "$(inputFile)" plus the preceeding "/" from the end
-# When inputFile is "path/to/myfile.txt", $Fn(inputFile) will expand to myfile
 subdirOfInput         = $$([substr("$(inputFile)", size("$(splittedListSpace)") + 1, -(size("$Fn(inputFile)") + 4 + 1))])
 # exeMacro              = xAna_monoZ_preselect.C
 macroName             = xAna_monoZ_preselect
@@ -38,16 +37,16 @@ singularityImage      = ana.sif
 ##########################################################
 
 
-outputTransfer        = $(outputSpace)/$(subdirOfInput)/output_$Fn(inputFile)_$(ClusterId).root
+# outputTransfer        = $(outputSpace)/$(subdirOfInput)/output_$Fn(inputFile)_$(ClusterId).root
 # outputVar             = testOut.root
 # #outputVar             = testOutSignal.root
 
 universe              = vanilla
-executable            = subMacroMultiCopyInternal.sh
+executable            = subMacroMultiCopyInternalOutname.sh
 output                = $(outputLogSpace)/$(subdirOfInput)/out/job_$(ClusterId)_$(ProcId)_$Fn(inputFile).out
 error                 = $(outputLogSpace)/$(subdirOfInput)/err/job_$(ClusterId)_$(ProcId)_$Fn(inputFile).err
 log                   = $(outputLogSpace)/$(subdirOfInput)/job_$(ClusterId)_splitted.log
-arguments             = $(cwdSend) $(cwdSend)/$(singularityImage) $(macroName) $(datagroupName) $(outputTransfer) $(inputFile)
+arguments             = $(cwdSend) $(cwdSend)/$(singularityImage) $(macroName) $(datagroupName) $(ClusterId) $(inputFile)
 
 
 # # Not to rely on the transfer mechanism of HTcondor
