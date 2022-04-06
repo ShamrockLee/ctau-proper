@@ -99,6 +99,9 @@
                 pname = "apptainer-unstable";
                 version = apptainer-source.lastModifiedDate;
                 src = apptainer-source;
+                # Run `nix run .#apptainer-prefetch-vendorsha256` to get the correct hash
+                # and paste it here
+                # after apptainer-source is updated
                 vendorSha256 = "sha256-u6iJScCAtLfHunUQyWYz1+xtDMZ51F7i+jnWcfn0KTw=";
               }).overrideAttrs (oldAttrs: {
                 postPatch = (oldAttrs.postPatch or "") + ''
