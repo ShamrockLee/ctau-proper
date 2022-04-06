@@ -4,4 +4,6 @@ result*
 .nix-bundles*
 *.sif
 dataTest*/
+# Ignore the nix-portable bundle used
+nix-portable
 *.tmp
