@@ -72,6 +72,8 @@
                     # [ "-Dgfal=OFF" "-Dgfal=ON" ]
                     [ "-Dxrootd=OFF" "-Dxrootd=ON" ]
                     [ "-DCMAKE_BUILD_TYPE=.*" "-DCMAKE_BUILD_TYPE=RelWithDebInfo" ]
+                    # Enable builtin LLVM to workaround `llvm::ELF::DF_1_PIE` not found error
+                    [ "-Dbuiltin_llvm=OFF" "-Dbuiltin_llvm=ON" ]
                   ];
                 buildInputs = (lib.subtractLists (with final; [
                   # Dependencies to remove
