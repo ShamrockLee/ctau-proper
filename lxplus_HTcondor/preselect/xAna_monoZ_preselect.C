@@ -1239,7 +1239,27 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   //   }
   // }
 
-  // Realize the actions and write to output files
+  std::vector<ROOT::RDF::RResultPtr<ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager>>> vSn;
+  vSn.clear();
+  {
+    const std::vector<std::string> vNameColJetCmp ({
+      "nGenPar"//, "genParPt", "genParEta", "genParPhi", "genParE", "genParM", "genParId", "genMomParId", "genParIndex", "genParQ", "genParSt"
+      // , "nEle", "elePt", "eleEta", "elePhi", "eleE", "eleM", "eleCharge", "eleChargeConsistent"
+      , "elePairedIdx"// , "elePairedPt", "elePairedEta", "elePairedPhi", "elePairedE", "elePairedM", "elePairedCharge", "elePairedChargeConsistent"
+      // , "nMu", "muPt", "muEta", "muPhi", "muE", "muM", "muCharge"
+      , "muPairedIdx"// , "muPairedPt", "muPairedEta", "muPairedPhi", "muPairedE", "muPairedM", "muPairedCharge"
+      , "THINnJet", "THINjetIdxPassBasicCuts"// , "THINjetPt", "THINjetEta", "THINjetPhi", "THINjetE", "THINjetM", "THINjetArea", "THINjetCharge"
+      , "FATnJet", "FATjetIdxPassBasicCuts"// , "FATjetPt", "FATjetEta", "FATjetPhi", "FATjetE", "FATjetM", "FATjetArea", "FATjetCharge"
+      // , "pfMetCorrPt", "pfMetCorrEta", "pfMetCorrPhi", "pfMetCorrSumEt", "pfMetCorrSig", "pfMetCorrUnc"
+    });
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        // vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}));
+        // vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}));
+      }
+    }
+  }
+
   TFile* tfOut = TFile::Open(fileOut.c_str(), "recreate");
   tfOut->cd("/");
   tfOut->mkdir("Original", "Unfiltered entries");
@@ -1271,35 +1291,30 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       tfOut->mkdir(("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
     }
   }
+  tfOut->Close();
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
   //   for (size_t iAK = 0; iAK < 2; ++iAK) {
   //     tfOut->mkdir(("LPairPassPt" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with " + aPrefLepFlav[iLepFlav] + " Pair pT < 50").c_str());
   //   }
   // }
-  tfOut->Close();
-  std::vector<ROOT::RDF::RResultPtr<ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager>>> vSn;
-  vSn.clear();
-  {
-    const std::vector<std::string> vNameColJetCmp ({
-      "nGenPar"//, "genParPt", "genParEta", "genParPhi", "genParE", "genParM", "genParId", "genMomParId", "genParIndex", "genParQ", "genParSt"
-      // , "nEle", "elePt", "eleEta", "elePhi", "eleE", "eleM", "eleCharge", "eleChargeConsistent"
-      , "elePairedIdx"// , "elePairedPt", "elePairedEta", "elePairedPhi", "elePairedE", "elePairedM", "elePairedCharge", "elePairedChargeConsistent"
-      // , "nMu", "muPt", "muEta", "muPhi", "muE", "muM", "muCharge"
-      , "muPairedIdx"// , "muPairedPt", "muPairedEta", "muPairedPhi", "muPairedE", "muPairedM", "muPairedCharge"
-      , "THINnJet", "THINjetIdxPassBasicCuts"// , "THINjetPt", "THINjetEta", "THINjetPhi", "THINjetE", "THINjetM", "THINjetArea", "THINjetCharge"
-      , "FATnJet", "FATjetIdxPassBasicCuts"// , "FATjetPt", "FATjetEta", "FATjetPhi", "FATjetE", "FATjetM", "FATjetArea", "FATjetCharge"
-      // , "pfMetCorrPt", "pfMetCorrEta", "pfMetCorrPhi", "pfMetCorrSumEt", "pfMetCorrSig", "pfMetCorrUnc"
-    });
-    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      for (size_t iAK = 0; iAK < 2; ++iAK) {
-        // vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}));
-        // vSn.emplace_back(aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}));
-      }
+
+  // Realize the actions and write to output files
+
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      // aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
+      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
     }
   }
-  for (auto &&sn: vSn) {
-    sn.GetValue();
+
+  for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+    for (size_t iAK = 0; iAK < 2; ++iAK) {
+      aaDfHasJet[iLepFlav][iAK].Count().GetValue();
+    }
   }
+  // for (auto &&sn: vSn) {
+  //   sn.GetValue();
+  // }
   tfOut = TFile::Open(fileOut.c_str(), "update");
   tfOut->cd("/");
   tfOut->cd("Original");
