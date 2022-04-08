@@ -88,8 +88,8 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(
   const Double_t binWidth = TMath::Power(10., -binDensityOrder);
   const Double_t lowerLimit = alignment + binWidth * lowerLimitBins;
   const Double_t upperLimit = alignment + binWidth * upperLimitBins;
-  const char*  &&cstrJSON = Form("{name:%s,typename:%s,expression:%s,%sbinDensityOrder:%d,alignment:%F,isLowerAssigned:%s,lowerLimitBins:%d,isUpperAssigned:%s,upperLimitBins:%d}",
-          nameColumn.c_str(), typenameColumn.c_str(), expression.c_str(), exprWeight.length() ? ("exprWeight:" + exprWeight + ",").c_str() : "",
+  const char*  &&cstrJSON = Form("{\"name\":\"%s\",\"typename\":\"%s\",\"expression\":\"%s\",%s\"binDensityOrder\":%d,\"alignment\":%F,\"isLowerAssigned\":%s,\"lowerLimitBins\":%d,\"isUpperAssigned\":%s,\"upperLimitBins\":%d}",
+          nameColumn.c_str(), typenameColumn.c_str(), expression.c_str(), exprWeight.length() ? ("\"exprWeight\":\"" + exprWeight + "\",").c_str() : "",
           binDensityOrder, alignment, isLowerAssigned ? "true" : "false", lowerLimitBins, isUpperAssigned ? "true" : "false", upperLimitBins);
   const ROOT::RDF::TH1DModel model {("h" + nameColumn).c_str(), cstrJSON,
       nBins, lowerLimit, upperLimit};
