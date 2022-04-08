@@ -23,7 +23,7 @@ macroName             = xAna_monoZ_preselect
 singularityImage      = ana.sif
 
 # +JobFlavour           = "longlunch"
-+JobFlavour           = "workday"
++JobFlavour           = "tomorrow"
 
 # Name          Duration
 # espresso      20min   
