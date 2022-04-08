@@ -2,16 +2,12 @@
 
 source ./common_header.sh
 
-fillToArray() {
-    local __arrayName="$1"
-    local __file=""
-    local -a __subArray=()
-    shift
-    while read -r -d $'\0' __file; do
-        __subArray+=( "$__file" )
-    done < <(find "$@" -print0)
-    declare -a "${__arrayName}=( \"\${${__arrayName}[@]}\" \"\${__subArray[@]}\" )"
-}
+# # Works only for bash version >4.4
+# fillToArray() {
+#     local __arrayName="$1"
+#     shift
+#     readarray -d $'\0' "$__arrayName" < <(find "$@" -print0)
+# }
 
 # originalListSpace="/afs/cern.ch/work/y/yuehshun/private/Projects/ShamrockLee/ctau-proper/lxplus_HTcondor/preselect/ntuple_filelist.tmp"
 originalListSpace=./ntuple_filelist
@@ -23,10 +19,11 @@ subDirRoot="";
 clusterID="";
 
 dryRun=0
+force=0
 
 while [[ "${#queuedArgsArray[@]}" -gt 0 ]]; do
     case "${queuedArgsArray[0]}" in
-        --help)
+        -h|--help)
             cat <<END_OF_HELP
 END_OF_HELP
             exit 0
@@ -37,6 +34,10 @@ END_OF_HELP
             ;;
         --dry-run)
             dryRun=1
+            shiftArgs
+            ;;
+        -f|--force)
+            force=1
             shiftArgs
             ;;
         --maxdepth)
@@ -59,12 +60,34 @@ END_OF_HELP
             outputSpace="${queuedArgsArray[1]}"
             shiftArgs 2
             ;;
-        --*)
+        --subdir)
+            subDirRoot="${queuedArgsArray[1]}"
+            shiftArgs 2
+            ;;
+        --?*)
             echo "Unexpected flag ${queuedArgsArray[0]}"
             exit 1
             ;;
+        --)
+            echo "Unexpected flag ${queuedArgsArray[0]}"
+            exit 1
+            ;;
+        -??*)
+            manageShorthands
+            ;;
+
     esac
 done
+
+if [[ -z "$clusterID" ]]; then
+    echo "Expected --cluster clusterID" >&2
+    exit 1
+fi
+
+declare -a forceArgArray=()
+if (( force )); then
+    forceArgArray=( "--force" )
+fi
 
 declare -a searchCommand=()
 searchCommand+=( find "$originalListSpace/$subDirRoot" )
@@ -85,7 +108,10 @@ while read -r -d $'\0' pathOriginalList; do
         echo "$outputSpace$subDirPlusPrefSlash is not a directory / a symlink to a directory" >&2
         exit 1
     fi
-    fillToArray filesToMerge "$outputSpace$subDirPlusPrefSlash" -mindepth 1 -maxdepth 1 -name "_$clusterID.root"
-    wrapDryRun mkdir -p 
-    wrapDryRun hadd -f "${outputMergedSpace}${subDirPlusPrefSlash}_merged.root" "${filesToMerge[@]}"
+    filesToMerge=()
+    while IFS= read -r -d $'\0' file; do
+        filesToMerge+=( "$file" )
+    done < <(find "$outputSpace$subDirPlusPrefSlash" -mindepth 1 -maxdepth 1 -name "*_$clusterID.root" -print0)
+    wrapDryRun mkdir -p "$(dirname "${outputMergedSpace}${subDirPlusPrefSlash}_merged.root")"
+    wrapDryRun hadd "${forceArgArray}" "${outputMergedSpace}${subDirPlusPrefSlash}_merged_$clusterID.root" "${filesToMerge[@]}"
 done < <("${searchCommand[@]}")
