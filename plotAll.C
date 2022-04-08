@@ -72,3 +72,92 @@ TH1* RebinTo100(TH1 * hist) {
   }
   return resultHist;
 }
+
+#if true
+
+#include "nlohmann_json.hpp"
+
+TH1* adjustWithJSONTitle(TH1 *hist) {
+  const char* strSetting = hist->GetTitle();
+  const nlohmann::json jSetting = nlohmann::json::parse(strSetting);
+  const double alignment = jSetting["alignment"].get<double>();
+  const int binDensityOrder = jSetting["binDensityOrder"].get<int>();
+  const bool isLowerAssigned = jSetting["isLowerAssigned"].get<bool>();
+  const int lowerLimitBins = jSetting["lowerLimitBins"].get<int>();
+  const bool isUpperAssigned = jSetting["isUpperAssigned"].get<bool>();
+  const int upperLimitBins = jSetting["upperLimitBins"].get<int>();
+  if (!isLowerAssigned || !isUpperAssigned) {
+    // Round to 12 to 20 instead of 100
+    const int biasFactor = 2.;
+    int lowerLimitBinsCorrect = lowerLimitBins;
+    int upperLimitBinsCorrect = upperLimitBins;
+    const int lowerLimitBinsNonzero = hist->FindFirstBinAbove() + lowerLimitBins - 1;
+    const int upperLimitBinsNonzero = hist->FindLastBinAbove() + lowerLimitBins;
+    if (isLowerAssigned) {
+      if (upperLimitBinsNonzero > 0) {
+        const int limitOrder = TMath::Ceil(TMath::Log10(upperLimitBinsNonzero / biasFactor + (upperLimitBinsNonzero % biasFactor != 0)));
+        const int limitBase = static_cast<int>(TMath::Power(10, limitOrder));
+        upperLimitBinsCorrect = limitBase * (upperLimitBinsNonzero / limitBase + (upperLimitBinsNonzero % limitBase != 0));
+      } else {
+        upperLimitBinsCorrect = (alignment < 0);
+      }
+    } else if (isUpperAssigned) {
+      if (lowerLimitBinsNonzero < 0) {
+        const int limitOrder = TMath::Ceil(TMath::Log10(-(lowerLimitBinsNonzero / biasFactor + (lowerLimitBinsNonzero % biasFactor != 0))));
+        const int limitBase = static_cast<int>(TMath::Power(10, limitOrder));
+        lowerLimitBinsCorrect = limitBase * (lowerLimitBinsNonzero / limitBase + (lowerLimitBinsNonzero % limitBase != 0));
+      } else {
+        lowerLimitBinsCorrect = -(alignment > 0);
+      }
+    } else if (lowerLimitBinsNonzero <= 0  && upperLimitBinsNonzero >= 0) {
+      int upperLimitOrder = -1, lowerLimitOrder = -1;
+      if (upperLimitBinsNonzero > 0) {
+        upperLimitOrder = TMath::Ceil(TMath::Log10(upperLimitBinsNonzero / biasFactor + (upperLimitBinsNonzero % biasFactor != 0)));
+      }
+      if (lowerLimitBinsNonzero < 0){
+        lowerLimitOrder = TMath::Ceil(TMath::Log10(-(lowerLimitBinsNonzero / biasFactor + (lowerLimitBinsNonzero % biasFactor != 0))));
+      }
+      const int limitOrder = TMath::Max(upperLimitOrder, lowerLimitOrder);
+      const int limitBase = static_cast<int>(TMath::Power(10, limitOrder));
+      if (limitOrder < 0) {
+        Fatal("adjustWithJSONTitle", "lowerLimitBinsNonzero (%d) == upperLimitBinsNonzero (%d) == 0", lowerLimitBinsNonzero, upperLimitBinsNonzero);
+      }
+      if (upperLimitBinsNonzero > 0) {
+        upperLimitBinsCorrect = limitBase * (upperLimitBinsNonzero / limitBase + (upperLimitBinsNonzero % limitBase != 0));
+      } else {
+        upperLimitBinsCorrect = (alignment < 0);
+      }
+      if (lowerLimitBinsNonzero < 0) {
+        lowerLimitBinsCorrect = limitBase * (lowerLimitBinsNonzero / limitBase + (lowerLimitBinsNonzero % limitBase != 0));
+      } else {
+        lowerLimitBinsCorrect = -(alignment > 0);
+      }
+    } else {
+      const int nBinsNonzero = upperLimitBinsNonzero - lowerLimitBinsNonzero;
+      const int limitOrder = TMath::Ceil(TMath::Log10(nBinsNonzero / biasFactor + (nBinsNonzero % biasFactor != 0)));
+      const int limitBase = static_cast<int>(TMath::Power(10, limitOrder));
+      if (upperLimitBinsNonzero > 0) {
+        upperLimitBinsCorrect = limitBase * (upperLimitBinsNonzero / limitBase + (upperLimitBinsNonzero % limitBase != 0));
+      } else {
+        upperLimitBinsCorrect = (alignment < 0);
+      }
+      if (lowerLimitBinsNonzero < 0) {
+        lowerLimitBinsCorrect = limitBase * (lowerLimitBinsNonzero / limitBase + (lowerLimitBinsNonzero % limitBase != 0));
+      } else {
+        lowerLimitBinsCorrect = -(alignment > 0);
+      }
+    }
+    const double binWidth = TMath::Power(10, -binDensityOrder);
+    const double lowerLimit = alignment + binWidth * lowerLimitBinsCorrect;
+    const double upperLimit = alignment + binWidth * upperLimitBinsCorrect;
+    const double nBinsNew = upperLimitBinsCorrect - lowerLimitBinsCorrect;
+    TH1 *histNew = new TH1D(TString(hist->GetName()) + "Adjusted", hist->GetName(), nBinsNew, lowerLimit, upperLimit);
+    for (int iBin = TMath::Max(lowerLimitBins, lowerLimitBinsCorrect); iBin <= TMath::Min(upperLimitBins, upperLimitBinsCorrect) + 1; ++iBin) {
+      histNew->SetBinContent(iBin - lowerLimitBinsCorrect, hist->GetBinContent(iBin - lowerLimitBins));
+      histNew->SetBinError(iBin - lowerLimitBinsCorrect, hist->GetBinError(iBin - lowerLimitBins));
+    }
+    return histNew;
+  }
+  return hist;
+}
+#endif
