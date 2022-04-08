@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <iostream>
+#include <cstdio>
 
 void plotAll(TString pathFileIn, TString dirOut, const Bool_t plotSubdir = true, const Bool_t normalize = false, const Bool_t logy = false, const Option_t *optionDraw = "", const std::function<TH1*(TH1*)> funAdjustHist = nullptr);
 
@@ -93,6 +94,16 @@ TH1* adjustWithJSONTitle(TH1 *hist) {
     int upperLimitBinsCorrect = upperLimitBins;
     const int lowerLimitBinsNonzero = hist->FindFirstBinAbove() + lowerLimitBins - 1;
     const int upperLimitBinsNonzero = hist->FindLastBinAbove() + lowerLimitBins;
+    if (upperLimitBinsNonzero == lowerLimitBins - 1) {
+      if (isLowerAssigned) {
+        upperLimitBinsCorrect = lowerLimitBins + 1;
+      } else if (isUpperAssigned) {
+        lowerLimitBinsCorrect = upperLimitBins - 1;
+      } else {
+        lowerLimitBinsCorrect = -(alignment > 0);
+        upperLimitBinsCorrect = 1 - (alignment > 0);
+      }
+    }
     if (isLowerAssigned) {
       if (upperLimitBinsNonzero > 0) {
         const int limitOrder = TMath::Ceil(TMath::Log10(upperLimitBinsNonzero / biasFactor + (upperLimitBinsNonzero % biasFactor != 0)));
@@ -112,15 +123,16 @@ TH1* adjustWithJSONTitle(TH1 *hist) {
     } else if (lowerLimitBinsNonzero <= 0  && upperLimitBinsNonzero >= 0) {
       int upperLimitOrder = -1, lowerLimitOrder = -1;
       if (upperLimitBinsNonzero > 0) {
-        upperLimitOrder = TMath::Ceil(TMath::Log10(upperLimitBinsNonzero / biasFactor + (upperLimitBinsNonzero % biasFactor != 0)));
+        upperLimitOrder = TMath::Max(0, static_cast<int>(TMath::Ceil(TMath::Log10(upperLimitBinsNonzero / biasFactor + (upperLimitBinsNonzero % biasFactor != 0)))));
       }
-      if (lowerLimitBinsNonzero < 0){
-        lowerLimitOrder = TMath::Ceil(TMath::Log10(-(lowerLimitBinsNonzero / biasFactor + (lowerLimitBinsNonzero % biasFactor != 0))));
+      if (lowerLimitBinsNonzero < 0) {
+        lowerLimitOrder = TMath::Max(0, static_cast<int>(TMath::Ceil(TMath::Log10(-(lowerLimitBinsNonzero / biasFactor + (lowerLimitBinsNonzero % biasFactor != 0))))));
       }
       const int limitOrder = TMath::Max(upperLimitOrder, lowerLimitOrder);
       const int limitBase = static_cast<int>(TMath::Power(10, limitOrder));
       if (limitOrder < 0) {
-        Fatal("adjustWithJSONTitle", "lowerLimitBinsNonzero (%d) == upperLimitBinsNonzero (%d) == 0", lowerLimitBinsNonzero, upperLimitBinsNonzero);
+        std::fprintf(stderr, "lowerLimitBinsNonzero: %d, upperLimitBinsNonzero: %d", lowerLimitBinsNonzero, upperLimitBinsNonzero);
+        Fatal("adjustWithJSONTitle", "limitOrder (%d) == -1", limitOrder);
       }
       if (upperLimitBinsNonzero > 0) {
         upperLimitBinsCorrect = limitBase * (upperLimitBinsNonzero / limitBase + (upperLimitBinsNonzero % limitBase != 0));
