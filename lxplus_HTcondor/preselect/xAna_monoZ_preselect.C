@@ -302,7 +302,7 @@ Bool_t RefgetE1D(std::string &typenameE, const std::string typenameCol) {
   return result;
 }
 
-inline std::string GetExprTakeIdx2D(const std::string nameCol, const std::string nameIdx, const std::string typenameE, const Bool_t debug = false) {
+inline std::string GetExprTakeIdx2D(const std::string nameCol, const std::string nameIdx, const std::string typenameE, const int debug = 0) {
   return
     // "if (true && " + nameCol + ".size() <= ROOT::VecOps::Max(" + nameIdx + ")) {"
     // "  Fatal(\"lambda:RedefineWithIdx\", \"" + nameIdx + " maximum (%d) exceeds the " + nameCol + " size (%zu)\", ROOT::VecOps::Max(" + nameIdx + "), " + nameCol + ".size());"
@@ -328,12 +328,12 @@ inline std::string GetExprTakeIdx2D(const std::string nameCol, const std::string
   ;
 }
 
-inline std::string GetExprTakeIdx1D(const std::string nameCol, const std::string nameIdx, const std::string typenameE, const Bool_t debug = false) {
+inline std::string GetExprTakeIdx1D(const std::string nameCol, const std::string nameIdx, const std::string typenameE, const Bool_t debug = 0) {
   return Form("ROOT::VecOps::Take(%s, %s)", nameCol.c_str(), nameIdx.c_str());
 }
 
 template <class D = ROOT::RDF::RNode>
-void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::string> vPrefExcl, const std::string nameIdx, const std::function<void(const std::string nameCol, const Int_t nDims, const std::string typenameE)> funPickNameCol = nullptr, const Bool_t debug = false) {
+void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::string> vPrefExcl, const std::string nameIdx, const std::function<void(const std::string nameCol, const Int_t nDims, const std::string typenameE)> funPickNameCol = nullptr, const int debug = 0) {
   for (const std::string &nameCol: df.GetColumnNames()) {
     if (std::find(vPrefExcl.cbegin(), vPrefExcl.cend(), pref) != vPrefExcl.cend()) continue;
     std::string typenameCol = df.GetColumnType(nameCol);
@@ -1436,6 +1436,7 @@ int main(int argc, char** argv) {
         break;
       case 'm':
         useMultiple = true;
+        break;
       case 'v':
         ++debug;
         break;
