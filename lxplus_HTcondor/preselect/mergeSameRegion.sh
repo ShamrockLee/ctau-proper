@@ -9,8 +9,8 @@ source ./common_header.sh
 #     readarray -d $'\0' "$__arrayName" < <(find "$@" -print0)
 # }
 
-# originalListSpace="/afs/cern.ch/work/y/yuehshun/private/Projects/ShamrockLee/ctau-proper/lxplus_HTcondor/preselect/ntuple_filelist.tmp"
-originalListSpace=./ntuple_filelist
+originalListSpace="/afs/cern.ch/work/y/yuehshun/private/Projects/ShamrockLee/ctau-proper/lxplus_HTcondor/preselect/ntuple_filelist"
+# originalListSpace=./ntuple_filelist
 outputSpace=/eos/user/y/yuehshun/ntuple_filelist_output.tmp
 outputMergedSpace=/eos/user/y/yuehshun/ntuple_filelist_outputmerged.tmp
 
@@ -84,13 +84,19 @@ if [[ -z "$clusterID" ]]; then
     exit 1
 fi
 
+if [[ -z "$subDirRoot" ]]; then
+  echo "subDirRoot is usually not set as empty." >&2
+  echo "Set it with --subdir subDirRoot" >&2
+fi
+
 declare -a forceArgArray=()
 if (( force )); then
     forceArgArray=( "--force" )
 fi
 
 declare -a searchCommand=()
-searchCommand+=( find "$originalListSpace/$subDirRoot" )
+# If subDirRoot is empty, it will find "$originalListSpace"
+searchCommand+=( find "$originalListSpace${subDirRoot:+/$subDirRoot}" )
 if [[ -n "${minDepth:-}" ]]; then
     searchCommand+=( "-mindepth" "$minDepth" )
 fi
@@ -100,7 +106,7 @@ fi
 searchCommand+=( "-name" "*.txt" )
 searchCommand+=( "-print0" )
 
-while read -r -d $'\0' pathOriginalList; do
+while IFS= read -r -d $'\0' pathOriginalList; do
     # Change the prefix and remove the .txt file extension
     subDirPlusPrefSlash="${pathOriginalList:${#originalListSpace}:-4}"
     declare -a filesToMerge=()
@@ -113,5 +119,5 @@ while read -r -d $'\0' pathOriginalList; do
         filesToMerge+=( "$file" )
     done < <(find "$outputSpace$subDirPlusPrefSlash" -mindepth 1 -maxdepth 1 -name "*_$clusterID.root" -print0)
     wrapDryRun mkdir -p "$(dirname "${outputMergedSpace}${subDirPlusPrefSlash}_merged.root")"
-    wrapDryRun hadd "${forceArgArray}" "${outputMergedSpace}${subDirPlusPrefSlash}_merged_$clusterID.root" "${filesToMerge[@]}"
+    wrapDryRun hadd "${forceArgArray[@]}" "${outputMergedSpace}${subDirPlusPrefSlash}_merged_$clusterID.root" "${filesToMerge[@]}"
 done < <("${searchCommand[@]}")
