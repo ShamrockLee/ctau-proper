@@ -170,6 +170,7 @@ TH1* adjustWithJSONTitle(TH1 *hist) {
     }
     return histNew;
   }
+  hist->SetTitle(hist->GetName());
   return hist;
 }
 #endif
