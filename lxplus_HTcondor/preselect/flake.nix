@@ -11,6 +11,12 @@
   inputs.nix-for-nix-portable.inputs.nixpkgs-regression.follows = "nixpkgs";
   # Use the same nixpkgs as other packages
   inputs.nix-portable-flake.inputs.nixpkgs.follows = "nixpkgs";
+  # The defaultChannel input of nix-portable-flake controls
+  # the version of nixpkgs being used to build packages.
+  # There are words of warning about build failure when updating
+  # of unidentified cause.
+  # See https://github.com/DavHau/nix-portable/blob/master/flake.nix#L6-L9=
+  inputs.nix-portable-flake.inputs.defaultChannel.follows = "nixpkgs";
   inputs.nix-portable-flake.inputs.flake-utils.follows = "flake-utils";
   inputs.nix-portable-flake.inputs.nix.follows = "nix-for-nix-portable";
   # Apptainer is the new name chosen by the Singularity community
