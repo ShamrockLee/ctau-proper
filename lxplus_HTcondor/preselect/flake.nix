@@ -85,7 +85,6 @@
                   # Dependencies to remove
                 ]) (oldAttrs.buildInputs or [ ])) ++ (with final; [
                   # Dependencies to add
-                  tbb # for implicit multithreading
                   openssl # for ssl support
                   xrootd # for xrootd / "root://" url support
                 ]);
