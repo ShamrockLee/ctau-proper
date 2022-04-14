@@ -1196,11 +1196,19 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
 
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    aaDfHasJet[iLepFlav][1] = aaDfHasJet[iLepFlav][1].Define(
+    aaDfHasJet[iLepFlav][1] = aaDfHasJet[iLepFlav][1]
+    .Define(
         "FATjetMTTwo",
-        [](const ROOT::RVec<TypeLorentzVector> vJetP4, const Float_t ptMet, const Float_t phiMet)->Double_t {
-	  return GetMTTwo(vJetP4[0], vJetP4[1], ptMet, phiMet);
-        }, { "FATjetP4", "pfMetCorrPt", "pfMetCorrPhi" }
+        "GetMTTwo(FATjetP4[0], FATjetP4[1], pfMetCorrPt, pfMetCorrPhi)"
+    ).Define(
+        "FATjetMTTwoSD",
+        [](const ROOT::RVec<TypeLorentzVector> vJetP4, const Float_t ptMet, const Float_t phiMet, const ROOT::RVec<Float_t> vJetM)->Double_t {
+          ROOT::RVec<TypeLorentzVector> vJetP4Modified({ vJetP4[0], vJetP4[1] });
+          for (size_t i = 0; i < 2; ++i) {
+            vJetP4Modified[i].SetM(vJetM[i]);
+          }
+	        return GetMTTwo(vJetP4Modified[0], vJetP4Modified[1], ptMet, phiMet);
+        }, { "FATjetP4", "pfMetCorrPt", "pfMetCorrPhi", "FATjetSDMass" }
     );
     aavNameColHasJet[iLepFlav][1].emplace_back("FATjetMTTwo");
   }
