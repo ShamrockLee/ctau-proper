@@ -1,5 +1,7 @@
 { lib }:
 rec {
+  # Increase the readability of the output file
+  # by arranging each section into the specified order
   allPrimarySectionNames = [ "pre" "setup" "files" "post" "environment" "runscript" "startscript" "test" "labels" "help" ];
   allAppSectionNames = [ "appfiles" "appinstall" "appenv" "apprun" "applabels" "apphelp" ];
 
@@ -66,6 +68,7 @@ rec {
     **/
   toDefinitionString =
     let
+      orderAs = template: listToOrder: (lib.intersectLists listToOrder template) ++ (lib.subtractLists template listToOrder);
       sectionMappingFunction = sectionName: sectionContent:
         map (s: "    ${s}") (
           if (builtins.typeOf sectionContent == "string") then
@@ -97,7 +100,7 @@ rec {
           [ "%${sectionName}" ]
           ++ sectionMappingFunction sectionName definition.${sectionName}
         ))
-        (lib.intersectLists (builtins.attrNames definition) allPrimarySectionNames)
+        (orderAs allPrimarySectionNames (builtins.attrNames definition))
       ++ lib.optionals (builtins.hasAttr "apps" definition) (builtins.concatLists (map
         (appName:
           map
@@ -105,7 +108,7 @@ rec {
               [ "%${sectionName} ${appName}" ]
               ++ sectionMappingFunction sectionName definition.apps.${appName}.${sectionName}
             ))
-            (lib.intersectLists (builtins.attrNames definition.apps.${appName}) allAppSectionNames)
+            (orderAs allAppSectionNames (builtins.attrNames definition.apps.${appName}))
         )
         (builtins.attrNames definition.apps)
       ))
