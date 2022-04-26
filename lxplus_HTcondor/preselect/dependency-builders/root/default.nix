@@ -8,6 +8,8 @@
 , ftgl
 , gl2ps
 , glew
+, gnugrep
+, gnused
 , gsl
 , lapack
 , libX11
@@ -20,6 +22,7 @@
 , llvm_9
 , lz4
 , xz
+, man
 , openblas
 , pcre
 , nlohmann_json
@@ -33,7 +36,9 @@
 , libjpeg
 , libtiff
 , libpng
+, procps
 , tbb
+, which
 , Cocoa
 , CoreSymbolication
 , OpenGL
@@ -179,6 +184,56 @@ stdenv.mkDerivation rec {
         --set PYTHONPATH "$out/lib" \
         --set ${lib.optionalString stdenv.isDarwin "DY"}LD_LIBRARY_PATH "$out/lib"
     done
+  '';
+
+  postFixup = ''
+    # Patch thisroot.{sh,csh,fish} setxrd.sh
+    patchCommandInplace(){
+      local file="$1"
+      shift
+      local sedCommand=""
+      local arg
+      while [ "$#" -gt 0 ]; do
+        local exeName="$1"
+        local exePath="$2"
+        shift 2
+        sedCommand="$sedCommand s|^$exeName\$|$exePath|g;"
+        sedCommand="$sedCommand s|^$exeName\\([^A-Za-z_-]\\)|$exePath\\1|g;"
+        sedCommand="$sedCommand s|\\([^A-Za-z_-]\\)$exeName\$|\\1$exePath|g;"
+        sedCommand="$sedCommand s|\\([^A-Za-z_-]\\)$exeName\\([^A-Za-z_-]\\)|\\1$exePath\\2|g;"
+      done
+      sed -i "''${sedCommand:1}" "$file"
+    }
+    patchWhichInplace(){
+      for file in "$@"; do
+        patchCommandInplace "$file" \
+          "which -p" which-p \
+          which "${lib.makeBinPath which}/which" \
+          which-p "which -p"
+      done
+    }
+    patchCommandInplace "$out/bin/thisroot.sh" \
+      "grep" "${lib.makeBinPath gnugrep}/grep" \
+      "manpath" "${lib.makeBinPath man}/manpath" \
+      "man" "${lib.makeBinPath man}/man" \
+      "ps" "${lib.makeBinPath procps}/ps" \
+      "sed" "${lib.makeBinPath gnused}/sed"
+    patchCommandInplace "$out/bin/thisroot.csh" \
+      "grep" "${lib.makeBinPath gnugrep}/grep" \
+      "manpath" "${lib.makeBinPath man}/manpath" \
+      "man" "${lib.makeBinPath man}/man" \
+      "sed" "${lib.makeBinPath gnused}/sed"
+    patchCommandInplace "$out/bin/thisroot.fish" \
+      "manpath" "${lib.makeBinPath man}/manpath" \
+      "man" "${lib.makeBinPath man}/man"
+    patchCommandInplace "$out/bin/setxrd.sh" \
+      "manpath" "${lib.makeBinPath man}/manpath" \
+      "man" "${lib.makeBinPath man}/man" \
+      "sed" "${lib.makeBinPath gnused}/sed"
+    patchWhichInplace "$out"/bin/{thisroot.sh,thisroot.csh,thisroot.fish,setxrd.sh}
+
+    # Make ldd and sed available to the ROOT executable
+    wrapProgram "$out/bin/root" --prefix PATH : "${lib.makeBinPath [ stdenv.cc.libc gnused ]}"
   '';
 
   setupHook = ./setup-hook.sh;
