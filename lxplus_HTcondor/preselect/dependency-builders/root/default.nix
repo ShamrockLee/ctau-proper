@@ -179,16 +179,8 @@ stdenv.mkDerivation rec {
   ];
 
   postInstall = ''
-    for prog in rootbrowse rootcp rooteventselector rootls rootmkdir rootmv rootprint rootrm rootslimtree; do
-      wrapProgram "$out/bin/$prog" \
-        --set PYTHONPATH "$out/lib" \
-        --set ${lib.optionalString stdenv.isDarwin "DY"}LD_LIBRARY_PATH "$out/lib"
-    done
-  '';
-
-  postFixup = ''
     # Patch thisroot.{sh,csh,fish} setxrd.sh
-    patchCommandInplace(){
+    patchCommand(){
       local file="$1"
       shift
       local sedCommand=""
@@ -204,33 +196,53 @@ stdenv.mkDerivation rec {
       done
       sed -i "''${sedCommand:1}" "$file"
     }
-    patchWhichInplace(){
+    autoPatchCommand(){
+      local patchCommandArgs=( "$1" )
+      shift
+      local exeName
+      for exeName in "$@"; do
+        local exePath="$(type -p "$exeName")"
+        if [ -n "$exePath" ]; then
+          patchCommandArgs+=( "$exeName" "$exePath" );
+        fi
+      done
+      patchCommand "$patchCommandArgs[@]"
+    }
+    patchWhich(){
       for file in "$@"; do
-        patchCommandInplace "$file" \
+        patchCommand "$file" \
           "which -p" which-p \
-          which "${lib.makeBinPath which}/which" \
+          which "${which}/bin/which" \
           which-p "which -p"
       done
     }
-    patchCommandInplace "$out/bin/thisroot.sh" \
-      "grep" "${lib.makeBinPath gnugrep}/grep" \
-      "manpath" "${lib.makeBinPath man}/manpath" \
-      "man" "${lib.makeBinPath man}/man" \
-      "ps" "${lib.makeBinPath procps}/ps" \
-      "sed" "${lib.makeBinPath gnused}/sed"
-    patchCommandInplace "$out/bin/thisroot.csh" \
-      "grep" "${lib.makeBinPath gnugrep}/grep" \
-      "manpath" "${lib.makeBinPath man}/manpath" \
-      "man" "${lib.makeBinPath man}/man" \
-      "sed" "${lib.makeBinPath gnused}/sed"
-    patchCommandInplace "$out/bin/thisroot.fish" \
-      "manpath" "${lib.makeBinPath man}/manpath" \
-      "man" "${lib.makeBinPath man}/man"
-    patchCommandInplace "$out/bin/setxrd.sh" \
-      "manpath" "${lib.makeBinPath man}/manpath" \
-      "man" "${lib.makeBinPath man}/man" \
-      "sed" "${lib.makeBinPath gnused}/sed"
-    patchWhichInplace "$out"/bin/{thisroot.sh,thisroot.csh,thisroot.fish,setxrd.sh}
+    patchCommand "$out/bin/thisroot.sh" \
+      "grep" "${gnugrep}/bin/grep" \
+      "manpath" "${man}/bin/manpath" \
+      "man" "${man}/bin/man" \
+      "ps" "${procps}/bin/ps" \
+      "sed" "${gnused}/bin/sed"
+    patchCommand "$out/bin/thisroot.csh" \
+      "grep" "${gnugrep}/bin/grep" \
+      "manpath" "${man}/bin/manpath" \
+      "man" "${man}/bin/man" \
+      "sed" "${gnused}/bin/sed"
+    patchCommand "$out/bin/thisroot.fish" \
+      "manpath" "${man}/bin/manpath" \
+      "man" "${man}/bin/man"
+    patchCommand "$out/bin/setxrd.sh" \
+      "manpath" "${man}/bin/manpath" \
+      "man" "${man}/bin/man" \
+      "sed" "${gnused}/bin/sed"
+    patchWhich "$out"/bin/{thisroot.sh,thisroot.csh,thisroot.fish,setxrd.sh}
+  '';
+
+  postFixup = ''
+    for prog in rootbrowse rootcp rooteventselector rootls rootmkdir rootmv rootprint rootrm rootslimtree; do
+      wrapProgram "$out/bin/$prog" \
+        --set PYTHONPATH "$out/lib" \
+        --set ${lib.optionalString stdenv.isDarwin "DY"}LD_LIBRARY_PATH "$out/lib"
+    done
 
     # Make ldd and sed available to the ROOT executable
     wrapProgram "$out/bin/root" --prefix PATH : "${lib.makeBinPath [ stdenv.cc.libc gnused ]}"
