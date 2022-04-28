@@ -28,13 +28,42 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <functional>
 #include <algorithm>
 #include <regex>
 #include <cstdlib>
+#include <utility>
 
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
 #include "skeeto_optparse.h"
+
+template<class E>
+ROOT::RVec<E> UniqueSort(const ROOT::RVec<E> &v) {
+  ROOT::RVec<E> r(v);
+  std::sort(r.begin(), r.end());
+  typename ROOT::RVec<E>::iterator &&rIterEnd = std::unique(r.begin(), r.end());
+  r.resize(std::distance(r.begin(), rIterEnd));
+  return r;
+}
+
+template<class E, class Compare, class Predicate>
+ROOT::RVec<E> UniqueSort(const ROOT::RVec<E> &v, Compare &&c, Predicate &&p) {
+  ROOT::RVec<E> r(v);
+  std::sort(r.begin(), r.end(), std::forward<Compare>(c));
+  typename ROOT::RVec<E>::iterator &&rIterEnd = std::unique(r.begin(), r.end(), std::forward<Predicate>(p));
+  r.resize(std::distance(r.begin(), rIterEnd));
+  return r;
+}
+
+template<class E, class Compare>
+ROOT::RVec<E> UniqueSort(const ROOT::RVec<E> &v, const Compare &c) {
+  ROOT::RVec<E> r(v);
+  std::sort(r.begin(), r.end(), c);
+  typename ROOT::RVec<E>::iterator &&rIterEnd = std::unique(r.begin(), r.end(), [&c](const E &a, const E &b){return !c(a, b) && !c(b, a);});
+  r.resize(std::distance(r.begin(), rIterEnd));
+  return r;
+}
 
 // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
 bool ReplaceStringFirst(std::string &str, const std::string &from, const std::string &to) {
@@ -136,18 +165,25 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
     lowerLimitBins = 0.;
     isUpperAssigned = true;
     upperLimitBins = 2.;
-  } else if (tstrTypenameColumn.Contains("Int") || tstrTypenameColumn.Contains("int")) {
+  } else if (tstrTypenameColumn.Contains("Int")
+  || tstrTypenameColumn.Contains("int")
+  || ((tstrTypenameColumn.Contains("short") || tstrTypenameColumn.Contains("long"))
+    && !(tstrTypenameColumn.Contains("float") || tstrTypenameColumn.Contains("double"))
+  )) {
     binDensityOrder = 0;
     alignment = -0.5;
     if (tstrNameColumnStripped.Contains("Idx")
       || tstrNameColumnStripped.Contains("Rank")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
-    } else if (tstrNameColumnStripped.BeginsWith("n")
+    } else if (
+      (tstrNameColumnStripped.BeginsWith("n")
+        && !tstrNameColumnStripped.Contains("PuppinJet"))
       || tstrNameColumnStripped.Contains("nJet")
       || tstrNameColumnStripped.Contains("nEle")
       || tstrNameColumnStripped.Contains("nMu")
       || tstrNameColumnStripped.Contains("nPho")
+      || tstrNameColumnStripped.Contains("nGen")
       || tstrNameColumnStripped.Contains("_n")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
@@ -930,10 +966,19 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       for (const std::string pref: {"genX1", "genX1Pair", "genD", "genDPair"}) {
         for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et"}) {
           avNameColGen[iLepFlav].emplace_back(pref + suf);
+          for (size_t iAK = 0; iAK < 2; ++iAK) {
+            aavNameColMatching[iLepFlav][iAK].emplace_back(pref + suf);
+            aavNameColAllMatched[iLepFlav][iAK].emplace_back(pref + suf);
+          }
         }
       }
-      for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR"})
-      avNameColGen[iLepFlav].emplace_back(nameCol);
+      for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR"}) {
+        avNameColGen[iLepFlav].emplace_back(nameCol);
+        for (size_t iAK = 0; iAK < 2; ++iAK) {
+          aavNameColMatching[iLepFlav][iAK].emplace_back(nameCol);
+          aavNameColAllMatched[iLepFlav][iAK].emplace_back(nameCol);
+        }
+      }
     }
     // Lazily register histogram action for the Gen stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
@@ -1250,6 +1295,118 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   //   }
   // }
 
+  // Begin the Matching stage
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfMatching = aaDfHasJet;
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      aaDfMatching[iLepFlav][0] = aaDfMatching[iLepFlav][0]
+      .Define("genDMinDeltaRTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+          return ROOT::VecOps::ArgMin(
+            ROOT::VecOps::Map(vJetP4,
+              [ p4Gen ](const TypeLorentzVector p4Jet) {
+                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+              })
+            );
+        });
+      }, {"genDP4", "THINjetP4"})
+      .Define("genDTHINjetMinDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+        ROOT::RVec<double> result(4, -1.);
+        for (size_t i = 0; i < 4; ++i){
+          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+        }
+        return result;
+      }, {"genDMinDeltaRTHINjetIdx", "genDP4", "THINjetP4"})
+      .Define("nGenDMatched", "ROOT::VecOps::Sum(genDTHINjetMinDeltaR < 0.4)")
+      .Define("MinDeltaRTHINjetIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDMinDeltaRTHINjetIdx"})
+      .Define("maxMinDeltaRTHINjetIdx", "MinDeltaRTHINjetIdx.back()")
+      ;
+      aaDfMatching[iLepFlav][1] = aaDfMatching[iLepFlav][1]
+      .Define("genDPairMinDeltaRFATjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+          return ROOT::VecOps::ArgMin(
+            ROOT::VecOps::Map(vJetP4,
+              [ p4Gen ](const TypeLorentzVector p4Jet) {
+                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+              })
+            );
+        });
+      }, {"genDPairP4", "FATjetP4"})
+      .Define("genDPairFATjetMinDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+        ROOT::RVec<double> result(2, 0.);
+        for (size_t i = 0; i < 2; ++i){
+          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+        }
+        return result;
+      }, {"genDPairMinDeltaRFATjetIdx", "genDP4", "THINjetP4"})
+      .Define("nGenDPairMatched", "ROOT::VecOps::Sum(genDPairFATjetMinDeltaR < 0.8)")
+      .Define("MinDeltaRFATjetIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDPairMinDeltaRFATjetIdx"})
+      .Define("maxMinDeltaRFATjetIdx", "MinDeltaRFATjetIdx.back()")
+      ;
+      for (const std::string &&name: {"genDMinDeltaRTHINjetIdx", "genDTHINjetMinDeltaR", "MinDeltaRTHINjetIdx", "maxMinDeltaRTHINjetIdx"}) {
+        aavNameColMatching[iLepFlav][0].emplace_back(name);
+        aavNameColAllMatched[iLepFlav][0].emplace_back(name);
+      }
+      for (const std::string &&name: {"nGenDMatched"}) {
+        aavNameColMatching[iLepFlav][0].emplace_back(name);
+      }
+      for (const std::string &&name: {"genDPairMinDeltaRFATjetIdx", "genDPairFATjetMinDeltaR", "MinDeltaRFATjetIdx", "maxMinDeltaRFATjetIdx"}) {
+        aavNameColMatching[iLepFlav][1].emplace_back(name);
+        aavNameColAllMatched[iLepFlav][1].emplace_back(name);
+      }
+      for (const std::string &&name: {"nGenDPairMatched"}) {
+        aavNameColMatching[iLepFlav][1].emplace_back(name);
+      }
+    }
+    // Lazily register histogram action for the Matching stages
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        const size_t nCol = aavHistViewMatching[iLepFlav][iAK].size();
+        aavHistViewMatching[iLepFlav][iAK].clear();
+        aavHistViewMatching[iLepFlav][iAK].reserve(nCol + 2);
+        aavHistViewMatching[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfMatching[iLepFlav][iAK], "mcWeight"));
+        aavHistViewMatching[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfMatching[iLepFlav][iAK], "mcWeightSgn"));
+        for (const std::string &nameCol: aavNameColMatching[iLepFlav][iAK]) {
+          aavHistViewMatching[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfMatching[iLepFlav][iAK], nameCol, "mcWeightSgn"));
+        }
+      }
+    }
+  }
+
+  // Begin the AllMatched stage
+  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfAllMatched = aaDfMatching;
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      aaDfAllMatched[iLepFlav][0] = aaDfAllMatched[iLepFlav][0]
+      .Filter("nGenDMatched == 4")
+      .Define("THINnjetMatched", "MinDeltaRTHINjetIdx.size()")
+      ;
+      aaDfAllMatched[iLepFlav][1] = aaDfAllMatched[iLepFlav][1]
+      .Filter("nGenDPairMatched == 2")
+      .Define("FATnjetMatched", "MinDeltaRFATjetIdx.size()")
+      ;
+      for (const std::string &&name: {"THINnjetMatched"}) {
+        aavNameColAllMatched[iLepFlav][0].emplace_back(name);
+      }
+      for (const std::string &&name: {"FATnjetMatched"}) {
+        aavNameColAllMatched[iLepFlav][1].emplace_back(name);
+      }
+    }
+    // Lazily register histogram action for the AllMatched stages
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        const size_t nCol = aavHistViewMatching[iLepFlav][iAK].size();
+        aavHistViewAllMatched[iLepFlav][iAK].clear();
+        aavHistViewAllMatched[iLepFlav][iAK].reserve(nCol + 2);
+        aavHistViewAllMatched[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfAllMatched[iLepFlav][iAK], "mcWeight"));
+        aavHistViewAllMatched[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfAllMatched[iLepFlav][iAK], "mcWeightSgn"));
+        for (const std::string &nameCol: aavNameColAllMatched[iLepFlav][iAK]) {
+          aavHistViewAllMatched[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfAllMatched[iLepFlav][iAK], nameCol, "mcWeightSgn"));
+        }
+      }
+    }
+  }
+
   std::vector<ROOT::RDF::RResultPtr<ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager>>> vSn;
   vSn.clear();
   {
@@ -1300,6 +1457,18 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       tfOut->mkdir(("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
+    }
+  }
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        tfOut->mkdir(("Matching" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
+      }
+    }
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        tfOut->mkdir(("AllMatched" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
+      }
     }
   }
   tfOut->Close();
@@ -1401,6 +1570,26 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   //     }
   //   }
   // }
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        tfOut->cd("/");
+        tfOut->cd(("Matching" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str());
+        for (auto &&histView: aavHistViewMatching[iLepFlav][iAK]) {
+          histView->Write();
+        }
+      }
+    }
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        tfOut->cd("/");
+        tfOut->cd(("AllMatched" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str());
+        for (auto &&histView: aavHistViewAllMatched[iLepFlav][iAK]) {
+          histView->Write();
+        }
+      }
+    }
+  }
   tfOut->Close();
   if (debug) std::cerr << "Completed!" << std::endl;
 }
