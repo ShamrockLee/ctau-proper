@@ -1308,7 +1308,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aaDfMatching[iLepFlav][0] = aaDfMatching[iLepFlav][0]
-      .Define("genDMinDeltaRTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+      .Define("genDClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
         return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
           return ROOT::VecOps::ArgMin(
             ROOT::VecOps::Map(vJetP4,
@@ -1318,19 +1318,41 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
             );
         });
       }, {"genDP4", "THINjetP4"})
-      .Define("genDTHINjetMinDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+      .Define("genDClosestTHINjetDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
         ROOT::RVec<double> result(4, -1.);
         for (size_t i = 0; i < 4; ++i){
           result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
         }
         return result;
-      }, {"genDMinDeltaRTHINjetIdx", "genDP4", "THINjetP4"})
-      .Define("nGenDMatched", "ROOT::VecOps::Sum(genDTHINjetMinDeltaR < 0.4)")
-      .Define("MinDeltaRTHINjetIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDMinDeltaRTHINjetIdx"})
-      .Define("maxMinDeltaRTHINjetIdx", "MinDeltaRTHINjetIdx.back()")
+      }, {"genDClosestTHINjetIdx", "genDP4", "THINjetP4"})
+      .Define("nGenDMatchedToTHINjet", "ROOT::VecOps::Sum(genDClosestTHINjetDeltaR < 0.4)")
+      .Define("THINjetClosestToGenDIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDClosestTHINjetIdx"})
+      .Define("maxTHINjetClosestToGenDIdx", "THINjetClosestToGenDIdx.back()")
+      .Define("nTHINjetClosestToGenD", "THINjetClosestToGenDIdx.size()")
+      .Define("genDPairClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+          return ROOT::VecOps::ArgMin(
+            ROOT::VecOps::Map(vJetP4,
+              [ p4Gen ](const TypeLorentzVector p4Jet) {
+                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+              })
+            );
+        });
+      }, {"genDPairP4", "THINjetP4"})
+      .Define("genDPairClosestTHINjetDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+        ROOT::RVec<double> result(2, -1.);
+        for (size_t i = 0; i < 2; ++i){
+          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+        }
+        return result;
+      }, {"genDPairClosestTHINjetIdx", "genDPairP4", "THINjetP4"})
+      .Define("nGenDPairMatchedToTHINjet", "ROOT::VecOps::Sum(genDPairClosestTHINjetDeltaR < 0.4)")
+      .Define("THINjetClosestToGenDPairIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDPairClosestTHINjetIdx"})
+      .Define("maxTHINjetClosestToGenDPairIdx", "THINjetClosestToGenDPairIdx.back()")
+      .Define("nTHINjetClosestToGenDPair", "THINjetClosestToGenDPairIdx.size()")
       ;
       aaDfMatching[iLepFlav][1] = aaDfMatching[iLepFlav][1]
-      .Define("genDPairMinDeltaRFATjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+      .Define("genDPairClosestFATjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
         return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
           return ROOT::VecOps::ArgMin(
             ROOT::VecOps::Map(vJetP4,
@@ -1340,30 +1362,30 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
             );
         });
       }, {"genDPairP4", "FATjetP4"})
-      .Define("genDPairFATjetMinDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
-        ROOT::RVec<double> result(2, 0.);
+      .Define("genDPairClosestFATjetDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+        ROOT::RVec<double> result(2, -1.);
         for (size_t i = 0; i < 2; ++i){
           result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
         }
         return result;
-      }, {"genDPairMinDeltaRFATjetIdx", "genDP4", "THINjetP4"})
-      .Define("nGenDPairMatched", "ROOT::VecOps::Sum(genDPairFATjetMinDeltaR < 0.8)")
-      .Define("MinDeltaRFATjetIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDPairMinDeltaRFATjetIdx"})
-      .Define("maxMinDeltaRFATjetIdx", "MinDeltaRFATjetIdx.back()")
+      }, {"genDPairClosestFATjetIdx", "genDPairP4", "FATjetP4"})
+      .Define("nGenDPairMatchedToFATjet", "ROOT::VecOps::Sum(genDPairClosestFATjetDeltaR < 0.4)")
+      .Define("FATjetClosestToGenDPairIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDPairClosestFATjetIdx"})
+      .Define("maxFATjetClosestToGenDPairIdx", "FATjetClosestToGenDPairIdx.back()")
+      .Define("nFATjetClosestToGenDPair", "FATjetClosestToGenDPairIdx.size()")
       ;
-      for (const std::string &&name: {"genDMinDeltaRTHINjetIdx", "genDTHINjetMinDeltaR", "MinDeltaRTHINjetIdx", "maxMinDeltaRTHINjetIdx"}) {
+      for (const std::string &&name: {
+        "genDClosestTHINjetIdx", "genDClosestTHINjetDeltaR", "THINjetClosestToGenDIdx", "maxTHINjetClosestToGenDIdx", "nTHINjetClosestToGenD",
+        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
+      }) {
         aavNameColMatching[iLepFlav][0].emplace_back(name);
         aavNameColAllMatched[iLepFlav][0].emplace_back(name);
       }
-      for (const std::string &&name: {"nGenDMatched"}) {
-        aavNameColMatching[iLepFlav][0].emplace_back(name);
-      }
-      for (const std::string &&name: {"genDPairMinDeltaRFATjetIdx", "genDPairFATjetMinDeltaR", "MinDeltaRFATjetIdx", "maxMinDeltaRFATjetIdx"}) {
+      for (const std::string &&name: {
+        "genDPairClosestFATjetIdx", "genDPairClosestFATjetDeltaR", "FATjetClosestToGenDPairIdx", "maxFATjetClosestToGenDPairIdx", "nFATjetClosestToGenDPair",
+      }) {
         aavNameColMatching[iLepFlav][1].emplace_back(name);
         aavNameColAllMatched[iLepFlav][1].emplace_back(name);
-      }
-      for (const std::string &&name: {"nGenDPairMatched"}) {
-        aavNameColMatching[iLepFlav][1].emplace_back(name);
       }
     }
     // Lazily register histogram action for the Matching stages
@@ -1378,6 +1400,21 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
           aavHistViewMatching[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfMatching[iLepFlav][iAK], nameCol, "mcWeightSgn"));
         }
       }
+      aavHistViewMatching[iLepFlav][0].emplace_back(GetHistFromColumnCustom(
+        aaDfMatching[iLepFlav][0],
+        "nGenDMatchedToTHINjet", aaDfMatching[iLepFlav][0].GetColumnType("nGenDMatchedToTHINjet"),
+        0, -0.5, true, 0, true, 5,
+        "nGenDMatchedToTHINjet", "mcWeightSgn"));
+      aavHistViewMatching[iLepFlav][0].emplace_back(GetHistFromColumnCustom(
+        aaDfMatching[iLepFlav][0],
+        "nGenDPairMatchedToTHINjet", aaDfMatching[iLepFlav][0].GetColumnType("nGenDPairMatchedToTHINjet"),
+        0, -0.5, true, 0, true, 3,
+        "nGenDPairMatchedToTHINjet", "mcWeightSgn"));
+      aavHistViewMatching[iLepFlav][1].emplace_back(GetHistFromColumnCustom(
+        aaDfMatching[iLepFlav][1],
+        "nGenDPairMatchedToFATjet", aaDfMatching[iLepFlav][1].GetColumnType("nGenDPairMatchedToFATjet"),
+        0, -0.5, true, 0, true, 3,
+        "nGenDPairMatchedToFATjet", "mcWeightSgn"));
     }
   }
 
@@ -1386,19 +1423,11 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aaDfAllMatched[iLepFlav][0] = aaDfAllMatched[iLepFlav][0]
-      .Filter("nGenDMatched == 4")
-      .Define("THINnjetMatched", "MinDeltaRTHINjetIdx.size()")
+      .Filter("nGenDMatchedToTHINjet == 4")
       ;
       aaDfAllMatched[iLepFlav][1] = aaDfAllMatched[iLepFlav][1]
-      .Filter("nGenDPairMatched == 2")
-      .Define("FATnjetMatched", "MinDeltaRFATjetIdx.size()")
+      .Filter("nGenDPairMatchedToFATjet == 2")
       ;
-      for (const std::string &&name: {"THINnjetMatched"}) {
-        aavNameColAllMatched[iLepFlav][0].emplace_back(name);
-      }
-      for (const std::string &&name: {"FATnjetMatched"}) {
-        aavNameColAllMatched[iLepFlav][1].emplace_back(name);
-      }
     }
     // Lazily register histogram action for the AllMatched stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
