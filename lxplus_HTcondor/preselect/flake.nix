@@ -176,7 +176,7 @@
             fi
           fi
         done
-        echo g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}" >2
+        echo g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}"
         g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}"
       '';
       ana = pkgs.callPackage ./ana.nix (rec {
