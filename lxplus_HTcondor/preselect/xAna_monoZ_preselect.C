@@ -1505,7 +1505,13 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       // aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
-      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, aavNameColHasJet[iLepFlav][iAK], {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
+      std::vector<std::string> vNameColUnique = aavNameColHasJet[iLepFlav][iAK];
+      {
+        std::sort(vNameColUnique.begin(), vNameColUnique.end());
+        const auto &&iterEnd = std::unique(vNameColUnique.begin(), vNameColUnique.begin());
+        vNameColUnique.resize(std::distance(vNameColUnique.begin(), iterEnd));
+      }
+      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColUnique, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
     }
   }
 
