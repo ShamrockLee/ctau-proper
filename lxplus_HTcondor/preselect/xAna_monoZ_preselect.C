@@ -560,12 +560,18 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       v.clear();
     }
   }
-  std::array<std::array<std::vector<std::string>, 2>, 2> aavNameColHasJet, aavNameColLPairPassPt, aavNameColAllMatched;
-  for (auto paav: {&aavNameColHasJet, &aavNameColAllMatched}) {
-    for (auto &av: *paav) {
+  std::array<std::array<std::vector<std::string>, 2>, 2> aavNameColHasJet, aavNameColLPairPassPt;
+  std::array<std::array<std::vector<std::string>, 3>, 2> aavNameColAllMatched;
+  for (auto paav: {&aavNameColHasJet, }) {
+    for (auto &av: aavNameColHasJet) {
       for (auto &v: av) {
         v.clear();
       }
+    }
+  }
+  for (auto &av: aavNameColAllMatched) {
+    for (auto &v: av) {
+      v.clear();
     }
   }
 
@@ -576,12 +582,18 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       v.clear();
     }
   }
-  std::array<std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2>, 2> aavHistViewHasJet, aavHistViewLPairPassPt, aavHistViewAllMatched;
-  for (auto paav: {&aavHistViewHasJet, &aavHistViewLPairPassPt, &aavHistViewAllMatched}) {
+  std::array<std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2>, 2> aavHistViewHasJet, aavHistViewLPairPassPt;
+  std::array<std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 3>, 2> aavHistViewAllMatched;
+  for (auto paav: {&aavHistViewHasJet, &aavHistViewLPairPassPt}) {
     for (auto &av: *paav) {
       for (auto &v: av) {
         v.clear();
       }
+    }
+  }
+  for (auto &av: aavHistViewAllMatched) {
+    for (auto &v: av) {
+      v.clear();
     }
   }
   // Begin the Original stage
@@ -628,11 +640,16 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
                 v.emplace_back(nameCol);
               }
             }
-            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColAllMatched}) {
+            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt}) {
               for (auto &av: *paav) {
                 for (auto &v: av) {
                   v.emplace_back(nameCol);
                 }
+              }
+            }
+            for (auto &av: aavNameColAllMatched) {
+              for (auto &v: av) {
+                v.emplace_back(nameCol);
               }
             }
           }
@@ -824,11 +841,16 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
           ) {
             if (debug) std::cerr << "Pick " << nameCol << std::endl;
             vNameColOriginal.emplace_back(nameCol);
-            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColAllMatched}) {
+            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt}) {
               for (auto &av: *paav) {
                 for (auto &v: av) {
                   v.emplace_back(nameCol);
                 }
+              }
+            }
+            for (auto &av: aavNameColAllMatched) {
+              for (auto &v: av) {
+                v.emplace_back(nameCol);
               }
             }
           }
@@ -855,11 +877,16 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
               .Define(nameColNew, funGen, {{ nameCol }});
             }
             vNameColOriginal.emplace_back(nameColNew);
-            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColAllMatched}) {
+            for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt}) {
               for (auto &av: *paav) {
                 for (auto &v: av) {
                   v.emplace_back(nameColNew);
                 }
+              }
+            }
+            for (auto &av: aavNameColAllMatched) {
+              for (auto &v: av) {
+                v.emplace_back(nameColNew);
               }
             }
           }
@@ -1041,10 +1068,13 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
             )
         ) {
           avNameColHasLPair[iLepFlav].emplace_back(nameColNew);
-          for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColAllMatched}) {
+          for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt}) {
             for (auto &v: (*paav)[iLepFlav]) {
               v.emplace_back(nameColNew);
             }
+          }
+          for (auto &v: aavNameColAllMatched[iLepFlav]) {
+            v.emplace_back(nameColNew);
           }
         }
       }
@@ -1065,10 +1095,13 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       for (auto pav: {&avNameColHasLPair, &avNameColZMassCutted}) {
         (*pav)[iLepFlav].emplace_back(nameColNew);
       }
-      for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColAllMatched}) {
+      for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt}) {
         for (auto &v: (*paav)[iLepFlav]) {
           v.emplace_back(nameColNew);
         }
+      }
+      for (auto &v: aavNameColAllMatched[iLepFlav]) {
+        v.emplace_back(nameColNew);
       }
     }
     aDfHasLPair[iLepFlav] = aDfHasLPair[iLepFlav]
@@ -1079,10 +1112,13 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     for (auto pav: {&avNameColHasLPair, &avNameColZMassCutted}) {
       (*pav)[iLepFlav].emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
     }
-    for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt, &aavNameColAllMatched}) {
+    for (auto paav: {&aavNameColHasJet, &aavNameColLPairPassPt}) {
       for (auto &v: (*paav)[iLepFlav]) {
         v.emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
       }
+    }
+    for (auto &v: aavNameColAllMatched[iLepFlav]) {
+      v.emplace_back(aPrefLepFlavLower[iLepFlav] + "PairIsPassZ");
     }
     aDfHasLPair[iLepFlav] = aDfHasLPair[iLepFlav]
     .Define("HPSTauIdxPassBasicCuts", [](
@@ -1352,6 +1388,12 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         aavNameColHasJet[iLepFlav][1].emplace_back(name);
         aavNameColAllMatched[iLepFlav][1].emplace_back(name);
       }
+      for (const std::string &&name: {
+        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
+      }) {
+        aavNameColHasJet[iLepFlav][2].emplace_back(name);
+        aavNameColAllMatched[iLepFlav][2].emplace_back(name);
+      }
     }
   }
   // Lazily register histogram action for the HasJet stages
@@ -1409,7 +1451,10 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   // }
 
   // Begin the AllMatched stage
-  std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfAllMatched = aaDfHasJet;
+  std::array<std::array<ROOT::RDF::RNode, 3>, 2> aaDfAllMatched = {{
+    {aaDfHasJet[0][0], aaDfHasJet[0][1], aaDfHasJet[0][0]},
+    {aaDfHasJet[1][0], aaDfHasJet[1][1], aaDfHasJet[1][0]},
+  }};
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       aaDfAllMatched[iLepFlav][0] = aaDfAllMatched[iLepFlav][0]
@@ -1418,10 +1463,13 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       aaDfAllMatched[iLepFlav][1] = aaDfAllMatched[iLepFlav][1]
       .Filter("nGenDPairMatchedToFATjet == 2")
       ;
+      aaDfAllMatched[iLepFlav][2] = aaDfAllMatched[iLepFlav][2]
+      .Filter("nGenDPairMatchedToTHINjet == 2")
+      ;
     }
     // Lazily register histogram action for the AllMatched stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      for (size_t iAK = 0; iAK < 2; ++iAK) {
+      for (size_t iAK = 0; iAK < 3; ++iAK) {
         const size_t nCol = aavNameColAllMatched[iLepFlav][iAK].size();
         aavHistViewAllMatched[iLepFlav][iAK].clear();
         aavHistViewAllMatched[iLepFlav][iAK].reserve(nCol + 2);
@@ -1488,8 +1536,8 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      for (size_t iAK = 0; iAK < 2; ++iAK) {
-        tfOut->mkdir(("AllMatched" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
+      for (size_t iAK = 0; iAK < 3; ++iAK) {
+        tfOut->mkdir(("AllMatched" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK & 1] + "jet" + (iAK ? "DPair" : "D")).c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
       }
     }
   }
@@ -1500,10 +1548,10 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   //   }
   // }
 
-  // Realize the actions and write to output files
+  // Realize the actions and write to output files // TODO
 
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-    for (size_t iAK = 0; iAK < 2; ++iAK) {
+    for (size_t iAK = 0; iAK < 3; ++iAK) {
       // aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
       std::vector<std::string> vNameColUnique = aavNameColHasJet[iLepFlav][iAK];
       {
@@ -1511,7 +1559,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         const auto &&iterEnd = std::unique(vNameColUnique.begin(), vNameColUnique.begin());
         vNameColUnique.resize(std::distance(vNameColUnique.begin(), iterEnd));
       }
-      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColUnique, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
+      aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet" + (iAK ? "DPair" : "D") + "/tree", fileOut, vNameColUnique, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
     }
   }
 
@@ -1600,9 +1648,9 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   // }
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      for (size_t iAK = 0; iAK < 2; ++iAK) {
+      for (size_t iAK = 0; iAK < 3; ++iAK) {
         tfOut->cd("/");
-        tfOut->cd(("AllMatched" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet").c_str());
+        tfOut->cd(("AllMatched" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK & 1] + "jet" + (iAK ? "DPair" : "D")).c_str());
         for (auto &&histView: aavHistViewAllMatched[iLepFlav][iAK]) {
           histView->Write();
         }
