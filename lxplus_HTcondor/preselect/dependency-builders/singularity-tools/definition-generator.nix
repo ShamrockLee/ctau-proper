@@ -100,7 +100,7 @@ rec {
           [ "%${sectionName}" ]
           ++ sectionMappingFunction sectionName definition.${sectionName}
         ))
-        (orderAs allPrimarySectionNames (builtins.attrNames definition))
+        (orderAs allPrimarySectionNames (lib.subtractLists [ "header" "apps" ] (builtins.attrNames definition)))
       ++ lib.optionals (builtins.hasAttr "apps" definition) (builtins.concatLists (map
         (appName:
           map

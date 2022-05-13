@@ -186,7 +186,7 @@ rec {
         meta.mainProgram = "build-image";
       };
     in
-    (runCommand "${projectName}-image-${name}.img" (removeAttrs args [ "name" "definition" ] // {
+    (runCommand "${projectName}-image-${name}.img" (removeAttrs args [ "name" "definition" "definitionOverrider" ] // {
       inherit executableFlags buildImageFlags;
       passthru = args.passthru or { } // {
         inherit singularity layerClosure definition definitionFile buildscriptPackage;
