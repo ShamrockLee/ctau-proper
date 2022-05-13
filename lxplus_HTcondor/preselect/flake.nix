@@ -210,6 +210,22 @@
         executableFlags = [ "--verbose" ];
         buildImageFlags = [ "--unprivileged" ];
       }).buildscriptPackage;
+      ana-singularity-image-testing = (pkgs.singularity-tools.buildImageFromDef {
+        name = ana.pname;
+        contents = [ ana pkgs.parallel ];
+        definitionOverrider = {
+          environment = {
+            PARALLEL_SHELL = pkgs.runtimeShell;
+          };
+        };
+        executableFlags = [ "--verbose" ];
+        buildImageFlags = [ "--unprivileged" ];
+      }).overrideAttrs (oldAttrs: {
+        buildCommand = ''
+          ${pkgs.utillinux}/bin/unshare -rm
+          ${pkgs.fakeroot}/bin/fakeroot
+        '' + oldAttrs.buildCommand;
+      });
       apptainer-prefetch-vendorsha256 = (pkgs.writeShellScriptBin "apptainer-prefetch-vendorsha256" ''
         NIX_PATH="nixpkgs=${nixpkgs}" "${nix-prefetch}/bin/nix-prefetch" \
           --extra-experimental-features "nix-command flakes" \
@@ -229,7 +245,7 @@
       packages = packagesSub // {
         inherit run ana compile-with-root apptainer-prefetch-vendorsha256 nix-portable;
       } // lib.optionalAttrs (lib.hasSuffix "linux" system) {
-        inherit ana-singularity-buildscript ana-singularity-image;
+        inherit ana-singularity-buildscript ana-singularity-image ana-singularity-image-testing;
       # # Cross build seems still buggy
       # } // lib.optionalAttrs (system == "x86_64-linux") {
       #   inherit nix-portable-aarch64-linux;
