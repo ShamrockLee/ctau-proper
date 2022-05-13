@@ -65,6 +65,24 @@ ROOT::RVec<E> UniqueSort(const ROOT::RVec<E> &v, const Compare &c) {
   return r;
 }
 
+template<class E>
+ROOT::RVec<E> UniqueFirst(const ROOT::RVec<E> &v) {
+  using size_type = typename ROOT::RVec<E>::size_type;
+  ROOT::RVec<size_type> vIdx(ROOT::VecOps::StableArgsort(v));
+  typename ROOT::RVec<size_type>::iterator &&vIdxIterEnd = std::unique(
+    vIdx.begin(), vIdx.end(),
+    [&vIdx](const size_type ia, const size_type ib){
+      return vIdx[ia] == vIdx[ib];
+    });
+  vIdx.resize(std::distance(vIdx.begin(), vIdxIterEnd));
+  std::sort(vIdx.begin(), vIdx.end());
+  ROOT::RVec<E> vResult(vIdx.size());
+  for (const size_type &&i: vIdx) {
+    vResult.emplace_back(vIdx[i]);
+  }
+  return vResult;
+}
+
 // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
 bool ReplaceStringFirst(std::string &str, const std::string &from, const std::string &to) {
   const size_t iStart = str.find(from);
