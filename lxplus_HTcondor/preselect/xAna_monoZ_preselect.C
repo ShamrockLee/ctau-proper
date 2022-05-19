@@ -948,6 +948,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   // Lazily register histogram action for the Original stage
   {
+    sort_uniquely(vNameColOriginal);
     const size_t nCol = vNameColOriginal.size();
     vHistViewOriginal.clear();
     vHistViewOriginal.reserve(nCol + 2);
@@ -1034,6 +1035,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     }
     // Lazily register histogram action for the Gen stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      sort_uniquely(avNameColGen[iLepFlav]);
       const size_t nCol = avNameColGen[iLepFlav].size();
       avHistViewGen[iLepFlav].clear();
       avHistViewGen[iLepFlav].reserve(nCol + 2);
@@ -1194,6 +1196,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   // // Lazily register histogram action for the HasLPair stages
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   sort_uniquely(avNameColHasLPair[iLepFlav]);
   //   const size_t nCol = avNameColHasLPair[iLepFlav].size();
   //   avHistViewHasLPair[iLepFlav].clear();
   //   avHistViewHasLPair[iLepFlav].reserve(nCol + 2);
@@ -1211,6 +1214,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   // // Lazily register histogram action for the HasVtx stages
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   sort_uniquely(avNameColHasVtx[iLepFlav]);
   //   const size_t nCol = avNameColHasVtx[iLepFlav].size();
   //   avHistViewHasVtx[iLepFlav].clear();
   //   avHistViewHasVtx[iLepFlav].reserve(nCol + 2);
@@ -1233,6 +1237,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   // // Lazily register histogram action for the LPairedPassPt stage
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   sort_uniquely(avNameColLPairedPassPt[iLepFlav]);
   //   const size_t nCol = avNameColLPairedPassPt[iLepFlav].size();
   //   avHistViewLPairedPassPt[iLepFlav].clear();
   //   avHistViewLPairedPassPt[iLepFlav].reserve(nCol + 2);
@@ -1249,6 +1254,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   // // Lazily register histogram action for the ZMassCutted stages
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   sort_uniquely(avNameColZMassCutted[iLepFlav]);
   //   const size_t nCol = avNameColZMassCutted[iLepFlav].size();
   //   avHistViewZMassCutted[iLepFlav].clear();
   //   avHistViewZMassCutted[iLepFlav].reserve(nCol + 2);
@@ -1266,6 +1272,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   // // Lazily register histogram action for the NoExtraL stages
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   sort_uniquely(avNameColNoExtraL[iLepFlav]);
   //   const size_t nCol = avNameColNoExtraL[iLepFlav].size();
   //   avHistViewNoExtraL[iLepFlav].clear();
   //   avHistViewNoExtraL[iLepFlav].reserve(nCol + 2);
@@ -1283,6 +1290,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
   // // Lazily register histogram action for the NoTau stages
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+  //   sort_uniquely(avNameColNoTau[iLepFlav]);
   //   const size_t nCol = avNameColNoTau[iLepFlav].size();
   //   avHistViewNoTau[iLepFlav].clear();
   //   avHistViewNoTau[iLepFlav].reserve(nCol + 2);
@@ -1424,6 +1432,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   // Lazily register histogram action for the HasJet stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
+      sort_uniquely(aavNameColHasJet[iLepFlav][iAK]);
       const size_t nCol = aavNameColHasJet[iLepFlav][iAK].size();
       aavHistViewHasJet[iLepFlav][iAK].clear();
       aavHistViewHasJet[iLepFlav][iAK].reserve(nCol + 2);
@@ -1464,7 +1473,8 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   // // Lazily register histogram action for the LPairPassPt stages
   // for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
   //   for (size_t iAK = 0; iAK < 2; ++iAK) {
-  //     const size_t nCol = aavHistViewLPairPassPt[iLepFlav][iAK].size();
+  //     sort_uniquely(aavNameColLPairPassPt[iLepFlav][iAK]);
+  //     const size_t nCol = aavNameColLPairPassPt[iLepFlav][iAK].size();
   //     aavHistViewLPairPassPt[iLepFlav][iAK].clear();
   //     aavHistViewLPairPassPt[iLepFlav][iAK].reserve(nCol + 2);
   //     aavHistViewLPairPassPt[iLepFlav][iAK].emplace_back(GetHistFromColumn(aaDfLPairPassPt[iLepFlav][iAK], "mcWeight"));
@@ -1495,6 +1505,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     // Lazily register histogram action for the AllMatched stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       for (size_t iAK = 0; iAK < 3; ++iAK) {
+        sort_uniquely(aavNameColAllMatched[iLepFlav][iAK]);
         const size_t nCol = aavNameColAllMatched[iLepFlav][iAK].size();
         aavHistViewAllMatched[iLepFlav][iAK].clear();
         aavHistViewAllMatched[iLepFlav][iAK].reserve(nCol + 2);
@@ -1579,11 +1590,6 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     for (size_t iAK = 0; iAK < 3; ++iAK) {
       // aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
       std::vector<std::string> vNameColUnique = aavNameColHasJet[iLepFlav][iAK];
-      {
-        std::sort(vNameColUnique.begin(), vNameColUnique.end());
-        const auto &&iterEnd = std::unique(vNameColUnique.begin(), vNameColUnique.begin());
-        vNameColUnique.resize(std::distance(vNameColUnique.begin(), iterEnd));
-      }
       aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet" + (iAK ? "DPair" : "D") + "/tree", fileOut, vNameColUnique, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
     }
   }
