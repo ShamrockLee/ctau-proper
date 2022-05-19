@@ -1029,18 +1029,25 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       for (const std::string pref: {"genX1", "genX1Pair", "genD", "genDPair"}) {
         for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et"}) {
           avNameColGen[iLepFlav].emplace_back(pref + suf);
-          for (size_t iAK = 0; iAK < 2; ++iAK) {
-            aavNameColHasJet[iLepFlav][iAK].emplace_back(pref + suf);
-            aavNameColAllMatched[iLepFlav][iAK].emplace_back(pref + suf);
-          }
+          // for (size_t iAK = 0; iAK < 2; ++iAK) {
+          //   aavNameColHasJet[iLepFlav][iAK].emplace_back(pref + suf);
+          //   aavNameColAllMatched[iLepFlav][iAK].emplace_back(pref + suf);
+          // }
         }
       }
       for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR"}) {
         avNameColGen[iLepFlav].emplace_back(nameCol);
-        for (size_t iAK = 0; iAK < 2; ++iAK) {
-          aavNameColHasJet[iLepFlav][iAK].emplace_back(nameCol);
-          aavNameColAllMatched[iLepFlav][iAK].emplace_back(nameCol);
-        }
+        // for (size_t iAK = 0; iAK < 2; ++iAK) {
+        //   aavNameColHasJet[iLepFlav][iAK].emplace_back(nameCol);
+        //   aavNameColAllMatched[iLepFlav][iAK].emplace_back(nameCol);
+        // }
+      }
+      // Inject all the column names from the Gen phase into these phases
+      for (size_t iAK = 0; iAK < 2; ++iAK) {
+        aavNameColHasJet[iLepFlav][iAK].insert(aavNameColHasJet[iLepFlav][iAK].end(), avNameColGen[iLepFlav].begin(), avNameColGen[iLepFlav].end());
+      }
+      for (size_t iAK = 0; iAK < 3; ++iAK) {
+        aavNameColAllMatched[iLepFlav][iAK].insert(aavNameColAllMatched[iLepFlav][iAK].end(), avNameColGen[iLepFlav].begin(), avNameColGen[iLepFlav].end());
       }
     }
     // Lazily register histogram action for the Gen stages
