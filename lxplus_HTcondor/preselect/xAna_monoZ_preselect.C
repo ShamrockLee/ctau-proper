@@ -66,6 +66,13 @@ ROOT::RVec<E> UniqueSort(const ROOT::RVec<E> &v, const Compare &c) {
 }
 
 template<class E>
+void sort_uniquely(std::vector<E> &v) {
+  std::sort(v.begin(), v.end());
+  typename std::vector<E>::iterator &&vIterEnd = std::unique(v.begin(), v.end());
+  v.resize(std::distance(v.begin(), vIterEnd));
+}
+
+template<class E>
 ROOT::RVec<E> UniqueFirst(const ROOT::RVec<E> &v) {
   using size_type = typename ROOT::RVec<E>::size_type;
   ROOT::RVec<size_type> vIdx(ROOT::VecOps::StableArgsort(v));
