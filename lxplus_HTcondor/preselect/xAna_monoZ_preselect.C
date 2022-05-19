@@ -962,19 +962,29 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   std::array<ROOT::RDF::RNode, 2> aDfGen {dfOriginal, dfOriginal};
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      aDfGen[iLepFlav] = aDfGen[iLepFlav]
-      .Define("gen" + aPrefLepFlav[iLepFlav] + "Idx",
-      [iLepFlav, pdgElectron, pdgMuon](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
-        ROOT::RVec<Int_t> genLIdx(2, -1);
-        const Int_t pdgLep = iLepFlav ? pdgMuon : pdgElectron;
-        for (int i = 0; i < nGenPar; ++i) {
-          if (TMath::Abs(genParId[i]) == pdgLep && TMath::Abs(genMomParId[i]) == pdgZ) {
-            genLIdx[genParId[i] < 0] = i;
+      for (size_t jLepFlav = 0; jLepFlav < 2; ++jLepFlav) {
+        aDfGen[iLepFlav] = aDfGen[iLepFlav]
+        .Define("gen" + aPrefLepFlav[jLepFlav] + "Idx",
+        [jLepFlav, pdgElectron, pdgMuon](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+          ROOT::RVec<Int_t> genLIdx(2, -1);
+          const Int_t pdgLep = jLepFlav ? pdgMuon : pdgElectron;
+          for (int i = 0; i < nGenPar; ++i) {
+            if (TMath::Abs(genParId[i]) == pdgLep && TMath::Abs(genMomParId[i]) == pdgZ) {
+              genLIdx[genParId[i] < 0] = i;
+            }
           }
-        }
-        return genLIdx;
-      }, {"nGenPar", "genParId", "genMomParId"})
-      .Filter("ROOT::VecOps::All(gen" + aPrefLepFlav[iLepFlav] + "Idx != -1)")
+          return genLIdx;
+        }, {"nGenPar", "genParId", "genMomParId"});
+      }
+      aDfGen[iLepFlav] = aDfGen[iLepFlav]
+      .Define("genLeptonFlavorId",
+          "ROOT::RVec<Bool_t>{"
+          "    ROOT::VecOps::All(gen" + aPrefLepFlav[0] + "Idx != -1),"
+          "    ROOT::VecOps::All(gen" + aPrefLepFlav[1] + "Idx != -1),"
+          "}");
+      aDfGen[iLepFlav] = aDfGen[iLepFlav]
+      .Filter("genLeptonFlavorId[" + std::to_string(iLepFlav) + "]");
+      aDfGen[iLepFlav] = aDfGen[iLepFlav]
       .Define("genX1Idx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
         ROOT::RVec<Int_t> genX1Idx(4, -1);
         for (int i = 0; i < nGenPar; ++i) {
