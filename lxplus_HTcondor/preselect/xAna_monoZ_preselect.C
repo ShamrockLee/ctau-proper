@@ -201,6 +201,13 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       || tstrNameColumnStripped.Contains("Rank")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
+      if (tstrNameColumnStripped.Contains("THINjet")) {
+        isUpperAssigned = true;
+        upperLimitBins = 10;
+      } else if (tstrNameColumnStripped.Contains("FATjet")) {
+        isUpperAssigned = true;
+        upperLimitBins = 10;
+      }
     } else if (
       (tstrNameColumnStripped.BeginsWith("n")
         && !tstrNameColumnStripped.Contains("PuppinJet"))
@@ -212,6 +219,17 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       || tstrNameColumnStripped.Contains("_n")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
+      // nGenDPair 0, 1, 2
+      if (tstrNameColumnStripped.BeginsWith("nGenDPair")
+      || (tstrNameColumnStripped.EndsWith("JetClosestToGenDPair"))) {
+        isUpperAssigned = true;
+        upperLimitBins = 3;
+      // nGenD 0, 1, 2, 3, 4
+      } else if (tstrNameColumnStripped.BeginsWith("nGenD")
+      || (tstrNameColumnStripped.EndsWith("JetClosestToGenD"))) {
+        isUpperAssigned = true;
+        upperLimitBins = 5;
+      }
     } else if (tstrNameColumnStripped.EndsWith("Sgn")) {
       isLowerAssigned = true;
       lowerLimitBins = -1;
