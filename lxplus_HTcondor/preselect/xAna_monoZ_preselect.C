@@ -579,8 +579,8 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
 
   ROOT::RDataFrame dfIn("tree/treeMaker", fileIn);
   std::vector<std::string> vNameColOriginal = {};
-  std::array<std::vector<std::string>, 2> avNameColGen, avNameColHasLPair, avNameColHasVtx, avNameColNoTau, avNameColLPairedPassPt, avNameColZMassCutted, avNameColNoExtraL;
-  for (auto pav: {&avNameColGen, &avNameColHasLPair, &avNameColHasVtx, &avNameColNoTau, &avNameColLPairedPassPt, &avNameColZMassCutted, &avNameColNoExtraL}) {
+  std::array<std::vector<std::string>, 2> avNameColGen, avNameColHasLPair, avNameColHasVtx, avNameColNoTau, avNameColLPairedPassPt, avNameColZMassCutted, avNameColNoExtraL, avNameColMissedOutFATjet;
+  for (auto pav: {&avNameColGen, &avNameColHasLPair, &avNameColHasVtx, &avNameColNoTau, &avNameColLPairedPassPt, &avNameColZMassCutted, &avNameColNoExtraL, &avNameColMissedOutFATjet}) {
     for (auto &v: *pav) {
       v.clear();
     }
@@ -601,8 +601,8 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
 
   std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal = {};
-  std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen, avHistViewHasLPair, avHistViewHasVtx, avHistViewNoTau, avHistViewLPairedPassPt, avHistViewZMassCutted, avHistViewNoExtraL;
-  for (auto pav: {&avHistViewGen, &avHistViewHasLPair, &avHistViewHasVtx, &avHistViewNoTau, &avHistViewLPairedPassPt, &avHistViewZMassCutted, &avHistViewNoExtraL}) {
+  std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen, avHistViewHasLPair, avHistViewHasVtx, avHistViewNoTau, avHistViewLPairedPassPt, avHistViewZMassCutted, avHistViewNoExtraL, avHistViewMissedOutFATjet;
+  for (auto pav: {&avHistViewGen, &avHistViewHasLPair, &avHistViewHasVtx, &avHistViewNoTau, &avHistViewLPairedPassPt, &avHistViewZMassCutted, &avHistViewNoExtraL, &avHistViewMissedOutFATjet}) {
     for (auto &v: *pav) {
       v.clear();
     }
@@ -1535,6 +1535,28 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     }
   }
 
+  // Begin the MissedOutFATjet stages
+  std::array<ROOT::RDF::RNode, 2> aDfMissedOutFATjet = {aaDfAllMatched[0][2], aaDfAllMatched[1][2]};
+  if (isSignal) {
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      aDfMissedOutFATjet[iLepFlav] = aDfMissedOutFATjet[iLepFlav]
+      .Filter("FATnJet < 2");
+      avNameColMissedOutFATjet[iLepFlav] = aavNameColAllMatched[iLepFlav][2];
+    }
+    // Lazily register histogram action for the MissedOutFATjet stages
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      sort_uniquely(avNameColMissedOutFATjet[iLepFlav]);
+      const size_t nCol = avNameColMissedOutFATjet[iLepFlav].size();
+      avHistViewMissedOutFATjet[iLepFlav].clear();
+      avHistViewMissedOutFATjet[iLepFlav].reserve(nCol + 2);
+      avHistViewMissedOutFATjet[iLepFlav].emplace_back(GetHistFromColumn(aDfMissedOutFATjet[iLepFlav], "mcWeight"));
+      avHistViewMissedOutFATjet[iLepFlav].emplace_back(GetHistFromColumn(aDfMissedOutFATjet[iLepFlav], "mcWeightSgn"));
+      for (const std::string &nameCol: avNameColMissedOutFATjet[iLepFlav]) {
+        avHistViewMissedOutFATjet[iLepFlav].emplace_back(GetHistFromColumn(aDfMissedOutFATjet[iLepFlav], nameCol, "mcWeightSgn"));
+      }
+    }
+  }
+
   std::vector<ROOT::RDF::RResultPtr<ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager>>> vSn;
   vSn.clear();
   {
@@ -1592,6 +1614,9 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       for (size_t iAK = 0; iAK < 3; ++iAK) {
         tfOut->mkdir(("AllMatched" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK & 1] + "jet" + (iAK ? "DPair" : "D")).c_str(), ("Entries with at least 1 " + aPrefAKShort[iAK] + " jet").c_str());
       }
+    }
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      tfOut->mkdir(("MissedOutFATjet" + aPrefLepFlav[iLepFlav]).c_str(), "Entries with all the d-pairs matching to THINjets but not FATjets");
     }
   }
   tfOut->Close();
@@ -1702,6 +1727,13 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         for (auto &&histView: aavHistViewAllMatched[iLepFlav][iAK]) {
           histView->Write();
         }
+      }
+    }
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      tfOut->cd("/");
+      tfOut->cd(("MissedOutFATjet" + aPrefLepFlav[iLepFlav]).c_str());
+      for (auto &&histView: avHistViewMissedOutFATjet[iLepFlav]) {
+        histView->Write();
       }
     }
   }
