@@ -187,9 +187,9 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
     binDensityOrder = 0;
     alignment = 0.;
     isLowerAssigned = true;
-    lowerLimitBins = 0.;
+    lowerLimitBins = 0;
     isUpperAssigned = true;
-    upperLimitBins = 2.;
+    upperLimitBins = 2;
   } else if (tstrTypenameColumn.Contains("Int")
   || tstrTypenameColumn.Contains("int")
   || ((tstrTypenameColumn.Contains("short") || tstrTypenameColumn.Contains("long"))
