@@ -1244,7 +1244,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   //     avHistViewHasVtx[iLepFlav].emplace_back(GetHistFromColumn(aDfHasVtx[iLepFlav], nameCol, "mcWeightSgn"));
   //   }
   // }
-  // Begin the LPairPassPt stages
+  // Begin the LPairedPassPt stages
   std::array<ROOT::RDF::RNode, 2> aDfLPairedPassPt = aDfHasVtx;
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     aDfLPairedPassPt[iLepFlav] = aDfLPairedPassPt[iLepFlav]
