@@ -10,6 +10,7 @@
 #include <TH1.h>
 #include <TLegend.h>
 #include <TMath.h>
+#include <TStyle.h>
 
 #include <functional>
 #include <iostream>
@@ -43,6 +44,7 @@ void plotAll(TDirectory *tdirIn, TString dirOut, const Bool_t plotSubdir, const 
       }
       if (funAdjustHist != nullptr) hist = funAdjustHist(hist);
       hist->Draw(optionDraw);
+      gStyle->SetOptStat(111111);
       gPad->Print(dirOut + seperatorPath + name + ".svg");
     }
   }
@@ -164,11 +166,13 @@ TH1* adjustWithJSONTitle(TH1 *hist) {
     const double upperLimit = alignment + binWidth * upperLimitBinsCorrect;
     const double nBinsNew = upperLimitBinsCorrect - lowerLimitBinsCorrect;
     TH1 *histNew = new TH1D(TString(hist->GetName()) + "Adjusted", hist->GetName(), nBinsNew, lowerLimit, upperLimit);
-    for (int iBin = TMath::Max(lowerLimitBins, lowerLimitBinsCorrect); iBin <= TMath::Min(upperLimitBins, upperLimitBinsCorrect) + 1; ++iBin) {
+    for (int iBin = TMath::Max(lowerLimitBins, lowerLimitBinsCorrect) + 1; iBin <= TMath::Min(upperLimitBins, upperLimitBinsCorrect); ++iBin) {
       histNew->SetBinContent(iBin - lowerLimitBinsCorrect, hist->GetBinContent(iBin - lowerLimitBins));
       histNew->SetBinError(iBin - lowerLimitBinsCorrect, hist->GetBinError(iBin - lowerLimitBins));
-      histNew->SetEntries(hist->GetEntries());
     }
+    histNew->SetBinContent(0, hist->GetBinContent(0));
+    histNew->SetBinContent(nBinsNew + 1, hist->GetBinContent(upperLimitBins - lowerLimitBins + 1));
+    histNew->SetEntries(hist->GetEntries());
     return histNew;
   }
   hist->SetTitle(hist->GetName());
