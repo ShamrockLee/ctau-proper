@@ -167,6 +167,7 @@ TH1* adjustWithJSONTitle(TH1 *hist) {
     for (int iBin = TMath::Max(lowerLimitBins, lowerLimitBinsCorrect); iBin <= TMath::Min(upperLimitBins, upperLimitBinsCorrect) + 1; ++iBin) {
       histNew->SetBinContent(iBin - lowerLimitBinsCorrect, hist->GetBinContent(iBin - lowerLimitBins));
       histNew->SetBinError(iBin - lowerLimitBinsCorrect, hist->GetBinError(iBin - lowerLimitBins));
+      histNew->SetEntries(hist->GetEntries());
     }
     return histNew;
   }
