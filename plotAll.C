@@ -43,7 +43,11 @@ void plotAll(TDirectory *tdirIn, TString dirOut, const Bool_t plotSubdir, const 
         hist->Scale(1.0 / hist->Integral());
       }
       if (funAdjustHist != nullptr) hist = funAdjustHist(hist);
-      hist->Draw(optionDraw);
+      const char *optionDrawNew = optionDraw;
+      if (hist->GetNbinsX() <= 13 && (! TString(optionDraw).Contains("Text"))) {
+        optionDrawNew = (TString(optionDraw) + "Text").Data();
+      }
+      hist->Draw(optionDrawNew);
       gStyle->SetOptStat(111111);
       gPad->Print(dirOut + seperatorPath + name + ".svg");
     }
