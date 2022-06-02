@@ -1068,6 +1068,113 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         aavNameColAllMatched[iLepFlav][iAK].insert(aavNameColAllMatched[iLepFlav][iAK].end(), avNameColGen[iLepFlav].begin(), avNameColGen[iLepFlav].end());
       }
     }
+    // Do the matching
+    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
+      aDfGen[iLepFlav] = aDfGen[iLepFlav]
+      .Define("genDClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+          return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
+            ROOT::VecOps::Map(vJetP4,
+              [ p4Gen ](const TypeLorentzVector p4Jet) {
+                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+              })
+            )) : -1;
+        });
+      }, {"genDP4", "THINjetP4"})
+      .Define("genDClosestTHINjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+        ROOT::RVec<double> result(4, -1.);
+        if (vJetP4.size()) for (size_t i = 0; i < 4; ++i){
+          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+        }
+        return result;
+      }, {"genDClosestTHINjetIdx", "genDP4", "THINjetP4"})
+      .Define("nGenDMatchedToTHINjet", "ROOT::VecOps::Sum(genDClosestTHINjetDeltaR < 0.4)")
+      .Define("THINjetClosestToGenDIdx", [](ROOT::RVec<Int_t> idx){
+        auto result = UniqueSort(idx);
+        if (result[0] < 0) {
+          result.erase(result.begin());
+        }
+        return result;
+      }, {"genDClosestTHINjetIdx"})
+      .Define("maxTHINjetClosestToGenDIdx", "THINjetClosestToGenDIdx.size() ? THINjetClosestToGenDIdx.back() : -1")
+      .Define("nTHINjetClosestToGenD", "THINjetClosestToGenDIdx.size()")
+      .Define("genDPairClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+          return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
+            ROOT::VecOps::Map(vJetP4,
+              [ p4Gen ](const TypeLorentzVector p4Jet) {
+                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+              })
+            )) : -1;
+        });
+      }, {"genDPairP4", "THINjetP4"})
+      .Define("genDPairClosestTHINjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+        ROOT::RVec<double> result(2, -1.);
+        if (vJetP4.size()) for (size_t i = 0; i < 2; ++i){
+          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+        }
+        return result;
+      }, {"genDPairClosestTHINjetIdx", "genDPairP4", "THINjetP4"})
+      .Define("nGenDPairMatchedToTHINjet", "ROOT::VecOps::Sum(genDPairClosestTHINjetDeltaR < 0.4)")
+      .Define("THINjetClosestToGenDPairIdx", [](ROOT::RVec<Int_t> idx){
+        auto result = UniqueSort(idx);
+        if (result[0] < 0) {
+          result.erase(result.begin());
+        }
+        return result;
+      }, {"genDPairClosestTHINjetIdx"})
+      .Define("maxTHINjetClosestToGenDPairIdx", "THINjetClosestToGenDPairIdx.size() ? THINjetClosestToGenDPairIdx.back() : -1")
+      .Define("nTHINjetClosestToGenDPair", "THINjetClosestToGenDPairIdx.size()")
+      ;
+      aDfGen[iLepFlav] = aDfGen[iLepFlav]
+      .Define("genDPairClosestFATjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+          return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
+            ROOT::VecOps::Map(vJetP4,
+              [ p4Gen ](const TypeLorentzVector p4Jet) {
+                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+              })
+            )) : -1;
+        });
+      }, {"genDPairP4", "FATjetP4"})
+      .Define("genDPairClosestFATjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+        ROOT::RVec<double> result(2, -1.);
+        if (vJetP4.size()) for (size_t i = 0; i < 2; ++i){
+          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+        }
+        return result;
+      }, {"genDPairClosestFATjetIdx", "genDPairP4", "FATjetP4"})
+      .Define("nGenDPairMatchedToFATjet", "ROOT::VecOps::Sum(genDPairClosestFATjetDeltaR >= 0 && genDPairClosestFATjetDeltaR < 0.4)")
+      .Define("FATjetClosestToGenDPairIdx", [](ROOT::RVec<Int_t> idx){
+        auto result = UniqueSort(idx);
+        if (result[0] < 0) {
+          result.erase(result.begin());
+        }
+        return result;
+      }, {"genDPairClosestFATjetIdx"})
+      .Define("maxFATjetClosestToGenDPairIdx", "FATjetClosestToGenDPairIdx.size() ? FATjetClosestToGenDPairIdx.back() : -1")
+      .Define("nFATjetClosestToGenDPair", "FATjetClosestToGenDPairIdx.size()")
+      ;
+      for (const std::string &&name: {
+        "genDClosestTHINjetIdx", "genDClosestTHINjetDeltaR", "THINjetClosestToGenDIdx", "maxTHINjetClosestToGenDIdx", "nTHINjetClosestToGenD",
+        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
+      }) {
+        avNameColGen[iLepFlav].emplace_back(name);
+        aavNameColAllMatched[iLepFlav][0].emplace_back(name);
+      }
+      for (const std::string &&name: {
+        "genDPairClosestFATjetIdx", "genDPairClosestFATjetDeltaR", "FATjetClosestToGenDPairIdx", "maxFATjetClosestToGenDPairIdx", "nFATjetClosestToGenDPair",
+      }) {
+        avNameColGen[iLepFlav].emplace_back(name);
+        aavNameColAllMatched[iLepFlav][1].emplace_back(name);
+      }
+      for (const std::string &&name: {
+        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
+      }) {
+        avNameColGen[iLepFlav].emplace_back(name);
+        aavNameColAllMatched[iLepFlav][2].emplace_back(name);
+      }
+    }
     // Lazily register histogram action for the Gen stages
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       sort_uniquely(avNameColGen[iLepFlav]);
@@ -1373,97 +1480,6 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     aavNameColHasJet[iLepFlav][1].emplace_back("FATjetFirst2MTTwoSD");
   }
 
-  // Do the matching
-  if (isSignal) {
-    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      aaDfHasJet[iLepFlav][0] = aaDfHasJet[iLepFlav][0]
-      .Define("genDClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
-        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
-          return ROOT::VecOps::ArgMin(
-            ROOT::VecOps::Map(vJetP4,
-              [ p4Gen ](const TypeLorentzVector p4Jet) {
-                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
-              })
-            );
-        });
-      }, {"genDP4", "THINjetP4"})
-      .Define("genDClosestTHINjetDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
-        ROOT::RVec<double> result(4, -1.);
-        for (size_t i = 0; i < 4; ++i){
-          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
-        }
-        return result;
-      }, {"genDClosestTHINjetIdx", "genDP4", "THINjetP4"})
-      .Define("nGenDMatchedToTHINjet", "ROOT::VecOps::Sum(genDClosestTHINjetDeltaR < 0.4)")
-      .Define("THINjetClosestToGenDIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDClosestTHINjetIdx"})
-      .Define("maxTHINjetClosestToGenDIdx", "THINjetClosestToGenDIdx.back()")
-      .Define("nTHINjetClosestToGenD", "THINjetClosestToGenDIdx.size()")
-      .Define("genDPairClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
-        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
-          return ROOT::VecOps::ArgMin(
-            ROOT::VecOps::Map(vJetP4,
-              [ p4Gen ](const TypeLorentzVector p4Jet) {
-                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
-              })
-            );
-        });
-      }, {"genDPairP4", "THINjetP4"})
-      .Define("genDPairClosestTHINjetDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
-        ROOT::RVec<double> result(2, -1.);
-        for (size_t i = 0; i < 2; ++i){
-          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
-        }
-        return result;
-      }, {"genDPairClosestTHINjetIdx", "genDPairP4", "THINjetP4"})
-      .Define("nGenDPairMatchedToTHINjet", "ROOT::VecOps::Sum(genDPairClosestTHINjetDeltaR < 0.4)")
-      .Define("THINjetClosestToGenDPairIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDPairClosestTHINjetIdx"})
-      .Define("maxTHINjetClosestToGenDPairIdx", "THINjetClosestToGenDPairIdx.back()")
-      .Define("nTHINjetClosestToGenDPair", "THINjetClosestToGenDPairIdx.size()")
-      ;
-      aaDfHasJet[iLepFlav][1] = aaDfHasJet[iLepFlav][1]
-      .Define("genDPairClosestFATjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
-        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
-          return ROOT::VecOps::ArgMin(
-            ROOT::VecOps::Map(vJetP4,
-              [ p4Gen ](const TypeLorentzVector p4Jet) {
-                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
-              })
-            );
-        });
-      }, {"genDPairP4", "FATjetP4"})
-      .Define("genDPairClosestFATjetDeltaR", [](ROOT::RVec<size_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
-        ROOT::RVec<double> result(2, -1.);
-        for (size_t i = 0; i < 2; ++i){
-          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
-        }
-        return result;
-      }, {"genDPairClosestFATjetIdx", "genDPairP4", "FATjetP4"})
-      .Define("nGenDPairMatchedToFATjet", "ROOT::VecOps::Sum(genDPairClosestFATjetDeltaR < 0.4)")
-      .Define("FATjetClosestToGenDPairIdx", [](ROOT::RVec<size_t> idx){return UniqueSort(idx);}, {"genDPairClosestFATjetIdx"})
-      .Define("maxFATjetClosestToGenDPairIdx", "FATjetClosestToGenDPairIdx.back()")
-      .Define("nFATjetClosestToGenDPair", "FATjetClosestToGenDPairIdx.size()")
-      ;
-      for (const std::string &&name: {
-        "genDClosestTHINjetIdx", "genDClosestTHINjetDeltaR", "THINjetClosestToGenDIdx", "maxTHINjetClosestToGenDIdx", "nTHINjetClosestToGenD",
-        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
-      }) {
-        aavNameColHasJet[iLepFlav][0].emplace_back(name);
-        aavNameColAllMatched[iLepFlav][0].emplace_back(name);
-      }
-      for (const std::string &&name: {
-        "genDPairClosestFATjetIdx", "genDPairClosestFATjetDeltaR", "FATjetClosestToGenDPairIdx", "maxFATjetClosestToGenDPairIdx", "nFATjetClosestToGenDPair",
-      }) {
-        aavNameColHasJet[iLepFlav][1].emplace_back(name);
-        aavNameColAllMatched[iLepFlav][1].emplace_back(name);
-      }
-      for (const std::string &&name: {
-        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
-      }) {
-        aavNameColHasJet[iLepFlav][2].emplace_back(name);
-        aavNameColAllMatched[iLepFlav][2].emplace_back(name);
-      }
-    }
-  }
   // Lazily register histogram action for the HasJet stages
   for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
     for (size_t iAK = 0; iAK < 2; ++iAK) {
