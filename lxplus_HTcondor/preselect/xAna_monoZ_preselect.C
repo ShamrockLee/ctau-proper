@@ -240,6 +240,12 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
     alignment = 0.;
     if (nameColumn == "mcWeight") {
       binDensityOrder = 2;
+    } else if (tstrNameColumnStripped.EndsWith("LogDiff")) {
+      binDensityOrder = 1;
+      isLowerAssigned = true;
+      lowerLimitBins = -60;
+      isUpperAssigned = true;
+      upperLimitBins = 60;
     } else if (tstrNameColumnStripped.EndsWith("Pt")) {
       isLowerAssigned = true;
       lowerLimitBins = 0;
@@ -1013,6 +1019,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     dfGenUnion = dfGenUnion
     .Define("genDPairDeltaR", "ROOT::VecOps::DeltaR(ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}))")
     .Define("genDPairsDeltaR", "TMath::Sqrt((genDPairEta[0] - genDPairEta[2]) * (genDPairEta[0] - genDPairEta[2]) + (genDPairPhi[0] - genDPairPhi[2]) * (genDPairPhi[0] - genDPairPhi[2]))")
+    .Define("genX1EDPairELogDiff", "ROOT::VecOps::log(genX1E) - ROOT::VecOps::log(genDPairE)")
     ;
     for (size_t jLepFlav = 0; jLepFlav < 2; ++jLepFlav) {
       dfGenUnion = dfGenUnion
@@ -1040,7 +1047,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         vNameColGenUnion.emplace_back(pref + suf);
       }
     }
-    for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR"}) {
+    for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR", "genX1EDPairELogDiff"}) {
       vNameColGenUnion.emplace_back(nameCol);
     }
     // Do the matching
