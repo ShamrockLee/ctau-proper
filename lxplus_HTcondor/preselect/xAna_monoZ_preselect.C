@@ -596,7 +596,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   const std::array<std::string, 2> aPrefAKShort{"THIN", "FAT"};
 
   ROOT::RDataFrame dfIn("tree/treeMaker", fileIn);
-  std::vector<std::string> vNameColOriginal = {};
+  std::vector<std::string> vNameColOriginal = {}, vNameColGenUnion = {};
   std::array<std::vector<std::string>, 2> avNameColGen, avNameColHasLPair, avNameColHasVtx, avNameColNoTau, avNameColLPairedPassPt, avNameColZMassCutted, avNameColNoExtraL, avNameColMissedOutFATjet;
   for (auto pav: {&avNameColGen, &avNameColHasLPair, &avNameColHasVtx, &avNameColNoTau, &avNameColLPairedPassPt, &avNameColZMassCutted, &avNameColNoExtraL, &avNameColMissedOutFATjet}) {
     for (auto &v: *pav) {
@@ -618,7 +618,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     }
   }
 
-  std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal = {};
+  std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal = {}, vHistViewGenUnion = {};
   std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen, avHistViewHasLPair, avHistViewHasVtx, avHistViewNoTau, avHistViewLPairedPassPt, avHistViewZMassCutted, avHistViewNoExtraL, avHistViewMissedOutFATjet;
   for (auto pav: {&avHistViewGen, &avHistViewHasLPair, &avHistViewHasVtx, &avHistViewNoTau, &avHistViewLPairedPassPt, &avHistViewZMassCutted, &avHistViewNoExtraL, &avHistViewMissedOutFATjet}) {
     for (auto &v: *pav) {
@@ -976,65 +976,201 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       vHistViewOriginal.emplace_back(GetHistFromColumn(dfOriginal, nameCol, "mcWeightSgn"));
     }
   }
+  // Begin the GenUnion stage in case the input dataset is MC Signal
+  ROOT::RDF::RNode dfGenUnion = dfOriginal;
+  if (isSignal) {
+    dfGenUnion = dfGenUnion
+    .Define("genX1Idx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+      ROOT::RVec<Int_t> genX1Idx(2, -1);
+      for (int i = 0; i < nGenPar; ++i) {
+        if (TMath::Abs(genParId[i]) == pdgX1 && TMath::Abs(genMomParId[i]) == pdgX2) {
+          genX1Idx[(genParId[i] < 0)] = i;
+        }
+      }
+      return genX1Idx;
+    }, {"nGenPar", "genParId", "genMomParId"})
+    .Define("genX1P4", "ROOT::VecOps::Take(genParP4, genX1Idx)")
+    .Define("genX1PairP4", "genX1P4[0] + genX1P4[1]")
+    .Define("genDIdx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+      ROOT::RVec<Int_t> genDIdx(4, -1);
+      for (int i = 0; i < nGenPar; ++i) {
+        if (TMath::Abs(genParId[i]) == pdgDown && TMath::Abs(genMomParId[i]) == pdgX2) {
+          genDIdx[((genMomParId[i] < 0) << 1) + (genParId[i] < 0)] = i;
+        }
+      }
+      return genDIdx;
+    }, {"nGenPar", "genParId", "genMomParId"})
+    .Define("genDP4", "ROOT::VecOps::Take(genParP4, genDIdx)")
+    .Define("genDPairP4", "ROOT::VecOps::Take(genDP4, {0, 2}) + ROOT::VecOps::Take(genDP4, {1, 3})")
+    ;
+    DefineP4Components1D(dfGenUnion, "genX1");
+    for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et", "M"}) {
+      dfGenUnion = dfGenUnion
+      .Define("genX1Pair" + suf, "genX1PairP4." + suf + "()");
+    }
+    DefineP4Components1D(dfGenUnion, "genD");
+    DefineP4Components1D(dfGenUnion, "genDPair");
+    dfGenUnion = dfGenUnion
+    .Define("genDPairDeltaR", "ROOT::VecOps::DeltaR(ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}))")
+    .Define("genDPairsDeltaR", "TMath::Sqrt((genDPairEta[0] - genDPairEta[2]) * (genDPairEta[0] - genDPairEta[2]) + (genDPairPhi[0] - genDPairPhi[2]) * (genDPairPhi[0] - genDPairPhi[2]))")
+    ;
+    for (size_t jLepFlav = 0; jLepFlav < 2; ++jLepFlav) {
+      dfGenUnion = dfGenUnion
+      .Define("gen" + aPrefLepFlav[jLepFlav] + "Idx",
+      [jLepFlav, pdgElectron, pdgMuon](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+        ROOT::RVec<Int_t> genLIdx(2, -1);
+        const Int_t pdgLep = jLepFlav ? pdgMuon : pdgElectron;
+        for (int i = 0; i < nGenPar; ++i) {
+          if (TMath::Abs(genParId[i]) == pdgLep && TMath::Abs(genMomParId[i]) == pdgZ) {
+            genLIdx[genParId[i] < 0] = i;
+          }
+        }
+        return genLIdx;
+      }, {"nGenPar", "genParId", "genMomParId"});
+    }
+    dfGenUnion = dfGenUnion
+    .Define("genLeptonFlavorId",
+        "ROOT::RVec<Bool_t>{"
+        "    ROOT::VecOps::All(gen" + aPrefLepFlav[0] + "Idx != -1),"
+        "    ROOT::VecOps::All(gen" + aPrefLepFlav[1] + "Idx != -1),"
+        "}");
+    // vNameColGenUnion.emplace_back("genDIdx");
+    for (const std::string pref: {"genX1", "genX1Pair", "genD", "genDPair"}) {
+      for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et"}) {
+        vNameColGenUnion.emplace_back(pref + suf);
+      }
+    }
+    for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR"}) {
+      vNameColGenUnion.emplace_back(nameCol);
+    }
+    // Do the matching
+    dfGenUnion = dfGenUnion
+    // THINjet
+    .Define("genDClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+      return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+        return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
+          ROOT::VecOps::Map(vJetP4,
+            [ p4Gen ](const TypeLorentzVector p4Jet) {
+              return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+            })
+          )) : -1;
+      });
+    }, {"genDP4", "THINjetP4"})
+    .Define("genDClosestTHINjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+      ROOT::RVec<double> result(4, -1.);
+      if (vJetP4.size()) for (size_t i = 0; i < 4; ++i){
+        result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+      }
+      return result;
+    }, {"genDClosestTHINjetIdx", "genDP4", "THINjetP4"})
+    .Define("nGenDMatchedToTHINjet", "ROOT::VecOps::Sum(genDClosestTHINjetDeltaR < 0.4)")
+    .Define("THINjetClosestToGenDIdx", [](ROOT::RVec<Int_t> idx){
+      auto result = UniqueSort(idx);
+      if (result[0] < 0) {
+        result.erase(result.begin());
+      }
+      return result;
+    }, {"genDClosestTHINjetIdx"})
+    .Define("maxTHINjetClosestToGenDIdx", "THINjetClosestToGenDIdx.size() ? THINjetClosestToGenDIdx.back() : -1")
+    .Define("nTHINjetClosestToGenD", "THINjetClosestToGenDIdx.size()")
+    .Define("genDPairClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+      return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+        return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
+          ROOT::VecOps::Map(vJetP4,
+            [ p4Gen ](const TypeLorentzVector p4Jet) {
+              return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+            })
+          )) : -1;
+      });
+    }, {"genDPairP4", "THINjetP4"})
+    .Define("genDPairClosestTHINjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+      ROOT::RVec<double> result(2, -1.);
+      if (vJetP4.size()) for (size_t i = 0; i < 2; ++i){
+        result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+      }
+      return result;
+    }, {"genDPairClosestTHINjetIdx", "genDPairP4", "THINjetP4"})
+    .Define("nGenDPairMatchedToTHINjet", "ROOT::VecOps::Sum(genDPairClosestTHINjetDeltaR < 0.4)")
+    .Define("THINjetClosestToGenDPairIdx", [](ROOT::RVec<Int_t> idx){
+      auto result = UniqueSort(idx);
+      if (result[0] < 0) {
+        result.erase(result.begin());
+      }
+      return result;
+    }, {"genDPairClosestTHINjetIdx"})
+    .Define("maxTHINjetClosestToGenDPairIdx", "THINjetClosestToGenDPairIdx.size() ? THINjetClosestToGenDPairIdx.back() : -1")
+    .Define("nTHINjetClosestToGenDPair", "THINjetClosestToGenDPairIdx.size()")
+    // FATjet
+    .Define("genDPairClosestFATjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
+      return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
+        return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
+          ROOT::VecOps::Map(vJetP4,
+            [ p4Gen ](const TypeLorentzVector p4Jet) {
+              return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
+            })
+          )) : -1;
+      });
+    }, {"genDPairP4", "FATjetP4"})
+    .Define("genDPairClosestFATjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
+      ROOT::RVec<double> result(2, -1.);
+      if (vJetP4.size()) for (size_t i = 0; i < 2; ++i){
+        result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
+      }
+      return result;
+    }, {"genDPairClosestFATjetIdx", "genDPairP4", "FATjetP4"})
+    .Define("nGenDPairMatchedToFATjet", "ROOT::VecOps::Sum(genDPairClosestFATjetDeltaR >= 0 && genDPairClosestFATjetDeltaR < 0.4)")
+    .Define("FATjetClosestToGenDPairIdx", [](ROOT::RVec<Int_t> idx){
+      auto result = UniqueSort(idx);
+      if (result[0] < 0) {
+        result.erase(result.begin());
+      }
+      return result;
+    }, {"genDPairClosestFATjetIdx"})
+    .Define("maxFATjetClosestToGenDPairIdx", "FATjetClosestToGenDPairIdx.size() ? FATjetClosestToGenDPairIdx.back() : -1")
+    .Define("nFATjetClosestToGenDPair", "FATjetClosestToGenDPairIdx.size()")
+    ;
+    for (const std::string &&name: {
+      "genDClosestTHINjetIdx", "genDClosestTHINjetDeltaR", "THINjetClosestToGenDIdx", "maxTHINjetClosestToGenDIdx", "nTHINjetClosestToGenD",
+      "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
+      "nGenDMatchedToTHINjet",
+    }) {
+      vNameColGenUnion.emplace_back(name);
+      for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) aavNameColAllMatched[iLepFlav][0].emplace_back(name);
+    }
+    for (const std::string &&name: {
+      "genDPairClosestFATjetIdx", "genDPairClosestFATjetDeltaR", "FATjetClosestToGenDPairIdx", "maxFATjetClosestToGenDPairIdx", "nFATjetClosestToGenDPair",
+      "nGenDPairMatchedToFATjet",
+    }) {
+      vNameColGenUnion.emplace_back(name);
+      for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) aavNameColAllMatched[iLepFlav][1].emplace_back(name);
+    }
+    for (const std::string &&name: {
+      "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
+      "nGenDPairMatchedToTHINjet"
+    }) {
+      vNameColGenUnion.emplace_back(name);
+      for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) aavNameColAllMatched[iLepFlav][2].emplace_back(name);
+    }
+    // Lazily register histogram action for the Original stage
+    {
+      sort_uniquely(vNameColGenUnion);
+      const size_t nCol = vNameColGenUnion.size();
+      vHistViewGenUnion.clear();
+      vHistViewGenUnion.reserve(nCol + 2);
+      vHistViewGenUnion.emplace_back(GetHistFromColumn(dfGenUnion, "mcWeight"));
+      vHistViewGenUnion.emplace_back(GetHistFromColumn(dfGenUnion, "mcWeightSgn"));
+      for (const std::string &nameCol: vNameColGenUnion) {
+        vHistViewGenUnion.emplace_back(GetHistFromColumn(dfGenUnion, nameCol, "mcWeightSgn"));
+      }
+    }
+  }
   // Begin the Gen stages in case the input dataset is MC Signal
-  std::array<ROOT::RDF::RNode, 2> aDfGen {dfOriginal, dfOriginal};
+  std::array<ROOT::RDF::RNode, 2> aDfGen {dfGenUnion, dfGenUnion};
   if (isSignal) {
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      for (size_t jLepFlav = 0; jLepFlav < 2; ++jLepFlav) {
-        aDfGen[iLepFlav] = aDfGen[iLepFlav]
-        .Define("gen" + aPrefLepFlav[jLepFlav] + "Idx",
-        [jLepFlav, pdgElectron, pdgMuon](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
-          ROOT::RVec<Int_t> genLIdx(2, -1);
-          const Int_t pdgLep = jLepFlav ? pdgMuon : pdgElectron;
-          for (int i = 0; i < nGenPar; ++i) {
-            if (TMath::Abs(genParId[i]) == pdgLep && TMath::Abs(genMomParId[i]) == pdgZ) {
-              genLIdx[genParId[i] < 0] = i;
-            }
-          }
-          return genLIdx;
-        }, {"nGenPar", "genParId", "genMomParId"});
-      }
-      aDfGen[iLepFlav] = aDfGen[iLepFlav]
-      .Define("genLeptonFlavorId",
-          "ROOT::RVec<Bool_t>{"
-          "    ROOT::VecOps::All(gen" + aPrefLepFlav[0] + "Idx != -1),"
-          "    ROOT::VecOps::All(gen" + aPrefLepFlav[1] + "Idx != -1),"
-          "}");
       aDfGen[iLepFlav] = aDfGen[iLepFlav]
       .Filter("genLeptonFlavorId[" + std::to_string(iLepFlav) + "]");
       aDfGen[iLepFlav] = aDfGen[iLepFlav]
-      .Define("genX1Idx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
-        ROOT::RVec<Int_t> genX1Idx(4, -1);
-        for (int i = 0; i < nGenPar; ++i) {
-          if (TMath::Abs(genParId[i]) == pdgX1 && TMath::Abs(genMomParId[i]) == pdgX2) {
-            genX1Idx[(genParId[i] < 0)] = i;
-          }
-        }
-        return genX1Idx;
-      }, {"nGenPar", "genParId", "genMomParId"})
-      .Define("genX1P4", "ROOT::VecOps::Take(genParP4, genX1Idx)")
-      .Define("genX1PairP4", "genX1P4[0] + genX1P4[1]")
-      .Define("genDIdx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
-        ROOT::RVec<Int_t> genDIdx(4, -1);
-        for (int i = 0; i < nGenPar; ++i) {
-          if (TMath::Abs(genParId[i]) == pdgDown && TMath::Abs(genMomParId[i]) == pdgX2) {
-            genDIdx[((genMomParId[i] < 0) << 1) + (genParId[i] < 0)] = i;
-          }
-        }
-        return genDIdx;
-      }, {"nGenPar", "genParId", "genMomParId"})
-      .Define("genDP4", "ROOT::VecOps::Take(genParP4, genDIdx)")
-      .Define("genDPairP4", "ROOT::VecOps::Take(genDP4, {0, 2}) + ROOT::VecOps::Take(genDP4, {1, 3})");
-      DefineP4Components1D(aDfGen[iLepFlav], "genX1");
-      for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et", "M"}) {
-        aDfGen[iLepFlav] = aDfGen[iLepFlav]
-        .Define("genX1Pair" + suf, "genX1PairP4." + suf + "()");
-      }
-      DefineP4Components1D(aDfGen[iLepFlav], "genD");
-      DefineP4Components1D(aDfGen[iLepFlav], "genDPair");
-      aDfGen[iLepFlav] = aDfGen[iLepFlav]
-      .Define("genDPairDeltaR", "ROOT::VecOps::DeltaR(ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}))")
-      .Define("genDPairsDeltaR", "TMath::Sqrt((genDPairEta[0] - genDPairEta[2]) * (genDPairEta[0] - genDPairEta[2]) + (genDPairPhi[0] - genDPairPhi[2]) * (genDPairPhi[0] - genDPairPhi[2]))")
       .Define("genMTTwo", [](const ROOT::RVec<TypeLorentzVector> genDP4, const Double_t ptMet, const Double_t phiMet)->Double_t{
         return GetMTTwo(genDP4[0] + genDP4[1], genDP4[2] + genDP4[3], ptMet, phiMet);
       }, {"genDP4", "genX1PairPt", "genX1PairPhi"})
@@ -1042,137 +1178,14 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         return GetMTTwo(genDP4[0] + genDP4[1], genDP4[2] + genDP4[3], ptMet, phiMet);
       }, {"genDP4", "pfMetCorrPt", "pfMetCorrPhi"});
       avNameColGen[iLepFlav] = vNameColOriginal;
+      avNameColGen[iLepFlav].insert(avNameColGen[iLepFlav].end(), vNameColGenUnion.cbegin(), vNameColGenUnion.cend());
       // avNameColGen[iLepFlav].emplace_back("gen" + aPrefLepFlav[iLepFlav] + "Idx");
-      // avNameColGen[iLepFlav].emplace_back("genDIdx");
-      for (const std::string pref: {"genX1", "genX1Pair", "genD", "genDPair"}) {
-        for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et"}) {
-          avNameColGen[iLepFlav].emplace_back(pref + suf);
-          // for (size_t iAK = 0; iAK < 2; ++iAK) {
-          //   aavNameColHasJet[iLepFlav][iAK].emplace_back(pref + suf);
-          //   aavNameColAllMatched[iLepFlav][iAK].emplace_back(pref + suf);
-          // }
-        }
-      }
-      for (const std::string nameCol: {"genDPairDeltaR", "genDPairsDeltaR"}) {
-        avNameColGen[iLepFlav].emplace_back(nameCol);
-        // for (size_t iAK = 0; iAK < 2; ++iAK) {
-        //   aavNameColHasJet[iLepFlav][iAK].emplace_back(nameCol);
-        //   aavNameColAllMatched[iLepFlav][iAK].emplace_back(nameCol);
-        // }
-      }
       // Inject all the column names from the Gen phase into these phases
       for (size_t iAK = 0; iAK < 2; ++iAK) {
         aavNameColHasJet[iLepFlav][iAK].insert(aavNameColHasJet[iLepFlav][iAK].end(), avNameColGen[iLepFlav].begin(), avNameColGen[iLepFlav].end());
       }
       for (size_t iAK = 0; iAK < 3; ++iAK) {
         aavNameColAllMatched[iLepFlav][iAK].insert(aavNameColAllMatched[iLepFlav][iAK].end(), avNameColGen[iLepFlav].begin(), avNameColGen[iLepFlav].end());
-      }
-    }
-    // Do the matching
-    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      aDfGen[iLepFlav] = aDfGen[iLepFlav]
-      .Define("genDClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
-        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
-          return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
-            ROOT::VecOps::Map(vJetP4,
-              [ p4Gen ](const TypeLorentzVector p4Jet) {
-                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
-              })
-            )) : -1;
-        });
-      }, {"genDP4", "THINjetP4"})
-      .Define("genDClosestTHINjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
-        ROOT::RVec<double> result(4, -1.);
-        if (vJetP4.size()) for (size_t i = 0; i < 4; ++i){
-          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
-        }
-        return result;
-      }, {"genDClosestTHINjetIdx", "genDP4", "THINjetP4"})
-      .Define("nGenDMatchedToTHINjet", "ROOT::VecOps::Sum(genDClosestTHINjetDeltaR < 0.4)")
-      .Define("THINjetClosestToGenDIdx", [](ROOT::RVec<Int_t> idx){
-        auto result = UniqueSort(idx);
-        if (result[0] < 0) {
-          result.erase(result.begin());
-        }
-        return result;
-      }, {"genDClosestTHINjetIdx"})
-      .Define("maxTHINjetClosestToGenDIdx", "THINjetClosestToGenDIdx.size() ? THINjetClosestToGenDIdx.back() : -1")
-      .Define("nTHINjetClosestToGenD", "THINjetClosestToGenDIdx.size()")
-      .Define("genDPairClosestTHINjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
-        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
-          return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
-            ROOT::VecOps::Map(vJetP4,
-              [ p4Gen ](const TypeLorentzVector p4Jet) {
-                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
-              })
-            )) : -1;
-        });
-      }, {"genDPairP4", "THINjetP4"})
-      .Define("genDPairClosestTHINjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
-        ROOT::RVec<double> result(2, -1.);
-        if (vJetP4.size()) for (size_t i = 0; i < 2; ++i){
-          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
-        }
-        return result;
-      }, {"genDPairClosestTHINjetIdx", "genDPairP4", "THINjetP4"})
-      .Define("nGenDPairMatchedToTHINjet", "ROOT::VecOps::Sum(genDPairClosestTHINjetDeltaR < 0.4)")
-      .Define("THINjetClosestToGenDPairIdx", [](ROOT::RVec<Int_t> idx){
-        auto result = UniqueSort(idx);
-        if (result[0] < 0) {
-          result.erase(result.begin());
-        }
-        return result;
-      }, {"genDPairClosestTHINjetIdx"})
-      .Define("maxTHINjetClosestToGenDPairIdx", "THINjetClosestToGenDPairIdx.size() ? THINjetClosestToGenDPairIdx.back() : -1")
-      .Define("nTHINjetClosestToGenDPair", "THINjetClosestToGenDPairIdx.size()")
-      ;
-      aDfGen[iLepFlav] = aDfGen[iLepFlav]
-      .Define("genDPairClosestFATjetIdx", [](const ROOT::RVec<TypeLorentzVector> vGenP4, const ROOT::RVec<TypeLorentzVector> vJetP4) {
-        return ROOT::VecOps::Map(vGenP4, [ vJetP4 ]( const TypeLorentzVector p4Gen ) {
-          return vJetP4.size() ? static_cast<Int_t>(ROOT::VecOps::ArgMin(
-            ROOT::VecOps::Map(vJetP4,
-              [ p4Gen ](const TypeLorentzVector p4Jet) {
-                return ROOT::Math::VectorUtil::DeltaR(p4Gen, p4Jet);
-              })
-            )) : -1;
-        });
-      }, {"genDPairP4", "FATjetP4"})
-      .Define("genDPairClosestFATjetDeltaR", [](ROOT::RVec<Int_t> vGenDJetIdx, ROOT::RVec<TypeLorentzVector> vGenDP4, ROOT::RVec<TypeLorentzVector> vJetP4) {
-        ROOT::RVec<double> result(2, -1.);
-        if (vJetP4.size()) for (size_t i = 0; i < 2; ++i){
-          result[i] = ROOT::Math::VectorUtil::DeltaR(vGenDP4[i], vJetP4[vGenDJetIdx[i]]);
-        }
-        return result;
-      }, {"genDPairClosestFATjetIdx", "genDPairP4", "FATjetP4"})
-      .Define("nGenDPairMatchedToFATjet", "ROOT::VecOps::Sum(genDPairClosestFATjetDeltaR >= 0 && genDPairClosestFATjetDeltaR < 0.4)")
-      .Define("FATjetClosestToGenDPairIdx", [](ROOT::RVec<Int_t> idx){
-        auto result = UniqueSort(idx);
-        if (result[0] < 0) {
-          result.erase(result.begin());
-        }
-        return result;
-      }, {"genDPairClosestFATjetIdx"})
-      .Define("maxFATjetClosestToGenDPairIdx", "FATjetClosestToGenDPairIdx.size() ? FATjetClosestToGenDPairIdx.back() : -1")
-      .Define("nFATjetClosestToGenDPair", "FATjetClosestToGenDPairIdx.size()")
-      ;
-      for (const std::string &&name: {
-        "genDClosestTHINjetIdx", "genDClosestTHINjetDeltaR", "THINjetClosestToGenDIdx", "maxTHINjetClosestToGenDIdx", "nTHINjetClosestToGenD",
-        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
-      }) {
-        avNameColGen[iLepFlav].emplace_back(name);
-        aavNameColAllMatched[iLepFlav][0].emplace_back(name);
-      }
-      for (const std::string &&name: {
-        "genDPairClosestFATjetIdx", "genDPairClosestFATjetDeltaR", "FATjetClosestToGenDPairIdx", "maxFATjetClosestToGenDPairIdx", "nFATjetClosestToGenDPair",
-      }) {
-        avNameColGen[iLepFlav].emplace_back(name);
-        aavNameColAllMatched[iLepFlav][1].emplace_back(name);
-      }
-      for (const std::string &&name: {
-        "genDPairClosestTHINjetIdx", "genDPairClosestTHINjetDeltaR", "THINjetClosestToGenDPairIdx", "maxTHINjetClosestToGenDPairIdx", "nTHINjetClosestToGenDPair",
-      }) {
-        avNameColGen[iLepFlav].emplace_back(name);
-        aavNameColAllMatched[iLepFlav][2].emplace_back(name);
       }
     }
     // Lazily register histogram action for the Gen stages
@@ -1494,25 +1507,6 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       }
     }
   }
-  if (isSignal) {
-    for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
-      aavHistViewHasJet[iLepFlav][0].emplace_back(GetHistFromColumnCustom(
-        aaDfHasJet[iLepFlav][0],
-        "nGenDMatchedToTHINjet", aaDfHasJet[iLepFlav][0].GetColumnType("nGenDMatchedToTHINjet"),
-        0, -0.5, true, 0, true, 5,
-        "nGenDMatchedToTHINjet", "mcWeightSgn"));
-      aavHistViewHasJet[iLepFlav][0].emplace_back(GetHistFromColumnCustom(
-        aaDfHasJet[iLepFlav][0],
-        "nGenDPairMatchedToTHINjet", aaDfHasJet[iLepFlav][0].GetColumnType("nGenDPairMatchedToTHINjet"),
-        0, -0.5, true, 0, true, 3,
-        "nGenDPairMatchedToTHINjet", "mcWeightSgn"));
-      aavHistViewHasJet[iLepFlav][1].emplace_back(GetHistFromColumnCustom(
-        aaDfHasJet[iLepFlav][1],
-        "nGenDPairMatchedToFATjet", aaDfHasJet[iLepFlav][1].GetColumnType("nGenDPairMatchedToFATjet"),
-        0, -0.5, true, 0, true, 3,
-        "nGenDPairMatchedToFATjet", "mcWeightSgn"));
-    }
-  }
 
   // // Begin the LPairPassPt stage
   // std::array<std::array<ROOT::RDF::RNode, 2>, 2> aaDfLPairPassPt = aaDfHasJet;
@@ -1616,6 +1610,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   tfOut->cd("/");
   tfOut->mkdir("Original", "Unfiltered entries");
   if (isSignal) {
+    tfOut->mkdir("GenUnion", "Unfiltered entries with GEN-level variables");
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       tfOut->mkdir(("Gen" + aPrefLepFlav[iLepFlav]).c_str(), ("GEN-level " + aPrefLepFlavLower[iLepFlav] + " events").c_str());
     }
@@ -1685,6 +1680,10 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     histView->Write();
   }
   if (isSignal) {
+    tfOut->cd("GenUnion");
+    for (auto &&histView: vHistViewGenUnion) {
+      histView->Write();
+    }
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       tfOut->cd("/");
       tfOut->cd(("Gen" + aPrefLepFlav[iLepFlav]).c_str());
