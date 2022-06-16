@@ -1158,7 +1158,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       vNameColGenUnion.emplace_back(name);
       for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) aavNameColAllMatched[iLepFlav][2].emplace_back(name);
     }
-    // Lazily register histogram action for the Original stage
+    // Lazily register histogram action for the GenUnion stage
     {
       sort_uniquely(vNameColGenUnion);
       const size_t nCol = vNameColGenUnion.size();
