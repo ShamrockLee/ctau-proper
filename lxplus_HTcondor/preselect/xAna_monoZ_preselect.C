@@ -625,8 +625,15 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   }
 
   std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal = {}, vHistViewGenUnion = {};
+  std::vector<ROOT::RDF::RResultPtr<TH2D>> vHistViewGenUnion2D = {};
   std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen, avHistViewHasLPair, avHistViewHasVtx, avHistViewNoTau, avHistViewLPairedPassPt, avHistViewZMassCutted, avHistViewNoExtraL, avHistViewMissedOutFATjet;
+  std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen2D;
   for (auto pav: {&avHistViewGen, &avHistViewHasLPair, &avHistViewHasVtx, &avHistViewNoTau, &avHistViewLPairedPassPt, &avHistViewZMassCutted, &avHistViewNoExtraL, &avHistViewMissedOutFATjet}) {
+    for (auto &v: *pav) {
+      v.clear();
+    }
+  }
+  for (auto pav: {&avHistViewGen2D}) {
     for (auto &v: *pav) {
       v.clear();
     }
@@ -1169,6 +1176,9 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       for (const std::string &nameCol: vNameColGenUnion) {
         vHistViewGenUnion.emplace_back(GetHistFromColumn(dfGenUnion, nameCol, "mcWeightSgn"));
       }
+      vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairPt", "", 16, 0, 1.6, 100, 0, 500), "genDPairDeltaR", "genDPairPt", "mcWeightSgn"));
+      vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairEta", "", 16, 0, 1.6, 32, -1.6, 1.6), "genDPairDeltaR", "genDPairEta", "mcWeightSgn"));
+      vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenX1Pt", "", 16, 0, 1.6, 100, 0, 500), "genDPairDeltaR", "genX1Pt", "mcWeightSgn"));
     }
   }
   // Begin the Gen stages in case the input dataset is MC Signal
@@ -1691,10 +1701,16 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     for (auto &&histView: vHistViewGenUnion) {
       histView->Write();
     }
+    for (auto &&histView: vHistViewGenUnion2D) {
+      histView->Write();
+    }
     for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) {
       tfOut->cd("/");
       tfOut->cd(("Gen" + aPrefLepFlav[iLepFlav]).c_str());
       for (auto &&histView: avHistViewGen[iLepFlav]) {
+        histView->Write();
+      }
+      for (auto &&histView: avHistViewGen2D[iLepFlav]) {
         histView->Write();
       }
     }
