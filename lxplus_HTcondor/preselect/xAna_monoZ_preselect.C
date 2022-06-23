@@ -627,7 +627,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   std::vector<ROOT::RDF::RResultPtr<TH1D>> vHistViewOriginal = {}, vHistViewGenUnion = {};
   std::vector<ROOT::RDF::RResultPtr<TH2D>> vHistViewGenUnion2D = {};
   std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen, avHistViewHasLPair, avHistViewHasVtx, avHistViewNoTau, avHistViewLPairedPassPt, avHistViewZMassCutted, avHistViewNoExtraL, avHistViewMissedOutFATjet;
-  std::array<std::vector<ROOT::RDF::RResultPtr<TH1D>>, 2> avHistViewGen2D;
+  std::array<std::vector<ROOT::RDF::RResultPtr<TH2D>>, 2> avHistViewGen2D;
   for (auto pav: {&avHistViewGen, &avHistViewHasLPair, &avHistViewHasVtx, &avHistViewNoTau, &avHistViewLPairedPassPt, &avHistViewZMassCutted, &avHistViewNoExtraL, &avHistViewMissedOutFATjet}) {
     for (auto &v: *pav) {
       v.clear();
