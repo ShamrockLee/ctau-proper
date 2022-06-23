@@ -177,8 +177,11 @@
         g++ $(root-config "''${ROOTCONFIG_ARGS[@]}") "''${CC_ARGS[@]}"
       '';
       ana = pkgs.callPackage ./ana.nix (rec {
-        subPathMacro = "xAna_monoZ_preselect.C";
-        subPaths = [ subPathMacro "skeeto_optparse.h" ];
+        macroName = "xAna_monoZ_preselect.C";
+        srcs = [
+          ./xAna_monoZ_preselect.C
+          ./skeeto_optparse.h
+        ];
       });
       mkSingularityBuildscript = package: pkgs.callPackage ./make-singularity-buildscript.nix {
         inherit package;
