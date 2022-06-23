@@ -95,8 +95,7 @@
             {
               inherit (
                 final.callPackage ./dependency-builders/singularity/packages.nix { }
-              ) singularity-legacy apptainer singularity-ce;
-              singularity = final.apptainer;
+              ) apptainer singularity;
               singularity-tools = final.callPackage ./dependency-builders/singularity-tools { };
             }
           )
@@ -110,10 +109,6 @@
                 # and paste it here
                 # after apptainer-source is updated
                 vendorSha256 = "sha256-u6iJScCAtLfHunUQyWYz1+xtDMZ51F7i+jnWcfn0KTw=";
-              }).overrideAttrs (oldAttrs: {
-                postPatch = (oldAttrs.postPatch or "") + ''
-                  echo "${apptainer-source.lastModifiedDate}" > VERSION
-                '';
               });
             }
           )

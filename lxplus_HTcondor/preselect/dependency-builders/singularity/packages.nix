@@ -1,54 +1,51 @@
 { lib
 , callPackage
-, fetchurl
+, fetchFromGitHub
 }:
 
 {
-  singularity-legacy = (callPackage ./template.nix rec {
-    pname = "singularity-legacy";
-    version = "3.8.5";
-    projectName = "singularity";
-
-    src = fetchurl {
-      url = "https://github.com/hpcng/singularity/releases/download/v${version}/singularity-${version}.tar.gz";
-      sha256 = "sha256-f/94tcB7XU0IJpvSZ6xemUOQ+TMyHlTv1rfIZoMVPOQ=";
-    };
-  }).overrideAttrs (oldAttrs: {
-    meta = oldAttrs.meta // (with lib; {
-      description = oldAttrs.meta.description + " (leagacy version before renaming)";
-      homepage = "https://singularity.lbl.gov";
-    });
-  });
-
-  apptainer = (callPackage ./template.nix rec {
+  apptainer = callPackage ./generic.nix rec {
     pname = "apptainer";
-    version = "1.0.0-rc.1";
+    version = "1.0.2";
     projectName = "apptainer";
 
-    src = fetchurl {
-      url = "https://github.com/apptainer/apptainer/releases/download/v${version}/apptainer-${version}.tar.gz";
-      sha256 = "1clb9vlw4mv6vd3yxyfvngrzj469qmfpwxih4vzx2q89l2wf4313";
+    src = fetchFromGitHub {
+      owner = "apptainer";
+      repo = "apptainer";
+      rev = "v${version}";
+      sha256 = "3yN2bDpgeOtCzFFhtPLf43wwzDNYxPCFnbgcL/1Mweg=";
     };
-  }).overrideAttrs (oldAttrs: {
-    meta = oldAttrs.meta // {
-      description = oldAttrs.meta.description + " (the new, renamed Singularity)";
-      homepage = "https://apptainer.org";
-    };
-  });
 
-  singularity-ce = (callPackage ./template.nix rec {
+    # Update by running
+    # nix-prefetch -E "{ sha256 }: ((import ./. { }).apptainer.override { vendorSha256 = sha256; }).go-modules"
+    # at the root directory of the Nixpkgs repository
+    vendorSha256 = "N0vbQToRCASKvNW/1bSLUXG2uwwg+0FO4lT3kG3ab04=";
+
+    # This would soon be false
+    # https://github.com/apptainer/apptainer/pull/495
+    defaultToSuid = true;
+
+    extraDescription = " (previously known as Singularity)";
+    extraMeta.homepage = "https://apptainer.org";
+  };
+
+  singularity = callPackage ./generic.nix rec {
     pname = "singularity-ce";
-    version = "3.9.5";
+    version = "3.9.8";
     projectName = "singularity";
 
-    src = fetchurl {
-      url = "https://github.com/sylabs/singularity/releases/download/v${version}/singularity-ce-${version}.tar.gz";
-      sha256 = "1sb0d9jbj66jd6z4garvb6w8g7azwdhp5zl9jslsy2hxqbm10bvz";
+    src = fetchFromGitHub {
+      owner = "sylabs";
+      repo = "singularity";
+      rev = "v${version}";
+      sha256 = "qjM+2JN0KJ8WrzNCCqeK6dyOoOnVMDin/BLzgjyWy50=";
     };
-  }).overrideAttrs (oldAttrs: {
-    meta = oldAttrs.meta // {
-      description = oldAttrs.meta.description + " (Sylabs's fork)";
-      homepage = "http://www.sylabs.io";
-    };
-  });
+
+    vendorSha256 = "LkmfDytRr/IeRsI6B9ypSCGAvAqBjK9VFDmICYJ6eco=";
+
+    defaultToSuid = true;
+
+    extraDescription = " (Sylabs Inc's fork of Singularity)";
+    extraMeta.homepage = "https://sylabs.io/";
+  };
 }
