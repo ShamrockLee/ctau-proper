@@ -20,11 +20,7 @@
   inputs.nix-portable-flake.inputs.flake-utils.follows = "flake-utils";
   inputs.nix-portable-flake.inputs.nix.follows = "nix-for-nix-portable";
   # Apptainer is the new name chosen by the Singularity community
-  # A symlink to the name singularity at $out/bin is preserved
-  inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
-  # This input is to follow the changes at
-  # https://github.com/apptainer/apptainer/pull/250
-  # inputs.apptainer-source.url = "github:ShamrockLee/apptainer/noroot";
+  inputs.apptainer-source.url = "github:apptainer/apptainer";
   inputs.apptainer-source.flake = false;
   # inputs.nix-prefetch-flake.url = "github:msteen/nix-prefetch";
   inputs.nix-prefetch-flake.url = "github:ShamrockLee/nix-prefetch/experimental-features";
@@ -94,7 +90,7 @@
           (final: prev:
             {
               inherit (
-                final.callPackage ./dependency-builders/singularity/packages.nix { }
+                final.callPackage ./dependency-builders/singularity/packages.nix {}
               ) apptainer singularity;
               singularity-tools = final.callPackage ./dependency-builders/singularity-tools { };
             }
@@ -108,8 +104,14 @@
                 # Run `nix run .#apptainer-prefetch-vendorsha256` to get the correct hash
                 # and paste it here
                 # after apptainer-source is updated
-                vendorSha256 = "sha256-u6iJScCAtLfHunUQyWYz1+xtDMZ51F7i+jnWcfn0KTw=";
+                vendorSha256 = "sha256-vmcagaO55JWFtUmnNAki4PwUtXjM5Z3lzG6bEYhGBRs=";
+                buildGoModule = final.buildGo117Module;
+                go = final.go_1_17;
               });
+              singularity = prev.singularity.override {
+                buildGoModule = final.buildGo117Module;
+                go = final.go_1_17;
+              };
             }
           )
         ];
@@ -182,7 +184,7 @@
         inherit package;
         singularity = pkgs.apptainer;
       };
-      ana-singularity-image = pkgs.singularity-tools.buildImage' {
+      ana-singularity-image = pkgs.singularity-tools.buildImageFromDef {
         name = ana.pname;
         contents = [ ana pkgs.parallel ];
         definitionOverrider = {
@@ -193,6 +195,7 @@
         executableFlags = [ "--verbose" ];
         diskSize = 4096;
         memSize = 2048;
+        singularity = pkgs.apptainer;
       };
       ana-singularity-buildscript = (pkgs.singularity-tools.buildImageFromDef {
         name = ana.pname;
@@ -203,7 +206,7 @@
           };
         };
         executableFlags = [ "--verbose" ];
-        buildImageFlags = [ "--unprivileged" ];
+        singularity = pkgs.apptainer;
       }).buildscriptPackage;
       apptainer-prefetch-vendorsha256 = (pkgs.writeShellScriptBin "apptainer-prefetch-vendorsha256" ''
         NIX_PATH="nixpkgs=${nixpkgs}" "${nix-prefetch}/bin/nix-prefetch" \

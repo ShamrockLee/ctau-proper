@@ -51,6 +51,9 @@ rec {
   '';
 
   buildImage =
+    let
+      defaultSingularity = singularity;
+    in
     { name
     , contents ? [ ]
     , diskSize ? 1024
@@ -59,11 +62,11 @@ rec {
     , runAsRoot ? null
     , executableFlags ? [ ]
     , buildImageFlags ? [ ]
-    , singularityPackage ? singularity
+    , singularity ? defaultSingularity
     }:
     let
       # May be "apptainer" instead of "singularity"
-      projectName = singularityPackage.projectName or "singularity";
+      projectName = singularity.projectName or "singularity";
       runAsRootFile = shellScript "run-as-root.sh" runAsRoot;
       runScriptFile = shellScript "run-script.sh" runScript;
       result = vmTools.runInLinuxVM (
@@ -120,10 +123,10 @@ rec {
             touch .${projectName}.d/env/94-appsbase.sh
 
             cd ..
-            mkdir -p /var/${projectName}/mnt/{container,final,overlay,session,source}
+            mkdir -p /var/lib/${projectName}/mnt/{container,final,overlay,session,source}
             echo "root:x:0:0:System administrator:/root:/bin/sh" > /etc/passwd
             echo > /etc/resolv.conf
-            TMPDIR=$(pwd -P) ${singularityPackage}/bin/singularity $executableFlags build $buildImageFlags $out ./img
+            TMPDIR=$(pwd -P) ${singularity}/bin/${projectName} $executableFlags build $buildImageFlags $out ./img
           '');
 
     in
@@ -136,17 +139,20 @@ rec {
     ;
 
   buildImageFromDef =
+    let
+      defaultSingularity = singularity;
+    in
     args@{ name
     , contents ? [ ]
     , definitionOverrider ? null
     , executableFlags ? [ ]
     , buildImageFlags ? [ ]
-    , singularityPackage ? singularity
+    , singularity ? defaultSingularity
     , ...
     }:
     let
       # May be "apptainer" instead of "singularity"
-      projectName = singularityPackage.projectName or "singularity";
+      projectName = singularity.projectName or "singularity";
       layerClosure = writeMultipleReferencesToFile (contents ++ [ bash coreutils ]);
       definition = if (args.definition or null != null) then args.definition else
       (
@@ -161,7 +167,7 @@ rec {
         setup = ''
           mkdir -p ''${SINGULARITY_ROOTFS}/${storeDir}
           for f in $(cat ${layerClosure}) ; do
-            cp -ar "$f" "''${SINGULARITY_ROOTFS}/${storeDir}"
+            cp -r "$f" "''${SINGULARITY_ROOTFS}/${storeDir}"
           done
           mkdir -p "''${SINGULARITY_ROOTFS}/bin"
           "${coreutils}/bin/ln" -s "${runtimeShell}" "''${SINGULARITY_ROOTFS}/bin/sh"
@@ -181,7 +187,7 @@ rec {
         fi
         pathSIF="$1"
         shift
-        ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularityPackage}/bin/singularity" ${toString executableFlags} build ${toString buildImageFlags} "$@" "$pathSIF" "${definitionFile}"
+        ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularity}/bin/${projectName}" ${toString executableFlags} build ${toString buildImageFlags} "$@" "$pathSIF" "${definitionFile}"
       '') // {
         meta.mainProgram = "build-image";
       };
@@ -192,15 +198,19 @@ rec {
         inherit singularity layerClosure definition definitionFile buildscriptPackage;
       };
     }) ''
-      ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularityPackage}/bin/singularity" $executableFlags build $buildImageFlags "''${buildImageFlagsArray[@]}" "$out" "${definitionFile}"
+      ${lib.toUpper projectName}ENV_PATH="$PATH" "${singularity}/bin/${projectName}" $executableFlags build $buildImageFlags "''${buildImageFlagsArray[@]}" "$out" "${definitionFile}"
     '');
 
   buildImage' =
+    let
+      defaultSingularity = singularity;
+    in
     args@{ name
     , diskSize ? 1024
     , memSize ? 512
     , passwdString ? "root:x:0:0:System administrator:/root:/bin/sh"
     , resolvString ? ""
+    , singularity ? defaultSingularity
     , ...
     }:
     vmTools.runInLinuxVM ((buildImageFromDef (removeAttrs args [ "diskSize" "passwdString" "resolvString" ] // {
@@ -213,7 +223,7 @@ rec {
       inherit memSize;
     })).overrideAttrs (oldAttrs: {
       buildCommand = ''
-        mkdir -p /var/${projectName}/mnt/{container,final,overlay,session,source}
+        mkdir -p /var/lib/${projectName}/mnt/{container,final,overlay,session,source}
         echo ${lib.escapeShellArg passwdString} > /etc/passwd
         echo ${lib.escapeShellArg resolvString} > /etc/resolv.conf
         rm -rf "$out"
