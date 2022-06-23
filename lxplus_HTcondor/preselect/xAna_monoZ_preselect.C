@@ -1826,9 +1826,9 @@ int main(int argc, char** argv) {
       case 'h':
         std::cout << "Description:\n"
         "xAna_monoZ_preselect [-v] [-j n] pathFileOut pathFileInGlobs\n"
-        "xAna_monoZ_preselect [-v] [-j n] (-m|--list) pathFileOut pathFileIn1 pathFileIn2 ...\n"
+        "xAna_monoZ_preselect [-v] [-j n] (-m|--multiple) pathFileOut pathFileIn1 pathFileIn2 ...\n"
         "  -h --help\tDisplay this help message.\n"
-        "  -m --multiple\tUse multiple input files.\n"
+        "  -m --multiple\tUse multiple input file arguments instead of an input file glob.\n"
         "  -v --debug\tRun with debug message and examinations.\n"
         "\tThis can be specified multiple times.\n"
         "  -j --threads\tSpecify the number of threads to use by EnableImplicitMT.\n"
