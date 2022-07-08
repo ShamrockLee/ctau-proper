@@ -984,24 +984,24 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   if (isSignal) {
     dfGenUnion = dfGenUnion
     .Define("genX1Idx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
-      ROOT::RVec<Int_t> genX1Idx(2, -1);
+      ROOT::RVec<Int_t> result(2, -1);
       for (int i = 0; i < nGenPar; ++i) {
         if (TMath::Abs(genParId[i]) == pdgX1 && TMath::Abs(genMomParId[i]) == pdgX2) {
-          genX1Idx[(genParId[i] < 0)] = i;
+          result[(genParId[i] < 0)] = i;
         }
       }
-      return genX1Idx;
+      return result;
     }, {"nGenPar", "genParId", "genMomParId"})
     .Define("genX1P4", "ROOT::VecOps::Take(genParP4, genX1Idx)")
     .Define("genX1PairP4", "genX1P4[0] + genX1P4[1]")
     .Define("genDIdx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
-      ROOT::RVec<Int_t> genDIdx(4, -1);
+      ROOT::RVec<Int_t> result(4, -1);
       for (int i = 0; i < nGenPar; ++i) {
         if (TMath::Abs(genParId[i]) == pdgDown && TMath::Abs(genMomParId[i]) == pdgX2) {
-          genDIdx[((genMomParId[i] < 0) << 1) + (genParId[i] < 0)] = i;
+          result[((genMomParId[i] < 0) << 1) + (genParId[i] < 0)] = i;
         }
       }
-      return genDIdx;
+      return result;
     }, {"nGenPar", "genParId", "genMomParId"})
     .Define("genDP4", "ROOT::VecOps::Take(genParP4, genDIdx)")
     .Define("genDPairP4", "ROOT::VecOps::Take(genDP4, {0, 2}) + ROOT::VecOps::Take(genDP4, {1, 3})")
