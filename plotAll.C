@@ -37,7 +37,10 @@ void plotAll(TDirectory *tdirIn, TString dirOut, const Bool_t plotSubdir, const 
     if (plotSubdir && obj->IsA()->InheritsFrom("TDirectory")) {
       plotAll(static_cast<TDirectory*>(obj), dirOut + seperatorPath + name, true, normalize, logy, optionDraw, funAdjustHist);
     }
-    if (obj->IsA()->InheritsFrom("TH1")) {
+    if (obj->IsA()->InheritsFrom("TH1")
+        && ! obj->IsA()->InheritsFrom("TH2")
+        && ! obj->IsA()->InheritsFrom("TH3")
+      ) {
       TH1 *hist = (TH1 *) key->ReadObj();
       if (normalize) {
         hist->Scale(1.0 / hist->Integral());
@@ -86,6 +89,8 @@ TH1* RebinTo100(TH1 * hist) {
 
 TH1* adjustWithJSONTitle(TH1 *hist) {
   const char* strSetting = hist->GetTitle();
+  std::cerr << "name: " << hist->GetName() << ", ";
+  std::cerr << "strSetting: "  << strSetting << std::endl;
   const nlohmann::json jSetting = nlohmann::json::parse(strSetting);
   const double alignment = jSetting["alignment"].get<double>();
   const int binDensityOrder = jSetting["binDensityOrder"].get<int>();
