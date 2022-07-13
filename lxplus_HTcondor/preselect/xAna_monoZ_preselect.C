@@ -443,6 +443,13 @@ void RedefinePrefWithIdx(D &df, const std::string pref, const std::vector<std::s
   }
 }
 
+void DefineP4Component(ROOT::RDF::RNode &df, const std::string prefNameCol) {
+  const std::string nameCol = prefNameCol + "P4";
+  for (const auto suf: {"Pt", "Eta", "Phi", "E", "Et", "M"}) {
+    df = df.Define(prefNameCol + suf, nameCol + "." + suf + "()");
+  }
+}
+
 typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
 
 void DefineP4Components1D(ROOT::RDF::RNode &df, const std::string prefNameCol) {
@@ -983,6 +990,33 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
   ROOT::RDF::RNode dfGenUnion = dfOriginal;
   if (isSignal) {
     dfGenUnion = dfGenUnion
+    .Define("genZpIdx", [&pdgZp](const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId, const Int_t mcWeightSgn)->Int_t {
+      // std::cerr << "genZpIdx: Calculating ..." << std::flush;
+      // auto &&result = static_cast<Int_t>(ROOT::VecOps::Nonzero(genParId == pdgZp && genMomParId /*== 10002*/!= pdgZp)[0]);
+      // std::cerr << " Done, result: " << result << std::endl;
+      // return result;
+      const auto vResult = ROOT::VecOps::Nonzero(genParId == pdgZp && genMomParId /*== 10002*/!= pdgZp);
+      // if (!vResult.size()) {
+      //   std::cerr << "Found event without Z'!\t";
+      //   std::cerr << "mcWeightSgn: " << mcWeightSgn << "\t" << std::flush;
+      //   std::cerr << std::endl;
+      // }
+      return vResult.size() ? static_cast<Int_t>(vResult[0]) : -1;
+    }, {"genParId", "genMomParId", "mcWeightSgn"})
+    .Filter("genZpIdx != -1")
+    // .Define("genZpP4", "std::cerr << \"genZpP4: Calculating ...\" << std::flush; const auto result = genParP4[genZpIdx]; std::cerr << \" Done\" << std::endl; return result;")
+    .Define("genZpP4", "genParP4[genZpIdx]")
+    .Define("genX2Idx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
+      ROOT::RVec<Int_t> result(2, -1);
+      for (int i = 0; i < nGenPar; ++i) {
+        if (TMath::Abs(genParId[i]) == pdgX2 && TMath::Abs(genMomParId[i]) == pdgZp) {
+          result[(genParId[i] < 0)] = i;
+        }
+      }
+      return result;
+    }, {"nGenPar", "genParId", "genMomParId"})
+    .Define("genX2P4", "ROOT::VecOps::Take(genParP4, genX2Idx)")
+    .Define("genX2PairP4", "genX2P4[0] + genX2P4[1]")
     .Define("genX1Idx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
       ROOT::RVec<Int_t> result(2, -1);
       for (int i = 0; i < nGenPar; ++i) {
@@ -1003,9 +1037,12 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       }
       return result;
     }, {"nGenPar", "genParId", "genMomParId"})
+    .Define("genDIdxAllUniqueId", [](const ROOT::RVec<Int_t> genDIdx){ return (UniqueSort(genDIdx)).size() == 4; }, { "genDIdx" })
     .Define("genDP4", "ROOT::VecOps::Take(genParP4, genDIdx)")
     .Define("genDPairP4", "ROOT::VecOps::Take(genDP4, {0, 2}) + ROOT::VecOps::Take(genDP4, {1, 3})")
     ;
+    DefineP4Component(dfGenUnion, "genZp");
+    DefineP4Components1D(dfGenUnion, "genX2");
     DefineP4Components1D(dfGenUnion, "genX1");
     for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et", "M"}) {
       dfGenUnion = dfGenUnion
@@ -1017,6 +1054,8 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     .Define("genDPairDeltaR", "ROOT::VecOps::DeltaR(ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDEta, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}), ROOT::VecOps::Take(genDPhi, {0, 2}))")
     .Define("genDPairsDeltaR", "TMath::Sqrt((genDPairEta[0] - genDPairEta[2]) * (genDPairEta[0] - genDPairEta[2]) + (genDPairPhi[0] - genDPairPhi[2]) * (genDPairPhi[0] - genDPairPhi[2]))")
     .Define("genX1EDPairELogDiff", "ROOT::VecOps::log(genX1E) - ROOT::VecOps::log(genDPairE)")
+    .Define("genX2EChildDiff", "genX2E - genDPairE - genX1E")
+    .Define("genZpEChildDiff", "genZpE - ROOT::VecOps::Sum(genX2E)")
     ;
     for (size_t jLepFlav = 0; jLepFlav < 2; ++jLepFlav) {
       dfGenUnion = dfGenUnion
@@ -1038,8 +1077,9 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         "    ROOT::VecOps::All(gen" + aPrefLepFlav[0] + "Idx != -1),"
         "    ROOT::VecOps::All(gen" + aPrefLepFlav[1] + "Idx != -1),"
         "}");
-    // vNameColGenUnion.emplace_back("genDIdx");
-    for (const std::string pref: {"genX1", "genX1Pair", "genD", "genDPair"}) {
+    vNameColGenUnion.emplace_back("genDIdx");
+    vNameColGenUnion.emplace_back("genDIdxAllUniqueId");
+    for (const std::string pref: {"genZp", "genX2", "genX1", "genX1Pair", "genD", "genDPair"}) {
       for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et"}) {
         vNameColGenUnion.emplace_back(pref + suf);
       }
@@ -1166,6 +1206,8 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       for (const std::string &nameCol: vNameColGenUnion) {
         vHistViewGenUnion.emplace_back(GetHistFromColumn(dfGenUnion, nameCol, "mcWeightSgn"));
       }
+      vHistViewGenUnion.emplace_back(GetHistFromColumnCustom(dfGenUnion, "genX2EChildDiff", "Double_t", 0, 0., true, -1000, true, 1000, "genX2EChildDiff", "mcWeightSgn"));
+      vHistViewGenUnion.emplace_back(GetHistFromColumnCustom(dfGenUnion, "genZpEChildDiff", "Double_t", 0, 0., true, -100, true, 100, "genZpEChildDiff", "mcWeightSgn"));
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairPt", "", 16, 0, 1.6, 100, 0, 500), "genDPairDeltaR", "genDPairPt", "mcWeightSgn"));
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairEta", "", 16, 0, 1.6, 32, -1.6, 1.6), "genDPairDeltaR", "genDPairEta", "mcWeightSgn"));
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenX1Pt", "", 16, 0, 1.6, 100, 0, 500), "genDPairDeltaR", "genX1Pt", "mcWeightSgn"));
