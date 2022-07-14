@@ -1021,7 +1021,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       ROOT::RVec<Int_t> result(2, -1);
       for (int i = 0; i < nGenPar; ++i) {
         if (TMath::Abs(genParId[i]) == pdgX1 && TMath::Abs(genMomParId[i]) == pdgX2) {
-          result[(genParId[i] < 0)] = i;
+          result[(genMomParId[i] < 0)] = i;
         }
       }
       return result;
