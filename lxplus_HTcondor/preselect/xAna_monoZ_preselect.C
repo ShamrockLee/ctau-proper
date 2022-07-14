@@ -1026,8 +1026,10 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       }
       return result;
     }, {"nGenPar", "genParId", "genMomParId"})
+    // .Filter("ROOT::VecOps::All(genX1Idx != -1)")
     .Define("genX1P4", "ROOT::VecOps::Take(genParP4, genX1Idx)")
-    .Define("genX1PairP4", "genX1P4[0] + genX1P4[1]")
+    // .Define("genX1PairP4", "genX1P4[0] + genX1P4[1]")
+    .Define("genX1PairP4", "ROOT::VecOps::Sum(genX1P4, remove_reference<decltype(genX1P4)>::type::value_type())")
     .Define("genDIdx", [](const Int_t nGenPar, const ROOT::RVec<Int_t> genParId, const ROOT::RVec<Int_t> genMomParId){
       ROOT::RVec<Int_t> result(4, -1);
       for (int i = 0; i < nGenPar; ++i) {
@@ -1077,9 +1079,10 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
         "    ROOT::VecOps::All(gen" + aPrefLepFlav[0] + "Idx != -1),"
         "    ROOT::VecOps::All(gen" + aPrefLepFlav[1] + "Idx != -1),"
         "}");
+    DefineP4Components1D(dfGenUnion, "genPar");
     vNameColGenUnion.emplace_back("genDIdx");
     vNameColGenUnion.emplace_back("genDIdxAllUniqueId");
-    for (const std::string pref: {"genZp", "genX2", "genX1", "genX1Pair", "genD", "genDPair"}) {
+    for (const std::string pref: {"genPar", "genZp", "genX2", "genX1", "genX1Pair", "genD", "genDPair"}) {
       for (const std::string suf: {"Pt", "Eta", "Phi", "E", "Et"}) {
         vNameColGenUnion.emplace_back(pref + suf);
       }
@@ -1701,6 +1704,16 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
     for (size_t iAK = 0; iAK < 2; ++iAK) {
       // aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet/tree", fileOut, vNameColJetCmp, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
       std::vector<std::string> vNameColUnique = aavNameColHasJet[iLepFlav][iAK];
+      vNameColUnique.reserve(vNameColUnique.size() + 6);
+      for (const auto nameCol: {"mcWeight", "mcWeightSgn"}) {
+        vNameColUnique.emplace_back(nameCol);
+      }
+      if (isSignal) {
+        for (const auto nameCol: {"genParId", "genMomParId", "genX2EChildDiff", "genZpEChildDiff"}) {
+          vNameColUnique.emplace_back(nameCol);
+        }
+      }
+      sort_uniquely(vNameColUnique);
       aaDfHasJet[iLepFlav][iAK] = aaDfHasJet[iLepFlav][iAK].Snapshot("HasJet" + aPrefLepFlav[iLepFlav] + aPrefAKShort[iAK] + "jet" + "/tree", fileOut, vNameColUnique, {"update", ROOT::kZLIB, 1, false, 99, true, true}).GetValue();
     }
   }
