@@ -1199,6 +1199,19 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       vNameColGenUnion.emplace_back(name);
       for (size_t iLepFlav = 0; iLepFlav < 2; ++iLepFlav) avNameColAllMatched[2].emplace_back(name);
     }
+    // These are for the 2D histogram plot, since Histo1D / Histo2D methods accepts column names instead of expressions.
+    for (int i = 0; i < 4; ++i) {
+      dfGenUnion = dfGenUnion.Define(Form("genD%d%dP4", i & 0b10, i & 0b01), Form("genDP4[%d]", i));
+      DefineP4Component(dfGenUnion, Form("genD%d%d", i & 0b10, i & 0b01));
+    }
+    for (int i = 0; i < 2; ++i) {
+      dfGenUnion = dfGenUnion.Define(Form("genDPair%dP4", i), Form("genDPairP4[%d]", i));
+      DefineP4Component(dfGenUnion, Form("genDPair%d", i));
+      dfGenUnion = dfGenUnion.Define(Form("genX1%dP4", i), Form("genX1P4[%d]", i));
+      DefineP4Component(dfGenUnion, Form("genX1%d", i));
+      dfGenUnion = dfGenUnion.Define(Form("genX2%dP4", i), Form("genX2P4[%d]", i));
+      DefineP4Component(dfGenUnion, Form("genX2%d", i));
+    }
     // Lazily register histogram action for the GenUnion stage
     {
       sort_uniquely(vNameColGenUnion);
@@ -1215,6 +1228,10 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairPt", "", 16, 0, 1.6, 100, 0, 500), "genDPairDeltaR", "genDPairPt", "mcWeightSgn"));
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairEta", "", 16, 0, 1.6, 32, -1.6, 1.6), "genDPairDeltaR", "genDPairEta", "mcWeightSgn"));
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenX1Pt", "", 16, 0, 1.6, 100, 0, 500), "genDPairDeltaR", "genX1Pt", "mcWeightSgn"));
+      vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genX1EvsgenDPairE", "", 50, 0., 500., 100, 0., 500.), "genX1E", "genDPairE", "mcWeightSgn"));
+      vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairE", "", 50, 0., 500., 100, 0., 500.), "genDPair0E", "genDPair1E", "mcWeightSgn"));
+      vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genX1E", "", 50, 0., 500., 100, 0., 500.), "genX10E", "genX11E", "mcWeightSgn"));
+      vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genX2E", "", 50, 0., 500., 100, 0., 500.), "genX20E", "genX21E", "mcWeightSgn"));
     }
 
     // Begin the AllMatched stage
