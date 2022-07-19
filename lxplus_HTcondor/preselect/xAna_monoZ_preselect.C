@@ -138,7 +138,7 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(
     const Int_t upperLimitBins,
     const std::string expression = "",
     const std::string exprWeight = "") {
-  const Int_t nBins = TMath::Nint((upperLimitBins - lowerLimitBins) * TMath::Power(10., binDensityOrder));
+  const Int_t nBins = (upperLimitBins - lowerLimitBins);
   const Double_t binWidth = TMath::Power(10., -binDensityOrder);
   const Double_t lowerLimit = alignment + binWidth * lowerLimitBins;
   const Double_t upperLimit = alignment + binWidth * upperLimitBins;
@@ -255,6 +255,7 @@ ROOT::RDF::RResultPtr<TH1D> GetHistFromColumnCustom(D &df, const std::string nam
       lowerLimitBins = 0;
     } else if (tstrNameColumnStripped.EndsWith("Eta")) {
       binDensityOrder = 1;
+      upperLimitBins = 100;
       lowerLimitBins = -upperLimitBins;
     } else if (tstrNameColumnStripped.EndsWith("Phi")) {
       binDensityOrder = 2;
@@ -1209,7 +1210,7 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       for (const std::string &nameCol: vNameColGenUnion) {
         vHistViewGenUnion.emplace_back(GetHistFromColumn(dfGenUnion, nameCol, "mcWeightSgn"));
       }
-      vHistViewGenUnion.emplace_back(GetHistFromColumnCustom(dfGenUnion, "genX2EChildDiff", "Double_t", 0, 0., true, -1000, true, 1000, "genX2EChildDiff", "mcWeightSgn"));
+      vHistViewGenUnion.emplace_back(GetHistFromColumnCustom(dfGenUnion, "genX2EChildDiff", "Double_t", 5, 0., true, -100, true, 100, "genX2EChildDiff", "mcWeightSgn"));
       vHistViewGenUnion.emplace_back(GetHistFromColumnCustom(dfGenUnion, "genZpEChildDiff", "Double_t", 0, 0., true, -100, true, 100, "genZpEChildDiff", "mcWeightSgn"));
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairPt", "", 16, 0, 1.6, 100, 0, 500), "genDPairDeltaR", "genDPairPt", "mcWeightSgn"));
       vHistViewGenUnion2D.emplace_back(dfGenUnion.Histo2D(ROOT::RDF::TH2DModel("h2genDPairDeltaRvsgenDPairEta", "", 16, 0, 1.6, 32, -1.6, 1.6), "genDPairDeltaR", "genDPairEta", "mcWeightSgn"));
