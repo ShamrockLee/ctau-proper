@@ -53,6 +53,12 @@ void plotAll(TDirectory *tdirIn, TString dirOut, const Bool_t plotSubdir, const 
       hist->Draw(optionDrawNew);
       gStyle->SetOptStat(111111);
       gPad->Print(dirOut + seperatorPath + name + ".svg");
+    } else if (obj->IsA()->InheritsFrom("TH2")) {
+      TH1 *hist = (TH1 *) key->ReadObj();
+      const char *optionDrawNew = "colz";
+      hist->Draw(optionDrawNew);
+      gStyle->SetOptStat(111111);
+      gPad->Print(dirOut + seperatorPath + name + ".svg");
     }
   }
   tdirIn->Close();
