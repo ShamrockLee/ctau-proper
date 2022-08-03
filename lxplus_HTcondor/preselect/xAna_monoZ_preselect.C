@@ -1863,7 +1863,7 @@ int main(int argc, char** argv) {
     {"multiple", 'm', OPTPARSE_NONE},
     {"debug", 'v', OPTPARSE_NONE},
     {"threads", 'j', OPTPARSE_REQUIRED},
-    {0} // NULL termination
+    {NULL} // NULL termination
   };
   int option;
   struct optparse options;
