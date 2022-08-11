@@ -183,6 +183,13 @@
           ./skeeto_optparse.h
         ];
       });
+      ana-inconservation-2017 = pkgs.callPackage ./ana.nix (rec {
+        macroName = "xAna_monoZ_inconservation_2017.C";
+        srcs = [
+          ./xAna_monoZ_inconservation_2017.C
+          ./skeeto_optparse.h
+        ];
+      });
       mkSingularityBuildscript = package: pkgs.callPackage ./make-singularity-buildscript.nix {
         inherit package;
         singularity = pkgs.apptainer;
@@ -231,6 +238,7 @@
         inherit run ana compile-with-root apptainer-prefetch-vendorsha256 nix-portable;
       } // lib.optionalAttrs (lib.hasSuffix "linux" system) {
         inherit ana-singularity-buildscript ana-singularity-image;
+        inherit ana-inconservation-2017;
       # # Cross build seems still buggy
       # } // lib.optionalAttrs (system == "x86_64-linux") {
       #   inherit nix-portable-aarch64-linux;
