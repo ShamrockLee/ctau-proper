@@ -715,8 +715,6 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
       }
     }
     if (debug) std::cerr << "avNameColHasVtx[0].size(): " << avNameColHasVtx[0].size() << std::endl;
-    std::vector<std::string> vPref;
-    vPref.clear();
     for (std::string nameCol: vNamesCol) {
       TString tstrNameCol(nameCol);
       const std::string typenameCol = dfOriginal.GetColumnType(nameCol);
@@ -756,12 +754,8 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
           tstrPrefNameCol = "HPSTau";
           dfOriginal = dfOriginal.Define(nameCol, "HPSTau_4Momentum");
         }
-        vPref.emplace_back(tstrPrefNameCol.Data());
       }
     }
-    // std::vector<size_t> vIdxPrefSorted(vPref.size(), 0);
-    // std::iota(vIdxPrefSorted.begin(), vIdxPrefSorted.end());
-    // std::sort(vIdxPrefSorted.begin(), vIdxPrefSorted.end(), [&vPref](size_t i, size_t j){ return vPref[i] > vPref[j]; });
     for (std::string prefNameCol: { "ele", "mu", "THINjet", "FATjet", "HPSTau" }) {
       std::string nameCol = prefNameCol + "P4";
       TString tstrNameCol(nameCol);
