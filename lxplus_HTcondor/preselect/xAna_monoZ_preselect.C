@@ -452,6 +452,7 @@ void DefineP4Component(ROOT::RDF::RNode &df, const std::string prefNameCol) {
 }
 
 typedef ROOT::Math::PtEtaPhiMVector TypeLorentzVector;
+typedef ROOT::Math::XYZVector TypeVector3D;
 
 void DefineP4Components1D(ROOT::RDF::RNode &df, const std::string prefNameCol) {
   const std::string nameCol = prefNameCol + "P4";
@@ -753,6 +754,20 @@ void xAna_monoZ_preselect_generic(const TIn fileIn, const std::string fileOut, c
           tstrNameCol = nameCol;
           tstrPrefNameCol = "HPSTau";
           dfOriginal = dfOriginal.Define(nameCol, "HPSTau_4Momentum");
+        }
+      }
+      if (tstrNameCol.EndsWith("Vtx") && typenameCol == "TClonesArray") {
+        dfOriginal = dfOriginal.Redefine(nameCol, [](const TClonesArray &tcaP3) {
+          const size_t n = tcaP3.GetSize();
+          ROOT::RVec<TypeVector3D> vResult(n, TypeVector3D());
+          for (size_t i = 0; i < n; ++i) {
+            const TVector3 *const ptv3 = static_cast<TVector3 *>(tcaP3[i]);
+            vResult[i].SetXYZ(ptv3->X(), ptv3->Y(), ptv3->Z());
+          }
+          return vResult;
+        }, {{ nameCol }});
+        for (const std::string suf: { "Pt", "Eta", "Phi" }) {
+          dfOriginal.Define(nameCol + suf, nameCol + "." + suf + "()");
         }
       }
     }
